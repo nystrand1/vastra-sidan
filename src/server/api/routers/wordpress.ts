@@ -13,6 +13,8 @@ const apiKey = env.WORDPRESS_API_KEY;
 
 const baseUrl = env.NEXT_PUBLIC_WORDPRESS_URL;
 
+console.log(baseUrl);
+
 const paths = {
   acfURL: baseUrl + "/wp-json/acf/v3/",
   wpURL: baseUrl + "/wp-json/wp/v2/",
@@ -106,7 +108,7 @@ export const wordpressRouter = createTRPCRouter({
     }))
   }),
   getAwayGame: publicProcedure
-    .input(z.object({ id: z.string() }))
+    .input(z.object({ id: z.string().or(z.number()) }))
     .query(async ({input}) => {
       const res = await makeRequest<AwayGame>(paths.acfURL + `awaygames/${input.id}`, 'GET');
       return {
