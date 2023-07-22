@@ -5,6 +5,7 @@ import {
 import { type AwayGame } from "~/types/wordpressTypes";
 import { awayGameMapper, makeRequest, PATHS } from "./wordpress";
 import { Event } from "@prisma/client";
+import { z } from "zod";
 
 
 
@@ -23,8 +24,9 @@ const awayGameToEvent = (awayGame: ReturnType<typeof awayGameMapper>) : Event =>
 
 export const cronRouter = createTRPCRouter({
   syncEvents: cronProcedure
-    .query(async ({ ctx }) => {
-
+    .input(z.any())
+    .mutation(async ({ ctx, input }) => {
+      console.log('data', input);
       const res = await makeRequest<AwayGame[]>(PATHS.acfURL + "awaygames", 'GET');
       const awayGames = res
         // uncomment to filter out games that have already happened
