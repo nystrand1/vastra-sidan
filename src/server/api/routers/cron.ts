@@ -4,12 +4,12 @@ import {
 } from "~/server/api/trpc";
 import { type AwayGame } from "~/types/wordpressTypes";
 import { awayGameMapper, makeRequest, PATHS } from "./wordpress";
-import { Event } from "@prisma/client";
+import { type VastraEvent } from "@prisma/client";
 import { z } from "zod";
 
 
 
-const awayGameToEvent = (awayGame: ReturnType<typeof awayGameMapper>) : Event => ({
+const awayGameToEvent = (awayGame: ReturnType<typeof awayGameMapper>) : VastraEvent => ({
   id: awayGame.id.toString(),
   name: `${awayGame.enemyTeam} - ${awayGame.date}`,
   description: awayGame.busInfo || "",
@@ -41,20 +41,20 @@ export const cronRouter = createTRPCRouter({
 
       // Upsert events in database
       await Promise.all(awayGames.map(async (awayGame) => {
-        const existingEvent = await ctx.prisma.event.findUnique({
+        const existingEvent = await ctx.prisma.vastraEvent.findUnique({
           where: {
             id: awayGame.id
           }
         })
         if (existingEvent) {
-          await ctx.prisma.event.update({
+          await ctx.prisma.vastraEvent.update({
             where: {
               id: awayGame.id
             },
             data: awayGame
           })
         } else {
-          await ctx.prisma.event.create({
+          await ctx.prisma.vastraEvent.create({
             data: awayGame
           })
         }
