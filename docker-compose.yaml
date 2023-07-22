@@ -1,0 +1,17 @@
+services:
+  database:
+    # We use a mariadb image which supports both amd64 & arm64 architecture
+    image: mariadb:10.6.4-focal
+    container_name: vastrasidan-event-db
+    command: '--default-authentication-plugin=mysql_native_password'
+    volumes:
+      - ./database:/var/lib/mysql
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=vssevent
+      - MYSQL_DATABASE=vssevent
+      - MYSQL_USER=vssevent
+      - MYSQL_PASSWORD=vssevent
+    ports:
+      - 3306:3306
+      - 33060:33060
