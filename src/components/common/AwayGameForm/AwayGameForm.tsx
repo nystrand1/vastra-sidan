@@ -7,19 +7,26 @@ import { InputField } from "../../atoms/InputField/InputField";
 import { OutlinedButton } from "../../atoms/OutlinedButton/OutlinedButton";
 import { toast } from "react-hot-toast";
 import Checkbox from "~/components/atoms/Checkbox/Checkbox";
+import { participantSchema } from "~/utils/zodSchemas";
 
 
 interface IPassenger {
   firstName: string;
   lastName: string;
-  phoneNumber: string;
+  phone: string;
   email: string;
   member: boolean;
   youth: boolean;
   consent: boolean;
 }
 
-const PassengerForm = ({ index, passenger, onRemove } : { index: number, passenger?: Partial<IPassenger>, onRemove: (index: number) => void }) => {
+interface PassengerFormProps {
+  index: number;
+  passenger?: Partial<IPassenger>;
+  onRemove: (index: number) => void;
+}
+
+const PassengerForm = ({ index, passenger, onRemove } : PassengerFormProps) => {
   return (
     <div className="flex flex-col space-y-2 p-4 bg-gray-700 rounded-md">
       <InputField
@@ -41,9 +48,9 @@ const PassengerForm = ({ index, passenger, onRemove } : { index: number, passeng
        <InputField
         label="Mobilnummer"
         placeholder="mobil..."
-        id={`phoneNumber_${index}`}
-        name={`phoneNumber_${index}`}
-        defaultValue={passenger?.phoneNumber || ""}
+        id={`phone_${index}`}
+        name={`phone_${index}`}
+        defaultValue={passenger?.phone || ""}
         type="tel"
         required
       />
@@ -57,8 +64,8 @@ const PassengerForm = ({ index, passenger, onRemove } : { index: number, passeng
       />
       <Checkbox
         label="Jag har läst & förstått reglerna kring bussresorna"
-        id={`email_${index}`}
-        name={`email_${index}`}
+        id={`consent_${index}`}
+        name={`consent_${index}`}
         isChecked={false}
         required
       />
@@ -67,6 +74,15 @@ const PassengerForm = ({ index, passenger, onRemove } : { index: number, passeng
       )}
     </div>
   )
+}
+
+const formToParticipant = (form: Record<string, IPassenger>) => {
+  return Object.values(form).map((input) => {
+    return {
+      ...input,
+      name: `${input.firstName} ${input.lastName}`,
+    }
+  })
 }
 
 
@@ -93,7 +109,13 @@ export const AwayGameForm = () => {
       acc[index][type] = value;
       return acc;
     }, {} as Record<string, any>);
-    await toast.promise(submitForm({formattedValues}), {
+
+    const participants = participantSchema.array().parse(formToParticipant(formattedValues));
+
+    await toast.promise(submitForm({
+      eventId: id,
+      participants,
+    }), {
       loading: 'Skickar anmälan...',
       success: 'Anmälan skickad!',
       error: 'Något gick fel, försök igen senare.',
@@ -109,7 +131,7 @@ export const AwayGameForm = () => {
             passenger = {
               firstName: session.data.user?.name || "",
               lastName: "",
-              phoneNumber: "",
+              phone: "",
               email: session.data.user?.email || "",
               member: false,
               youth: false,
