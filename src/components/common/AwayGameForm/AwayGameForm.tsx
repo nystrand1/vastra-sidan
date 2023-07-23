@@ -1,6 +1,6 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../../../utils/api";
 import { Button } from "../../atoms/Button/Button";
 import { InputField } from "../../atoms/InputField/InputField";
@@ -66,7 +66,6 @@ const PassengerForm = ({ index, passenger, onRemove } : PassengerFormProps) => {
         label="Jag har läst & förstått reglerna kring bussresorna"
         id={`consent_${index}`}
         name={`consent_${index}`}
-        isChecked={false}
         required
       />
       {index > 0 && (
@@ -91,6 +90,7 @@ export const AwayGameForm = () => {
   const { id } = query;
   const session = useSession();
   const [passengers, setPassengers] = useState([{ index: 0 }]);
+  const formRef = useRef<HTMLFormElement>(null);
   if (!id) return null
   if (Array.isArray(id)) return null;
   const { data: awayGame, isLoading } = api.wordpress.getAwayGame.useQuery({ id: id });
@@ -109,10 +109,9 @@ export const AwayGameForm = () => {
       acc[index][type] = value;
       return acc;
     }, {} as Record<string, any>);
-
     const participants = participantSchema.array().parse(formToParticipant(formattedValues));
 
-    await toast.promise(submitForm({
+    const res = await toast.promise(submitForm({
       eventId: id,
       participants,
     }), {
@@ -120,10 +119,15 @@ export const AwayGameForm = () => {
       success: 'Anmälan skickad!',
       error: 'Något gick fel, försök igen senare.',
     });
+
+    if (res.status === "ok") {
+      setPassengers([{ index: 0 }]);
+      formRef.current?.reset();
+    }
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} ref={formRef}>
       <div className="grid gap-8">
         {passengers.map(({ index }) => {
           let passenger;

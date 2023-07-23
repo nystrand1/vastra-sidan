@@ -28,7 +28,7 @@ export const paymentRouter = createTRPCRouter({
         })
       }
       await ctx.prisma.participant.createMany({
-        data: input.participants.map((participant) => ({
+        data: input.participants.map(({ consent: _consent, ...participant }) => ({
           ...participant,
           eventId: input.eventId,
         }))

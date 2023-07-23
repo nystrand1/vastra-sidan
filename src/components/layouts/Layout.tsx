@@ -9,7 +9,7 @@ const Layout = ({ children } : PropsWithChildren) => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#0220c9] to-[#000000]">
-        <div className="container">
+        <div className="container p-4 md:p-8">
           {children}
         </div>
       </main>
