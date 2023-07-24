@@ -3,8 +3,14 @@ import { api } from "~/utils/api";
 
 
 export default function Admin() {
+  const { data: sessionData } = useSession();
 
+  const { data: events } = api.admin.getEvents.useQuery(
+    undefined,
+    { enabled: !!sessionData?.user }
+    );
 
+  console.log(events);
   return (
     <>
     <h1>

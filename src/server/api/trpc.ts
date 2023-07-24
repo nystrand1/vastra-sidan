@@ -124,6 +124,21 @@ const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
   });
 });
 
+
+const enforceUserIsAdmin = t.middleware(({ ctx, next }) => {
+  if (!ctx.session || !ctx.session.user || !["ADMIN", "BUS_HOST"].includes(ctx.session.user.role)) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+  return next({
+    ctx: {
+      // infers the `session` as non-nullable
+      session: { ...ctx.session, user: ctx.session.user },
+    },
+  });
+});
+
+export const adminProcedure = t.procedure.use(enforceUserIsAdmin);
+
 /**
  * Protected (authenticated) procedure
  *

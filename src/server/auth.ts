@@ -22,14 +22,11 @@ type UserRole = "ADMIN" | "BUS_HOST" | "USER";
  */
 declare module "next-auth" {
   interface Session extends DefaultSession {
-    refreshTokenExpires?: number;
-    accessTokenExpires?: string;
-    refreshToken?: string;
     token?: string;
     error?: string;
     user: {
       id: string;
-      role: User;
+      role: UserRole;
     } & DefaultSession["user"];
   }
 
@@ -51,39 +48,6 @@ declare module "next-auth/jwt" {
   }
 }
 
-const cookies: Partial<CookiesOptions> = {
-  sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-          httpOnly: true,
-          sameSite: "none",
-          path: "/",
-          domain: process.env.NEXT_PUBLIC_DOMAIN,
-          secure: true,
-      },
-  },
-  callbackUrl: {
-      name: `next-auth.callback-url`,
-      options: {
-          httpOnly: true,
-          sameSite: "none",
-          path: "/",
-          domain: process.env.NEXT_PUBLIC_DOMAIN,
-          secure: true,
-      },
-  },
-  csrfToken: {
-      name: "next-auth.csrf-token",
-      options: {
-      httpOnly: true,
-          sameSite: "none",
-          path: "/",
-          domain: process.env.NEXT_PUBLIC_DOMAIN,
-          secure: true,
-      },
-  },
-};
-
 const sha256 = (content: string) => {
   return createHash('sha256').update(content).digest('hex')
 }
@@ -98,10 +62,20 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  // callbacks: {
-  //   session,
-  //   jwt
-  // },
+  callbacks: {
+    session: ({ session, token }) => {
+      if (token && session.user) {
+        session.user.role = token.role as UserRole;
+      }
+      return session;
+    },
+    jwt: ({ token, user }) => {
+      if (user) {
+        token.role = user.role;
+      }
+      return token;
+    },
+  },
   adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
@@ -122,7 +96,7 @@ export const authOptions: NextAuthOptions = {
         if (!user) return null;
 
         if (user.password !== sha256(credentials.password)) return null;
-
+        console.log(user);
         return user;
       },
     }),

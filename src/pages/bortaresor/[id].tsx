@@ -6,7 +6,6 @@ import { api } from "~/utils/api";
 
 export const BusPage = () => {
   const { id } = useRouter().query;
-  console.log(id);
   const { data: game, isLoading: isLoadingGame } = api.wordpress.getAwayGame.useQuery({ id: id as string });
 
   if (!game || isLoadingGame) return null;

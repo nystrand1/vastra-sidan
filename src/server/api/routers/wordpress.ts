@@ -119,7 +119,6 @@ export const wordpressRouter = createTRPCRouter({
   getStartPage: publicProcedure
     .query(async () => {
       const res = await makeRequest<StartPage>(PATHS.acfURL + RESOURCES.startPage, 'GET');
-      console.log(res.acf);
       return {
         ...res.acf,
       };

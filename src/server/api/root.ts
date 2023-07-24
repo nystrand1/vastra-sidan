@@ -3,6 +3,7 @@ import { createTRPCRouter } from "~/server/api/trpc";
 import { wordpressRouter } from "./routers/wordpress";
 import { paymentRouter } from "./routers/payment";
 import { cronRouter } from "./routers/cron";
+import { adminRouter } from "./routers/admin";
 
 /**
  * This is the primary router for your server.
@@ -14,6 +15,7 @@ export const appRouter = createTRPCRouter({
   wordpress: wordpressRouter,
   payment: paymentRouter,
   cron: cronRouter,
+  admin: adminRouter
 });
 
 // export type definition of API
