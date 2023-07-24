@@ -1,13 +1,18 @@
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import { createHash } from "crypto";
 import { type GetServerSidePropsContext } from "next";
 import {
   getServerSession,
   type NextAuthOptions,
   type DefaultSession,
+  CookiesOptions,
+  Session,
 } from "next-auth";
-import DiscordProvider from "next-auth/providers/discord";
-import { env } from "~/env.mjs";
+import { JWT } from "next-auth/jwt";
+import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "~/server/db";
+
+type UserRole = "ADMIN" | "BUS_HOST" | "USER";
 
 /**
  * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
@@ -17,17 +22,70 @@ import { prisma } from "~/server/db";
  */
 declare module "next-auth" {
   interface Session extends DefaultSession {
+    refreshTokenExpires?: number;
+    accessTokenExpires?: string;
+    refreshToken?: string;
+    token?: string;
+    error?: string;
     user: {
       id: string;
-      // ...other properties
-      // role: UserRole;
+      role: User;
     } & DefaultSession["user"];
   }
 
-  // interface User {
-  //   // ...other properties
-  //   // role: UserRole;
-  // }
+  interface User {
+    role: UserRole;
+  }
+}
+
+declare module "next-auth/jwt" {
+  /** Returned by the `jwt` callback and `getToken`, when using JWT sessions */
+  interface JWT {
+    refreshTokenExpires?: number;
+    accessTokenExpires?: number;
+    refreshToken?: string;
+    token: string;
+    exp?: number;
+    iat?: number;
+    jti?: string;
+  }
+}
+
+const cookies: Partial<CookiesOptions> = {
+  sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+          httpOnly: true,
+          sameSite: "none",
+          path: "/",
+          domain: process.env.NEXT_PUBLIC_DOMAIN,
+          secure: true,
+      },
+  },
+  callbackUrl: {
+      name: `next-auth.callback-url`,
+      options: {
+          httpOnly: true,
+          sameSite: "none",
+          path: "/",
+          domain: process.env.NEXT_PUBLIC_DOMAIN,
+          secure: true,
+      },
+  },
+  csrfToken: {
+      name: "next-auth.csrf-token",
+      options: {
+      httpOnly: true,
+          sameSite: "none",
+          path: "/",
+          domain: process.env.NEXT_PUBLIC_DOMAIN,
+          secure: true,
+      },
+  },
+};
+
+const sha256 = (content: string) => {
+  return createHash('sha256').update(content).digest('hex')
 }
 
 /**
@@ -36,30 +94,38 @@ declare module "next-auth" {
  * @see https://next-auth.js.org/configuration/options
  */
 export const authOptions: NextAuthOptions = {
-  callbacks: {
-    session: ({ session, user }) => ({
-      ...session,
-      user: {
-        ...session.user,
-        id: user.id,
-      },
-    }),
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  // callbacks: {
+  //   session,
+  //   jwt
+  // },
   adapter: PrismaAdapter(prisma),
   providers: [
-    DiscordProvider({
-      clientId: env.DISCORD_CLIENT_ID,
-      clientSecret: env.DISCORD_CLIENT_SECRET,
+    CredentialsProvider({
+      name: 'Credentials',
+      credentials: {
+        username: { label: "Email", type: "text", placeholder: "email" },
+        password: {  label: "Password", type: "password" }
+      },
+      authorize: async (credentials) => {
+        if (!credentials?.username || !credentials?.password) {
+          return null;
+        }
+        const user = await prisma.user.findFirst({
+          where: {
+            email: credentials.username,
+          },
+        });
+        if (!user) return null;
+
+        if (user.password !== sha256(credentials.password)) return null;
+
+        return user;
+      },
     }),
-    /**
-     * ...add more providers here.
-     *
-     * Most other providers require a bit more work than the Discord provider. For example, the
-     * GitHub provider requires you to add the `refresh_token_expires_in` field to the Account
-     * model. Refer to the NextAuth.js docs for the provider you want to use. Example:
-     *
-     * @see https://next-auth.js.org/providers/github
-     */
   ],
 };
 

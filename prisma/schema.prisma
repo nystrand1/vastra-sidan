@@ -55,8 +55,16 @@ model User {
     email         String?   @unique
     emailVerified DateTime?
     image         String?
+    password      String?
+    role          Role      @default(USER)
     accounts      Account[]
     sessions      Session[]
+}
+
+enum Role {
+    USER
+    ADMIN
+    BUS_HOST
 }
 
 model VerificationToken {
