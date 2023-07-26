@@ -8,6 +8,7 @@ import { awayGameMapper, makeRequest, PATHS } from "./wordpress";
 import { type Bus, type VastraEvent } from "@prisma/client";
 import { type inferAsyncReturnType, inferProcedureOutput } from "@trpc/server";
 import { AppRouter } from "../root";
+import { z } from "zod";
 
 const awayGameToEvent = (awayGame: ReturnType<typeof awayGameMapper>) : { event: VastraEvent, buses: Bus[] }  => ({
   event: {
@@ -79,6 +80,7 @@ const upsertBus = async (bus: Bus, ctx: inferAsyncReturnType<typeof createTRPCCo
 
 export const cronRouter = createTRPCRouter({
   syncEvents: cronProcedure
+    .input(z.any())
     .mutation(async ({ ctx, input }) => {
       console.info("Syncing events");
       console.info('input', input);
