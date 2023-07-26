@@ -7,6 +7,7 @@
  * need to use are documented accordingly near the end.
  */
 
+import { Role } from "@prisma/client";
 import { initTRPC, TRPCError } from "@trpc/server";
 import { type CreateNextContextOptions } from "@trpc/server/adapters/next";
 import { type Session } from "next-auth";
@@ -126,13 +127,16 @@ const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
 
 
 const enforceUserIsAdmin = t.middleware(({ ctx, next }) => {
-  if (!ctx.session || !ctx.session.user || !["ADMIN", "BUS_HOST"].includes(ctx.session.user.role)) {
+  if (!ctx.session || !ctx.session.user || ctx.session.user.role !== Role.ADMIN) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
   return next({
     ctx: {
       // infers the `session` as non-nullable
-      session: { ...ctx.session, user: ctx.session.user },
+      session: {
+        ...ctx.session,
+        user: ctx.session.user
+      },
     },
   });
 });
