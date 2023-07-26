@@ -12,7 +12,7 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import { type CreateNextContextOptions } from "@trpc/server/adapters/next";
 import { type Session } from "next-auth";
 import superjson from "superjson";
-import { SuperJSONResult } from "superjson/dist/types";
+import { type SuperJSONResult } from "superjson/dist/types";
 import { ZodError } from "zod";
 import { env } from "~/env.mjs";
 import { getServerAuthSession } from "~/server/auth";
