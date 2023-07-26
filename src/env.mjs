@@ -21,8 +21,10 @@ export const env = createEnv({
       process.env.VERCEL ? z.string().min(1) : z.string().url()
     ),
     // Add `.min(1) on ID and SECRET if you want to make sure they're not empty
-    WORDPRESS_API_KEY: z.string(),
-    CRON_KEY: z.string(),
+    WORDPRESS_API_KEY: z.string().min(1),
+    CRON_KEY: z.string().min(1),
+    RESEND_API_KEY: z.string().min(1),
+    CANCELLATION_URL: z.string().url(),
   },
 
   /**
@@ -47,6 +49,8 @@ export const env = createEnv({
     WORDPRESS_API_KEY: process.env.WORDPRESS_API_KEY,
     NEXT_PUBLIC_WORDPRESS_URL: process.env.NEXT_PUBLIC_WORDPRESS_URL,
     CRON_KEY: process.env.CRON_KEY,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    CANCELLATION_URL: process.env.CANCELLATION_URL,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.
