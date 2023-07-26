@@ -1,11 +1,13 @@
 import { TRPCError } from "@trpc/server";
+import { Resend } from 'resend';
 import { z } from "zod";
+import { env } from "~/env.mjs";
 import {
   createTRPCRouter,
-  protectedProcedure,
-  publicProcedure,
+  publicProcedure
 } from "~/server/api/trpc";
 import { participantSchema } from "~/utils/zodSchemas";
+import { EventSignUp } from "~/components/emails/EventSignUp";
 
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
@@ -27,23 +29,54 @@ export const paymentRouter = createTRPCRouter({
           message: "Event not found"
         })
       }
-      await ctx.prisma.participant.createMany({
-        data: input.participants.map(({ consent: _consent, ...participant }) => ({
-          ...participant,
-          eventId: input.eventId,
-        }))
-      });
+
+      const participants = await ctx.prisma.$transaction(
+        input.participants.map(({ consent: _consent, ...participant }) => (
+          ctx.prisma.participant.create({
+           data: {
+             ...participant,
+             eventId: input.eventId,
+           }
+         })
+        ))
+      );
+
       await delay(1000);
+
+      const resend = new Resend(env.RESEND_API_KEY);
+
+      const [ participant ] = participants;
+
+      const cancellationUrl = `${env.CANCELLATION_URL}?token=${participant?.cancellationToken || ''}`;
+
+      await resend.sendEmail({
+        from: 'onboarding@resend.dev',
+        to: 'filip.nystrand@gmail.com',
+        subject: 'Hello World',
+        react: EventSignUp({ name: participant?.name || '' , cancellationUrl })
+      });
       return {
         status: "ok",
       }
     }),
 
-  getAll: publicProcedure.query(({ ctx }) => {
-    return ctx.prisma.example.findMany();
-  }),
+  cancelBooking: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .mutation(async({ input, ctx }) => {
+      const participant = await ctx.prisma.participant.findFirst({
+        where: {
+          cancellationToken: input.token
+        }
+      });
 
-  getSecretMessage: protectedProcedure.query(() => {
-    return "you can now see this secret message!";
+      if (!participant) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Participant not found"
+        })
+      }
+
+      await delay(1000);
+      return "you can now see this secret message!";
   }),
 });
