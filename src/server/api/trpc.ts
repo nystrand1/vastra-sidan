@@ -154,9 +154,12 @@ export const adminProcedure = t.procedure.use(enforceUserIsAdmin);
 export const protectedProcedure = t.procedure.use(enforceUserIsAuthed);
 
 const cronOnly = t.middleware(({ ctx, next }) => {
+  console.info("cronOnly");
   if (ctx.cronKey !== env.CRON_KEY) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
+
+  console.info("cronOnly - next");
 
   return next({
     ctx: ctx

@@ -81,7 +81,7 @@ export const cronRouter = createTRPCRouter({
   syncEvents: cronProcedure
     .mutation(async ({ ctx, input }) => {
       console.info("Syncing events");
-      console.log('input', input);
+      console.info('input', input);
       const res = await makeRequest<AwayGame[]>(PATHS.acfURL + "awaygames", 'GET');
       const awayGames = res
         // uncomment to filter out games that have already happened
