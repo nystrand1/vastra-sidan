@@ -158,7 +158,9 @@ const cronOnly = t.middleware(({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
 
-  return next();
+  return next({
+    ctx: ctx
+  });
 });
 
 export const cronProcedure = t.procedure.use(cronOnly);
