@@ -1,47 +1,51 @@
+import { Role } from "@prisma/client";
 import { signIn, signOut, useSession } from "next-auth/react";
+import { Button } from "~/components/atoms/Button/Button";
+import Card from "~/components/atoms/CardLink/CardLink";
+import { Progressbar } from "~/components/atoms/Progressbar/Progressbar";
 import { api } from "~/utils/api";
 
 
 export default function Admin() {
   const { data: sessionData } = useSession();
-
+  const title = sessionData?.user?.role === Role.ADMIN ? `Admin - ${sessionData.user?.name || ''}` : "Logga in för att se adminsidan";
   const { data: events } = api.admin.getEvents.useQuery(
     undefined,
-    { enabled: !!sessionData?.user }
+    { enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN }
     );
 
-  console.log(events);
   return (
     <>
-    <h1>
-      Admin
-    </h1>
-    <AuthShowcase />
+      <h1 className="text-center text-3xl mb-8 mt-10">
+        {title}
+      </h1>
+      <div className="grid grid-cols-12 gap-4 md:gap-8 text-black max-h-[60vh] md:max-h-[100%] overflow-auto">
+        {events && events.map((event) => (
+          <div key={event.id} className="col-span-12 md:col-span-4">
+            <Card link={`/admin/events/${event.id}`} title={event.name}>
+              <Progressbar
+                label="Antal anmälda"
+                maxValue={100}
+                currentValue={57}
+              />
+            </Card>
+          </div>
+        ))}
+      </div>
+      <Auth />
     </>
   )
 }
 
 
-function AuthShowcase() {
+function Auth() {
   const { data: sessionData } = useSession();
 
-  const { data: secretMessage } = api.example.getSecretMessage.useQuery(
-    undefined, // no input
-    { enabled: sessionData?.user !== undefined }
-  );
-
   return (
-    <div className="flex flex-col items-center justify-center gap-4">
-      <p className="text-center text-2xl text-white">
-        {sessionData && <span>Logged in as {sessionData.user?.name}</span>}
-        {secretMessage && <span> - {secretMessage}</span>}
-      </p>
-      <button
-        className="rounded-full bg-white/10 px-10 py-3 font-semibold text-white no-underline transition hover:bg-white/20"
-        onClick={sessionData ? () => void signOut() : () => void signIn()}
-      >
-        {sessionData ? "Sign out" : "Sign in"}
-      </button>
+    <div className="flex flex-col items-center justify-center absolute bottom-8 left-0 right-0 m-auto">
+      <Button onClick={sessionData ? () => void signOut() : () => void signIn()}>
+        <p>{sessionData ? "Logga ut" : "Logga in"}</p>
+      </Button>
     </div>
   );
 }

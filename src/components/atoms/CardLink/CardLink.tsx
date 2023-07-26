@@ -8,7 +8,7 @@ interface CardProps extends PropsWithChildren {
 
 const Card = ({ title, link, children } : CardProps) => {
   return (
-    <div className="bg-slate-50 hover:bg-slate-100 rounded-lg shadow-md p-4 cursor-pointer overflow-hidden w-56">
+    <div className="bg-slate-800 hover:bg-slate-700 text-slate-50 rounded-lg shadow-md p-4 cursor-pointer overflow-hidden">
       <Link href={link}>
         <div className="flex flex-col justify-between space-y-4">
           <h2 className="text-xl font-semibold mb-2">{title}</h2>
