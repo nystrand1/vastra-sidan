@@ -96,7 +96,6 @@ export const authOptions: NextAuthOptions = {
         if (!user) return null;
 
         if (user.password !== sha256(credentials.password)) return null;
-        console.log(user);
         return user;
       },
     }),

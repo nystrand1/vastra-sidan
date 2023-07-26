@@ -79,10 +79,8 @@ const upsertBus = async (bus: Bus, ctx: inferAsyncReturnType<typeof createTRPCCo
 
 export const cronRouter = createTRPCRouter({
   syncEvents: cronProcedure
-    .input(z.any())
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx }) => {
       console.info("Syncing events");
-      console.info('input', input);
       const res = await makeRequest<AwayGame[]>(PATHS.acfURL + "awaygames", 'GET');
       const awayGames = res
         // uncomment to filter out games that have already happened

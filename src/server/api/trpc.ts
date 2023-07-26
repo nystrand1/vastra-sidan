@@ -12,6 +12,7 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import { type CreateNextContextOptions } from "@trpc/server/adapters/next";
 import { type Session } from "next-auth";
 import superjson from "superjson";
+import { SuperJSONResult } from "superjson/dist/types";
 import { ZodError } from "zod";
 import { env } from "~/env.mjs";
 import { getServerAuthSession } from "~/server/auth";
@@ -76,7 +77,14 @@ export const createTRPCContext = async (opts: CreateNextContextOptions) => {
  */
 
 const t = initTRPC.context<typeof createTRPCContext>().create({
-  transformer: superjson,
+  transformer: {
+    deserialize: (value: SuperJSONResult) => {
+      // WP webhook sends null as body which fails superJSON
+      if (value === null) return null;
+      return superjson.deserialize<SuperJSONResult>(value);
+    },
+    serialize: superjson.serialize,
+  },
   errorFormatter({ shape, error }) {
     return {
       ...shape,
@@ -154,12 +162,9 @@ export const adminProcedure = t.procedure.use(enforceUserIsAdmin);
 export const protectedProcedure = t.procedure.use(enforceUserIsAuthed);
 
 const cronOnly = t.middleware(({ ctx, next }) => {
-  console.info("cronOnly");
   if (ctx.cronKey !== env.CRON_KEY) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
-
-  console.info("cronOnly - next");
 
   return next({
     ctx: ctx
