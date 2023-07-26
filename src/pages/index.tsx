@@ -5,7 +5,7 @@ import { api } from "~/utils/api";
 import { PATHS } from "~/utils/constants";
 
 export default function Home() {
-  const { data: awayGames, isLoading: isLoadingAwayGames } = api.public.getEvents.useQuery();
+  const { data: awayGames, isLoading: isLoadingAwayGames } = api.public.getAwayGames.useQuery();
 
   return (
     <>

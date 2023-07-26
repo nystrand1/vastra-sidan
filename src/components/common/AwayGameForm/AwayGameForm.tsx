@@ -1,13 +1,16 @@
+import { type inferRouterOutputs } from "@trpc/server";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { useRef, useState } from "react";
+import { toast } from "react-hot-toast";
+import Checkbox from "~/components/atoms/Checkbox/Checkbox";
+import { SelectField } from "~/components/atoms/SelectField/SelectField";
+import { type AppRouter } from "~/server/api/root";
+import { participantSchema } from "~/utils/zodSchemas";
 import { api } from "../../../utils/api";
 import { Button } from "../../atoms/Button/Button";
 import { InputField } from "../../atoms/InputField/InputField";
 import { OutlinedButton } from "../../atoms/OutlinedButton/OutlinedButton";
-import { toast } from "react-hot-toast";
-import Checkbox from "~/components/atoms/Checkbox/Checkbox";
-import { participantSchema } from "~/utils/zodSchemas";
 
 
 interface IPassenger {
@@ -18,15 +21,25 @@ interface IPassenger {
   member: boolean;
   youth: boolean;
   consent: boolean;
+  busId: string;
 }
 
 interface PassengerFormProps {
   index: number;
   passenger?: Partial<IPassenger>;
   onRemove: (index: number) => void;
+  buses: inferRouterOutputs<AppRouter>['public']['getAwayGame']['buses'];
 }
 
-const PassengerForm = ({ index, passenger, onRemove } : PassengerFormProps) => {
+const PassengerForm = ({ index, passenger, onRemove, buses } : PassengerFormProps) => {
+  const busOptions = buses.map((bus) => {
+    const fullyBooked = bus._count.passengers >= bus.seats;
+    return {
+      value: bus.id,
+      label: `${bus.name} - (${bus._count.passengers}/${bus.seats})` + (fullyBooked ? " - Fullbokad" : "") ,
+      disabled: fullyBooked
+    }
+  })
   return (
     <div className="flex flex-col space-y-2 p-4 bg-gray-700 rounded-md">
       <InputField
@@ -61,6 +74,13 @@ const PassengerForm = ({ index, passenger, onRemove } : PassengerFormProps) => {
         name={`email_${index}`}
         defaultValue={passenger?.email || ""}
         required
+      />
+      <SelectField
+        label="Buss"
+        id={`busId_${index}`}
+        name={`busId_${index}`}
+        placeholder="Välj buss..."
+        options={busOptions}
       />
       <Checkbox
         label="Jag har läst & förstått reglerna kring bussresorna"
@@ -139,11 +159,12 @@ export const AwayGameForm = () => {
               email: session.data.user?.email || "",
               member: false,
               youth: false,
+              busId: awayGame?.buses[0]?.id || '',
             } as IPassenger
           }
           return (
             <div key={index}>
-              <PassengerForm index={index} passenger={passenger} onRemove={(x: number) => {
+              <PassengerForm buses={awayGame.buses} index={index} passenger={passenger} onRemove={(x: number) => {
                 setPassengers(passengers.filter((p) => p.index !== x));
               }} />
             </div>

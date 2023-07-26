@@ -5,4 +5,5 @@ export const participantSchema = z.object({
   email: z.string().email(),
   phone: z.string(),
   consent: z.literal("on"),
+  busId: z.string()
 });
