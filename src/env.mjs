@@ -24,7 +24,10 @@ export const env = createEnv({
     WORDPRESS_API_KEY: z.string().min(1),
     CRON_KEY: z.string().min(1),
     RESEND_API_KEY: z.string().min(1),
-    CANCELLATION_URL: z.string().url(),
+    CANCELLATION_URL: z.preprocess(
+      (str) =>  process.env.VERCEL_URL ? `${process.env.VERCEL_URL}/bortaresor/avboka` : str,
+      z.string().min(1)
+    ),
   },
 
   /**
