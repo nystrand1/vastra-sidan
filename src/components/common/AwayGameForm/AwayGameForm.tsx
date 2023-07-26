@@ -93,7 +93,7 @@ export const AwayGameForm = () => {
   const formRef = useRef<HTMLFormElement>(null);
   if (!id) return null
   if (Array.isArray(id)) return null;
-  const { data: awayGame, isLoading } = api.wordpress.getAwayGame.useQuery({ id: id });
+  const { data: awayGame, isLoading } = api.public.getAwayGame.useQuery({ id: id });
   const { mutateAsync: submitForm } = api.payment.submitEventForm.useMutation();
   if (isLoading) return null;
   if (!awayGame) return null;

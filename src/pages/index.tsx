@@ -1,4 +1,3 @@
-import { signIn, signOut, useSession } from "next-auth/react";
 import Head from "next/head";
 import Card from "~/atoms/CardLink/CardLink";
 import { Progressbar } from "~/atoms/Progressbar/Progressbar";
@@ -6,7 +5,7 @@ import { api } from "~/utils/api";
 import { PATHS } from "~/utils/constants";
 
 export default function Home() {
-  const { data: awayGames, isLoading: isLoadingAwayGames } = api.wordpress.getAwayGames.useQuery();
+  const { data: awayGames, isLoading: isLoadingAwayGames } = api.public.getEvents.useQuery();
 
   return (
     <>
@@ -18,11 +17,11 @@ export default function Home() {
             Västra Sidan Events
           </h1>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-8 text-black">
-            {isLoadingAwayGames && <p className="text-white">Loading events...</p>}
+            {isLoadingAwayGames && <p className="text-white">Laddar events...</p>}
             {awayGames?.map((game) => (
               <Card
                 key={game.id}
-                title={game.enemyTeam}
+                title={game.name}
                 link={`${PATHS.awayGames}${game.id}`}
               >
                 <Progressbar

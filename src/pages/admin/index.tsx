@@ -23,11 +23,14 @@ export default function Admin() {
         {events && events.map((event) => (
           <div key={event.id} className="col-span-12 md:col-span-4">
             <Card link={`/admin/events/${event.id}`} title={event.name}>
-              <Progressbar
-                label="Antal anmälda"
-                maxValue={100}
-                currentValue={57}
-              />
+              {event.buses && event.buses.map((bus) => (
+                <Progressbar
+                  key={bus.id}
+                  label={bus.name}
+                  maxValue={bus.seats}
+                  currentValue={bus.passengers.length || 0}
+                />
+              ))}
             </Card>
           </div>
         ))}

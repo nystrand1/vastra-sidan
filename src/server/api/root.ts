@@ -1,9 +1,8 @@
-import { exampleRouter } from "~/server/api/routers/example";
 import { createTRPCRouter } from "~/server/api/trpc";
-import { wordpressRouter } from "./routers/wordpress";
 import { paymentRouter } from "./routers/payment";
 import { cronRouter } from "./routers/cron";
 import { adminRouter } from "./routers/admin";
+import { publicRouter } from "./routers/public";
 
 /**
  * This is the primary router for your server.
@@ -11,8 +10,7 @@ import { adminRouter } from "./routers/admin";
  * All routers added in /api/routers should be manually added here.
  */
 export const appRouter = createTRPCRouter({
-  example: exampleRouter,
-  wordpress: wordpressRouter,
+  public: publicRouter,
   payment: paymentRouter,
   cron: cronRouter,
   admin: adminRouter

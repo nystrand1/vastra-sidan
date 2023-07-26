@@ -6,8 +6,41 @@ import {
   type createTRPCContext,
 } from "~/server/api/trpc";
 import { type AwayGame } from "~/types/wordpressTypes";
-import { PATHS, awayGameMapper, makeRequest } from "./wordpress";
-import { z } from "zod";
+import { env } from "~/env.mjs";
+
+const apiKey = env.WORDPRESS_API_KEY;
+
+const baseUrl = env.NEXT_PUBLIC_WORDPRESS_URL;
+
+export const RESOURCES = {
+  memberPage: "options/acf-page-options",
+  awayGames: "awaygames",
+}
+
+export const PATHS = {
+  acfURL: baseUrl + "/wp-json/acf/v3/",
+  wpURL: baseUrl + "/wp-json/wp/v2/",
+}
+
+
+export const makeRequest = async <T>(url: string, method: string, body?: BodyInit) : Promise<T> => {
+  const headers = new Headers();
+  headers.set("Authorization", "Bearer " + apiKey)
+  try {
+    const res = await fetch(url, {
+      method: method,
+      headers: headers,
+      body: body
+    });
+    if (!res.ok) {
+      throw new Error(res.statusText);
+    }
+    return res.json() as T;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
 
 const awayGameToEvent = (awayGame: ReturnType<typeof awayGameMapper>) : { event: VastraEvent, buses: Bus[] }  => ({
   event: {
@@ -76,12 +109,27 @@ const upsertBus = async (bus: Bus, ctx: inferAsyncReturnType<typeof createTRPCCo
   }
 }
 
+export const awayGameMapper = (awayGame: AwayGame) => (
+  {
+    ...awayGame.acf,
+    id: awayGame.id,
+    enemyTeam: awayGame.acf.enemyteam,
+    busInfo: awayGame.acf.businfo,
+    memberPrice: awayGame.acf.memberprice,
+    memberPriceYouth: awayGame.acf.memberprice_youth,
+    nonMemberPrice: awayGame.acf.nonmemberprice,
+    nonMemberPriceYouth: awayGame.acf.nonmemberprice_youth,
+    maxSeats: awayGame.acf.buses.reduce((acc, bus) => acc + Number(bus.maxSeats), 0),
+    bookedSeats: awayGame.acf.buses.reduce((acc, bus) => acc + Number(bus.occupiedSeats), 0),
+  }
+);
+
 
 export const cronRouter = createTRPCRouter({
   syncEvents: cronProcedure
     .mutation(async ({ ctx }) => {
       console.info("Syncing events");
-      const res = await makeRequest<AwayGame[]>(PATHS.acfURL + "awaygames", 'GET');
+      const res = await makeRequest<AwayGame[]>(PATHS.acfURL + RESOURCES.awayGames, 'GET');
       const awayGames = res
         // uncomment to filter out games that have already happened
         //.filter((awayGame) => awayGame.acf.date >= new Date().toISOString())
