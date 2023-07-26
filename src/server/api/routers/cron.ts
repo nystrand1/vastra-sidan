@@ -27,7 +27,7 @@ const awayGameToEvent = (awayGame: ReturnType<typeof awayGameMapper>) : { event:
 
 const awayGameToBuses = (awayGame: ReturnType<typeof awayGameMapper>) : Bus[] => {
   return awayGame.buses.map((bus) => ({
-    id: `${awayGame.id}-${awayGame.enemyTeam}-${bus.busName}`,
+    id: `${awayGame.id}-${bus.busName}`,
     name: bus.busName,
     seats: Number(bus.maxSeats),
     createdAt: new Date(),
