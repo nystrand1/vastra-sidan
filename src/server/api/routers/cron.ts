@@ -1,13 +1,12 @@
+import { type Bus, type VastraEvent } from "@prisma/client";
+import { type inferAsyncReturnType } from "@trpc/server";
 import {
-  type createTRPCContext,
   createTRPCRouter,
   cronProcedure,
+  type createTRPCContext,
 } from "~/server/api/trpc";
 import { type AwayGame } from "~/types/wordpressTypes";
-import { awayGameMapper, makeRequest, PATHS } from "./wordpress";
-import { type Bus, type VastraEvent } from "@prisma/client";
-import { type inferAsyncReturnType, inferProcedureOutput } from "@trpc/server";
-import { AppRouter } from "../root";
+import { PATHS, awayGameMapper, makeRequest } from "./wordpress";
 import { z } from "zod";
 
 const awayGameToEvent = (awayGame: ReturnType<typeof awayGameMapper>) : { event: VastraEvent, buses: Bus[] }  => ({
