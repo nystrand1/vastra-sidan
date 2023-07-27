@@ -51,8 +51,8 @@ export const paymentRouter = createTRPCRouter({
 
       await resend.sendEmail({
         from: 'onboarding@resend.dev',
-        to: 'filip.nystrand@gmail.com',
-        subject: 'Hello World',
+        to: participant?.email || 'filip.nystrand@gmail.com',
+        subject: `Anmälan till ${event?.name}`,
         react: EventSignUp({ name: participant?.name || '' , cancellationUrl })
       });
       return {
