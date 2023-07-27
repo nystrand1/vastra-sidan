@@ -22,7 +22,7 @@ export default function Admin() {
       <div className="grid grid-cols-12 gap-4 md:gap-8 text-black max-h-[60vh] md:max-h-[100%] overflow-auto">
         {events && events.map((event) => (
           <div key={event.id} className="col-span-12 md:col-span-4">
-            <Card link={`/admin/events/${event.id}`} title={event.name}>
+            <Card link={`/admin/event/${event.id}`} title={event.name}>
               {event.buses && event.buses.map((bus) => (
                 <Progressbar
                   key={bus.id}

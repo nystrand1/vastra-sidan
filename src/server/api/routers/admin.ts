@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   createTRPCRouter,
   adminProcedure,
@@ -16,4 +17,21 @@ export const adminRouter = createTRPCRouter({
     });
     return res;
   }),
+  getEvent: adminProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ input, ctx }) => {
+    const res = await ctx.prisma.vastraEvent.findFirst({
+      where: {
+        id: input.id,
+      },
+      include: {
+        buses: {
+          include: {
+            passengers: true,
+          }
+        }
+      }
+    });
+    return res;
+  })
 });

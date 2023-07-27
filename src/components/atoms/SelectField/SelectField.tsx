@@ -1,12 +1,13 @@
 
 
 interface SelectFieldProps extends React.InputHTMLAttributes<HTMLSelectElement>  {
-  options: { value: string; label: string, disabled: boolean }[];
+  options: { value: string; label: string, disabled?: boolean }[];
   label: string,
   labelProps?: React.LabelHTMLAttributes<HTMLLabelElement>,
+  onChange?: (event: React.ChangeEvent<HTMLSelectElement>) => void;
 }
 
-export const SelectField = ({ id, label, options, name, labelProps, placeholder, ...props } : SelectFieldProps) => {
+export const SelectField = ({ id, label, options, name, labelProps, placeholder, onChange, ...props } : SelectFieldProps) => {
   return (
     <div>
       <label
@@ -19,7 +20,8 @@ export const SelectField = ({ id, label, options, name, labelProps, placeholder,
           id={id}
           name={name}
           placeholder={placeholder}
-          className="bg-transparent w-full px-4 py-2 border-gray-300 text-slate-50 leading-6 text-gray-900 border rounded-lg shadow-sm focus:ring focus:ring-opacity-50 focus:ring-blue-500"
+          onChange={onChange}
+          className="bg-transparent w-full px-4 py-2 border-gray-300 text-slate-50 leading-6 border rounded-lg shadow-sm focus:ring focus:ring-opacity-50 focus:ring-blue-500"
           {...props}
         >
           {options.map((option) => (
