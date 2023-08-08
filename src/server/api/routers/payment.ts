@@ -8,7 +8,7 @@ import {
 } from "~/server/api/trpc";
 import { participantSchema } from "~/utils/zodSchemas";
 import { EventSignUp } from "~/components/emails/EventSignUp";
-import { createPaymentRequest, getPaymentStatus, swishClient } from "~/utils/swishHelpers";
+import { createPaymentRequest, getPaymentStatus } from "~/utils/swishHelpers";
 
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
@@ -82,7 +82,7 @@ export const paymentRouter = createTRPCRouter({
       return "you can now see this secret message!";
   }),
   requestSwishPayment: publicProcedure
-    .mutation(async({ ctx }) => {
+    .mutation(async() => {
       await delay(1000);
       // Setup the data object for the payment
       const data = {
@@ -112,12 +112,12 @@ export const paymentRouter = createTRPCRouter({
 
     }),
   swishCallback: publicProcedure
-    .mutation(({ input, ctx }) => {
+    .mutation(({ input }) => {
       console.log("SWISH CALLBACK");
       console.log("input", input);
     }),
   getSwishPaymentStatus: publicProcedure
-    .query(async ({ input }) => {
+    .query(async () => {
       const id = "F4DB8C8DA9BB41238459A50015154AF3"
       try {
         const res = await getPaymentStatus(id);

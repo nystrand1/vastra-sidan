@@ -45,7 +45,7 @@ const createInnerTRPCContext = (opts: CreateContextOptions) => {
   return {
     session: opts.session,
     prisma,
-    cronKey: opts.cronKey
+    cronKey: opts.cronKey,
   };
 };
 
@@ -61,10 +61,9 @@ export const createTRPCContext = async (opts: CreateNextContextOptions) => {
   // Get the session from the server using the getServerSession wrapper function
   const session = await getServerAuthSession({ req, res });
   const cronKey = req.query["cron-key"] ?? null;
-
   return createInnerTRPCContext({
     session,
-    cronKey: cronKey as string
+    cronKey: cronKey as string,
   });
 };
 
@@ -172,3 +171,12 @@ const cronOnly = t.middleware(({ ctx, next }) => {
 });
 
 export const cronProcedure = t.procedure.use(cronOnly);
+
+const swishOnly = t.middleware(({ ctx, next }) => {
+  // Check Swish IP addresses
+  return next({
+    ctx: ctx
+  })
+});
+
+export const swishProcedure = t.procedure.use(swishOnly);
