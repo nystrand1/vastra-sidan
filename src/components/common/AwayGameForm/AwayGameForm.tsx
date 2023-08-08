@@ -11,6 +11,7 @@ import { api } from "../../../utils/api";
 import { Button } from "../../atoms/Button/Button";
 import { InputField } from "../../atoms/InputField/InputField";
 import { OutlinedButton } from "../../atoms/OutlinedButton/OutlinedButton";
+import { TextArea } from "~/components/atoms/TextArea/TextArea";
 
 
 interface IPassenger {
@@ -18,8 +19,8 @@ interface IPassenger {
   lastName: string;
   phone: string;
   email: string;
-  member: boolean;
-  youth: boolean;
+  member: "on" | "off";
+  youth: "on" | "off";
   consent: boolean;
   busId: string;
 }
@@ -40,6 +41,9 @@ const PassengerForm = ({ index, passenger, onRemove, buses } : PassengerFormProp
       disabled: fullyBooked
     }
   })
+
+  const isSwishNumber = index === 0;
+
   return (
     <div className="flex flex-col space-y-2 p-4 bg-gray-700 rounded-md">
       <InputField
@@ -67,6 +71,9 @@ const PassengerForm = ({ index, passenger, onRemove, buses } : PassengerFormProp
         type="tel"
         required
       />
+      {isSwishNumber && (
+        <span className="text-xs">Detta nummer kommer användas för Swish-betalning</span>
+      )}
       <InputField
         label="Email"
         placeholder="email..."
@@ -82,11 +89,27 @@ const PassengerForm = ({ index, passenger, onRemove, buses } : PassengerFormProp
         placeholder="Välj buss..."
         options={busOptions}
       />
+      <TextArea
+        label="Övrigt"
+        id={`note_${index}`}
+        name={`note_${index}`}
+        placeholder="Övrigt... (t.ex endast dit)"
+      />
+      <Checkbox
+        label="Medlem"
+        id={`member_${index}`}
+        name={`member_${index}`}
+        required
+      />
+      <Checkbox
+        label="Ungdom (upp till 20 år)"
+        id={`youth_${index}`}
+        name={`youth_${index}`}
+      />
       <Checkbox
         label="Jag har läst & förstått reglerna kring bussresorna"
         id={`consent_${index}`}
         name={`consent_${index}`}
-        required
       />
       {index > 0 && (
         <OutlinedButton type="button" onClick={() => onRemove(index)}>Ta bort</OutlinedButton>
@@ -100,6 +123,8 @@ const formToParticipant = (form: Record<string, IPassenger>) => {
     return {
       ...input,
       name: `${input.firstName} ${input.lastName}`,
+      member: input.member === "on",
+      youth: input.youth === "on",
     }
   })
 }
@@ -157,8 +182,8 @@ export const AwayGameForm = () => {
               lastName: "",
               phone: "",
               email: session.data.user?.email || "",
-              member: false,
-              youth: false,
+              member: "off",
+              youth: "off",
               busId: awayGame?.buses[0]?.id || '',
             } as IPassenger
           }
