@@ -109,12 +109,29 @@ model Participant {
     name                String
     email               String
     phone               String
+    note                String?   @db.Text
     event               VastraEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
     eventId             String
     bus                 Bus?    @relation(fields: [busId], references: [id])
     busId               String?
     cancellationToken   String? @default(uuid())
+    payment             SwishPayment?
 
     @@index([eventId])
     @@index([busId])
+}
+
+model SwishPayment {
+    id                  String   @id @default(cuid())
+    createdAt           DateTime @default(now())
+    updatedAt           DateTime @updatedAt
+    paymentRequestUrl   String
+    paymentId           String
+    payerAlias          String
+    payeeAlias          String
+    amount              Float
+    message             String?
+    status              String
+    participantId       String  @unique
+    participant         Participant    @relation(fields: [participantId], references: [id])
 }
