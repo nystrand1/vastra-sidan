@@ -86,6 +86,7 @@ export const paymentRouter = createTRPCRouter({
       await delay(1000);
       // Setup the data object for the payment
       console.info('API URL', env.API_URL);
+      return env.API_URL;
       const data = {
         "payeePaymentReference" : "0123456789",
         "callbackUrl" : `${env.API_URL}/payment.swishCallback`,
