@@ -115,10 +115,15 @@ model Participant {
     bus                 Bus?    @relation(fields: [busId], references: [id])
     busId               String?
     cancellationToken   String? @default(uuid())
-    payment             SwishPayment?
+    swishPaymentId      String?
+    swishPayment        SwishPayment? @relation(fields: [swishPaymentId], references: [id])
+    payAmount           Float?
+    member              Boolean @default(false)
+    youth               Boolean @default(false)
 
     @@index([eventId])
     @@index([busId])
+    @@index([swishPaymentId])
 }
 
 model SwishPayment {
@@ -132,6 +137,5 @@ model SwishPayment {
     amount              Float
     message             String?
     status              String
-    participantId       String  @unique
-    participant         Participant    @relation(fields: [participantId], references: [id])
+    participants        Participant[]
 }
