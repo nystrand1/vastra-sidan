@@ -103,7 +103,9 @@ export const paymentRouter = createTRPCRouter({
         return "ok";
       } catch (err) {
         console.error('Error creating payment request');
-        console.error(err);
+        const error = err as { response: { data: any } };
+        console.error(error.response);
+        console.error(error.response.data);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
         })
