@@ -25,11 +25,11 @@ export const env = createEnv({
     CRON_KEY: z.string().min(1),
     RESEND_API_KEY: z.string().min(1),
     CANCELLATION_URL: z.preprocess(
-      (str) =>  process.env.VERCEL_URL ? `${process.env.VERCEL_URL}/bortaresor/avboka` : str,
+      (str) =>  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/bortaresor/avboka` : str,
       z.string().min(1)
     ),
     API_URL: z.preprocess(
-      (str) =>  process.env.VERCEL_URL ? `${process.env.VERCEL_URL}/api/trpc` : str,
+      (str) =>  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/api/trpc` : str,
       z.string().min(1)
     ),
     SWISH_MERCHANT_BASEURL: z.string().url(),
