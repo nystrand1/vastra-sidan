@@ -9,9 +9,9 @@ const keyPath = path.resolve('./swishCerts/Swish_Merchant_TestCertificate_123467
 const caPath = path.resolve('./swishCerts/Swish_TLS_RootCA.pem');
 
 const swishAgent = new https.Agent({
-  cert: fs.readFileSync(certPath, { encoding: 'utf8' }),
-  key: fs.readFileSync(keyPath, { encoding: 'utf8' }),
-  ca: fs.readFileSync(caPath, { encoding: 'utf8' }),
+  cert: env.LOCAL_SWISH_CERTS ? fs.readFileSync(certPath, { encoding: 'utf8' }) : env.SWISH_CERT,
+  key: env.LOCAL_SWISH_CERTS ? fs.readFileSync(keyPath, { encoding: 'utf8' }) : env.SWISH_KEY,
+  ca: env.LOCAL_SWISH_CERTS ? fs.readFileSync(caPath, { encoding: 'utf8' }) : env.SWISH_CA,
 });
 
 

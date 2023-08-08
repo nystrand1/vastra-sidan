@@ -34,6 +34,10 @@ export const env = createEnv({
     ),
     SWISH_MERCHANT_BASEURL: z.string().url(),
     BOOKING_EMAIL: z.string().email(),
+    LOCAL_SWISH_CERTS: z.boolean().default(true),
+    SWISH_CERT: process.env.NODE_ENV === "production" ? z.string().min(1) : z.string().min(1).optional(),
+    SWISH_KEY: process.env.NODE_ENV === "production" ? z.string().min(1) : z.string().min(1).optional(),
+    SWISH_CA: process.env.NODE_ENV === "production" ? z.string().min(1) : z.string().min(1).optional(),
   },
 
   /**
@@ -63,6 +67,10 @@ export const env = createEnv({
     SWISH_MERCHANT_BASEURL: process.env.SWISH_MERCHANT_BASEURL,
     API_URL: process.env.API_URL,
     BOOKING_EMAIL: process.env.BOOKING_EMAIL,
+    LOCAL_SWISH_CERTS: process.env.LOCAL_SWISH_CERTS,
+    SWISH_CA: process.env.SWISH_CA,
+    SWISH_CERT: process.env.SWISH_CERT,
+    SWISH_KEY: process.env.SWISH_KEY,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.
