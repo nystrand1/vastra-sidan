@@ -28,6 +28,12 @@ export const env = createEnv({
       (str) =>  process.env.VERCEL_URL ? `${process.env.VERCEL_URL}/bortaresor/avboka` : str,
       z.string().min(1)
     ),
+    API_URL: z.preprocess(
+      (str) =>  process.env.VERCEL_URL ? `${process.env.VERCEL_URL}/api/trpc` : str,
+      z.string().min(1)
+    ),
+    SWISH_MERCHANT_BASEURL: z.string().url(),
+    BOOKING_EMAIL: z.string().email(),
   },
 
   /**
@@ -54,6 +60,9 @@ export const env = createEnv({
     CRON_KEY: process.env.CRON_KEY,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     CANCELLATION_URL: process.env.CANCELLATION_URL,
+    SWISH_MERCHANT_BASEURL: process.env.SWISH_MERCHANT_BASEURL,
+    API_URL: process.env.API_URL,
+    BOOKING_EMAIL: process.env.BOOKING_EMAIL,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.
