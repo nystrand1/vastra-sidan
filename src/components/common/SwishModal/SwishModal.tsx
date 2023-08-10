@@ -3,9 +3,14 @@ import { Button } from "~/components/atoms/Button/Button";
 import Modal from "~/components/atoms/Modal/Modal";
 import { Spinner } from "~/components/atoms/Spinner/Spinner";
 
-export const SwishModal = () => {
+interface SwishModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export const SwishModal = ({ isOpen, onClose } : SwishModalProps) => {
   const router = useRouter();
-  const swishUrl = "swish://paymentrequest?token=c28a4061470f4af48973bd2a4642b4fa&callbackurl=merchant%253A%252F%252F";
+  const swishUrl = "swish://paymentrequest";
 
   const openSwishApp = async () => {
     await router.push(swishUrl);
@@ -13,8 +18,8 @@ export const SwishModal = () => {
 
   return (
     <Modal
-      isOpen
-      onClose={() => {console.log("close")}}
+      isOpen={isOpen}
+      onClose={onClose}
     >
       <div className="space-y-4">
         <h4 className="text-xl">Swish</h4>

@@ -131,7 +131,6 @@ model SwishPayment {
     createdAt           DateTime @default(now())
     updatedAt           DateTime @updatedAt
     paymentRequestUrl   String
-    paymentId           String
     payerAlias          String
     payeeAlias          String
     amount              Float

@@ -12,6 +12,7 @@ import { Button } from "../../atoms/Button/Button";
 import { InputField } from "../../atoms/InputField/InputField";
 import { OutlinedButton } from "../../atoms/OutlinedButton/OutlinedButton";
 import { TextArea } from "~/components/atoms/TextArea/TextArea";
+import { SwishModal } from "../SwishModal/SwishModal";
 
 
 interface IPassenger {
@@ -135,11 +136,13 @@ export const AwayGameForm = () => {
   const { id } = query;
   const session = useSession();
   const [passengers, setPassengers] = useState([{ index: 0 }]);
+  const [modalOpen, setModalOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   if (!id) return null
   if (Array.isArray(id)) return null;
   const { data: awayGame, isLoading } = api.public.getAwayGame.useQuery({ id: id });
   const { mutateAsync: submitForm } = api.payment.submitEventForm.useMutation();
+  const { mutateAsync: createPayment } = api.payment.requestSwishPayment.useMutation();
   if (isLoading) return null;
   if (!awayGame) return null;
 
@@ -155,58 +158,78 @@ export const AwayGameForm = () => {
       return acc;
     }, {} as Record<string, any>);
     const participants = participantSchema.array().parse(formToParticipant(formattedValues));
+    if (participants.length < 1) return;
+    setModalOpen(true);
 
-    const res = await toast.promise(submitForm({
-      eventId: id,
+    const payer = participants[0];
+
+    if (!payer) return;
+
+    const payment = await createPayment({
       participants,
-    }), {
-      loading: 'Skickar anmälan...',
-      success: 'Anmälan skickad!',
-      error: 'Något gick fel, försök igen senare.',
+      eventId: id,
     });
-
-    if (res.status === "ok") {
+    console.log("payment", payment);
+    if (payment.status === 201) {
+      setModalOpen(false);
       setPassengers([{ index: 0 }]);
       formRef.current?.reset();
+      toast.success("Nu är du anmäld! Bekräftelse skickas till din mail.");
     }
+    // const res = await toast.promise(submitForm({
+    //   eventId: id,
+    //   participants,
+    // }), {
+    //   loading: 'Skickar anmälan...',
+    //   success: 'Anmälan skickad!',
+    //   error: 'Något gick fel, försök igen senare.',
+    // });
+
+    // if (res.status === "ok") {
+    //   setPassengers([{ index: 0 }]);
+    //   formRef.current?.reset();
+    // }
   }
 
   return (
-    <form onSubmit={handleSubmit} ref={formRef}>
-      <div className="grid gap-8">
-        {passengers.map(({ index }) => {
-          let passenger;
-          if (index === 0 && session.data) {
-            passenger = {
-              firstName: session.data.user?.name || "",
-              lastName: "",
-              phone: "",
-              email: session.data.user?.email || "",
-              member: "off",
-              youth: "off",
-              busId: awayGame?.buses[0]?.id || '',
-            } as IPassenger
-          }
-          return (
-            <div key={index}>
-              <PassengerForm buses={awayGame.buses} index={index} passenger={passenger} onRemove={(x: number) => {
-                setPassengers(passengers.filter((p) => p.index !== x));
-              }} />
-            </div>
-          )
-        })}
-        <div className="flex flex-col space-y-2">
-          <Button
-            type="button"
-            onClick={() => {
-              setPassengers([...passengers, { index: passengers.length + 1 }])
-            }}
-            >
-              Lägg till passagerare
-            </Button>
-          <Button type="submit">Anmäl</Button>
+    <>
+      <SwishModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
+      <form onSubmit={handleSubmit} ref={formRef}>
+        <div className="grid gap-8">
+          {passengers.map(({ index }) => {
+            let passenger;
+            if (index === 0 && session.data) {
+              passenger = {
+                firstName: session.data.user?.name || "",
+                lastName: "",
+                phone: "",
+                email: session.data.user?.email || "",
+                member: "off",
+                youth: "off",
+                busId: awayGame?.buses[0]?.id || '',
+              } as IPassenger
+            }
+            return (
+              <div key={index}>
+                <PassengerForm buses={awayGame.buses} index={index} passenger={passenger} onRemove={(x: number) => {
+                  setPassengers(passengers.filter((p) => p.index !== x));
+                }} />
+              </div>
+            )
+          })}
+          <div className="flex flex-col space-y-2">
+            <Button
+              type="button"
+              onClick={() => {
+                setPassengers([...passengers, { index: passengers.length + 1 }])
+              }}
+              >
+                Lägg till passagerare
+              </Button>
+            <Button type="submit">Anmäl</Button>
+          </div>
         </div>
-      </div>
-  </form>
+    </form>
+    </>
 );
 }
