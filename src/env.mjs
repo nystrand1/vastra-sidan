@@ -29,7 +29,7 @@ export const env = createEnv({
       z.string().min(1)
     ),
     API_URL: z.preprocess(
-      (str) =>  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/api/trpc` : str,
+      (str) =>  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/api` : str,
       z.string().min(1)
     ),
     SWISH_MERCHANT_BASEURL: z.string().url(),

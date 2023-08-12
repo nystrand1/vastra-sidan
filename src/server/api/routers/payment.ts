@@ -6,12 +6,13 @@ import {
   createTRPCRouter,
   publicProcedure
 } from "~/server/api/trpc";
-import { participantSchema } from "~/utils/zodSchemas";
+import { participantSchema, swishCallbackSchema } from "~/utils/zodSchemas";
 import { EventSignUp } from "~/components/emails/EventSignUp";
 import { PAYMENT_STATUS, createPaymentRequest, getPaymentStatus } from "~/utils/swishHelpers";
-import { PrismaClient, VastraEvent } from "@prisma/client";
+import { type Participant, type PrismaClient, type VastraEvent } from "@prisma/client";
 
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+const resend = new Resend(env.RESEND_API_KEY);
 
 type ParticipantInput = z.infer<typeof participantSchema>;
 
@@ -27,47 +28,58 @@ const calculateCost = (participants: ParticipantInput[], event: VastraEvent) => 
 
 }
 
-const pollPaymentStatus = async (id: string, url: string, prisma: PrismaClient, attempt = 0) => {
-  if (attempt > 10) {
+const sendConfirmationEmail = async (participant: Participant, event: VastraEvent) => {
+  const cancellationUrl = `${env.CANCELLATION_URL}?token=${participant?.cancellationToken || ''}`;
+  return await resend.sendEmail({
+    from: env.BOOKING_EMAIL,
+    to: participant?.email || 'filip.nystrand@gmail.com',
+    subject: `Anmälan till ${event?.name}`,
+    react: EventSignUp({ name: participant?.name || '' , cancellationUrl })
+  });
+}
+
+const pollPaymentStatus = async (id: string, url: string, prisma: PrismaClient, attempt = 0) : Promise<{ success : boolean }> => {
+  // Retry 30 times
+  if (attempt > 30) {
+    console.error(`Payment timed out - attempt: ${attempt}`);
+    const failedPayment = await prisma.swishPayment.findFirst({
+      where: {
+        id: id,
+      }
+    });
+    if (failedPayment) {
+      console.error("Failed payment", JSON.stringify(failedPayment, null, 2));
+    }
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: "Payment timed out"
     })
   }
-  const status = await getPaymentStatus(url) as { data: { status: string }};
-  if (status.data.status === PAYMENT_STATUS.PAID) {
-    const payment = await prisma.swishPayment.findFirst({
-      where: {
-        id
-      }
-    });
-    if (!payment) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Participant not found"
-      })
+  const successfulPayment = await prisma.swishPayment.findFirst({
+    where: {
+      id: id,
+      status: PAYMENT_STATUS.PAID
     }
-    await prisma.swishPayment.update({
-      where: {
-        id: payment.id
-      },
-      data: {
-        status: PAYMENT_STATUS.PAID
-      }
-    });
+  })
+  console.log(`successfulPayment - attempt: ${attempt}`, successfulPayment)
+  if (successfulPayment) {
+    return {
+      success: true
+    }
   } else {
+    // Wait 1 second before checking again
     await delay(1000);
-    await pollPaymentStatus(id, url, prisma, attempt + 1);
+    return pollPaymentStatus(id, url, prisma, attempt + 1);
   }
 };
 
 export const paymentRouter = createTRPCRouter({
-  submitEventForm: publicProcedure
+  requestSwishPayment: publicProcedure
     .input(z.object({
+      participants: participantSchema.array().min(1),
       eventId: z.string(),
-      participants: z.array(participantSchema),
     }))
-    .mutation(async ({ input, ctx }) => {
+    .mutation(async({ input, ctx }) => {
       const event = await ctx.prisma.vastraEvent.findFirst({
         where: {
           id: input.eventId
@@ -80,36 +92,76 @@ export const paymentRouter = createTRPCRouter({
         })
       }
 
-      const participants = await ctx.prisma.$transaction(
-        input.participants.map(({ consent: _consent, ...participant }) => (
-          ctx.prisma.participant.create({
-           data: {
-             ...participant,
-             eventId: input.eventId,
-           }
-         })
-        ))
-      );
+      const cost = calculateCost(input.participants, event);
 
-      await delay(1000);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const payer = input.participants[0]!
+      const message = `${event.name}. ${input.participants.length} resenärer`.slice(0, 50).replaceAll('/', '-');
+      const data = {
+        "payeePaymentReference" : "0123456789",
+        "callbackUrl" : `${env.API_URL}/payment/swishCallback`,
+        "payerAlias" : payer.phone,
+        "payeeAlias" : "1234679304",
+        "amount" : cost,
+        "currency" : "SEK",
+        "message" : message
+      };
+      try {
+        const res = await createPaymentRequest(data);
+        const paymentRequestUrl = res.headers.location as string;
+        // ID is the last part of the URL
+        const paymentRequestId = paymentRequestUrl.split('/').pop() as string;
+        // Create payment request in our database
+        const swishPayment = await ctx.prisma.swishPayment.create({
+          data: {
+            paymentRequestUrl,
+            paymentId: paymentRequestId,
+            payerAlias: payer.phone,
+            payeeAlias: "1234679304",
+            amount: cost,
+            message: message,
+            status: PAYMENT_STATUS.CREATED,
+          }
+        });
 
-      const resend = new Resend(env.RESEND_API_KEY);
+        // Poll payment status from our DB
+        const paymentStatus = await pollPaymentStatus(swishPayment.id, paymentRequestId, ctx.prisma);
+        if (!paymentStatus?.success) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR"
+          })
+        }
 
-      const [ participant ] = participants;
+        // Create participants for event
+        const participants = await ctx.prisma.$transaction(
+          input.participants.map(({ consent: _consent, ...participant }) => (
+            ctx.prisma.participant.create({
+             data: {
+               ...participant,
+               eventId: input.eventId,
+             }
+           })
+          ))
+        );
 
-      const cancellationUrl = `${env.CANCELLATION_URL}?token=${participant?.cancellationToken || ''}`;
-
-      await resend.sendEmail({
-        from: env.BOOKING_EMAIL,
-        to: participant?.email || 'filip.nystrand@gmail.com',
-        subject: `Anmälan till ${event?.name}`,
-        react: EventSignUp({ name: participant?.name || '' , cancellationUrl })
-      });
-      return {
-        status: "ok",
+        // Send email confirmation to all participants
+        await Promise.all(participants.map(p => sendConfirmationEmail(p, event)));
+        console.info('Payment request created');
+        return {
+          status: 201
+        };
+      } catch (err) {
+        console.error('Error creating payment request');
+        const error = err as { response: { data: any } };
+        console.error(error);
+        console.error(error?.response?.data);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+        })
       }
-    }),
 
+
+    }),
   cancelBooking: publicProcedure
     .input(z.object({ token: z.string() }))
     .mutation(async({ input, ctx }) => {
@@ -129,80 +181,27 @@ export const paymentRouter = createTRPCRouter({
       await delay(1000);
       return "you can now see this secret message!";
   }),
-  requestSwishPayment: publicProcedure
-    .input(z.object({
-      participants: participantSchema.array().min(1),
-      eventId: z.string(),
-    }))
-    .mutation(async({ input, ctx }) => {
-      const event = await ctx.prisma.vastraEvent.findFirst({
-        where: {
-          id: input.eventId
-        }
-      });
-      if (!event) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Event not found"
-        })
-      }
-      await delay(1000);
-
-
-      const cost = calculateCost(input.participants, event);
-
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const payer = input.participants[0]!
-      // Setup the data object for the payment
-      const message = `${event.name}. ${input.participants.length} resenärer`.slice(0, 50).replaceAll('/', '-');
-      const data = {
-        "payeePaymentReference" : "0123456789",
-        "callbackUrl" : `${env.API_URL}/payment.swishCallback`,
-        "payerAlias" : payer.phone,
-        "payeeAlias" : "1234679304",
-        "amount" : cost,
-        "currency" : "SEK",
-        "message" : message
-      };
-
-      try {
-        const res = await createPaymentRequest(data);
-        const paymentRequestUrl = res.headers.location as string;
-
-        const swishPayment = await ctx.prisma.swishPayment.create({
-          data: {
-            paymentRequestUrl,
-            payerAlias: payer.phone,
-            payeeAlias: "1234679304",
-            amount: cost,
-            message: message,
-            status: PAYMENT_STATUS.CREATED,
-          }
-        });
-
-        const paymentRequestId = paymentRequestUrl.split('/').pop() as string;
-
-        const paymentStatus = await pollPaymentStatus(swishPayment.id, paymentRequestId, ctx.prisma);
-        console.log("paymentStatus", paymentStatus);
-        console.info('Payment request created');
-        return {
-          status: 201
-        };
-      } catch (err) {
-        console.error('Error creating payment request');
-        const error = err as { response: { data: any } };
-        console.error(error?.response?.data);
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-        })
-      }
-
-
-    }),
   swishCallback: publicProcedure
-    .mutation(({ input }) => {
+    .input(swishCallbackSchema)
+    .mutation(async ({ input, ctx }) => {
+      // TODO: Protect this endpoint with a secret
+      await ctx.prisma.swishPayment.update({
+        where: {
+          paymentId: input.id
+        },
+        data: {
+          status: input.status,
+          errorCode: input.errorCode,
+          errorMessage: input.errorMessage,
+          datePaid: new Date(input.datePaid),
+          paymentReference: input.paymentReference,
+        }
+      })
       console.log("SWISH CALLBACK");
       console.log("input", input);
+      return {
+        status: 200
+      }
     }),
   getSwishPaymentStatus: publicProcedure
     .query(async () => {

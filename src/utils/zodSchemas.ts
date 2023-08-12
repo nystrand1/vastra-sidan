@@ -10,3 +10,20 @@ export const participantSchema = z.object({
   member: z.boolean(),
   youth: z.boolean(),
 });
+
+export const swishCallbackSchema = z.object({
+  id: z.string(),
+  payeePaymentReference: z.string(),
+  paymentReference: z.string(),
+  callbackUrl: z.string(),
+  payerAlias: z.string(),
+  payeeAlias: z.string(),
+  currency: z.string(),
+  message: z.string(),
+  errorMessage: z.string().nullable(),
+  status: z.string(),
+  amount: z.number(),
+  dateCreated: z.string(),
+  datePaid: z.string(),
+  errorCode: z.string().nullable(),
+})

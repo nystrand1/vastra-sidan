@@ -130,11 +130,18 @@ model SwishPayment {
     id                  String   @id @default(cuid())
     createdAt           DateTime @default(now())
     updatedAt           DateTime @updatedAt
+    paymentId           String   @unique
     paymentRequestUrl   String
+    paymentReference    String?
     payerAlias          String
     payeeAlias          String
     amount              Float
     message             String?
     status              String
+    errorCode           String?
+    errorMessage        String?
+    datePaid            DateTime?
     participants        Participant[]
+
+    @@index([paymentId])
 }

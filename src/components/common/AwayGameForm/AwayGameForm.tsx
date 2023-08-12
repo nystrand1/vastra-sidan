@@ -13,6 +13,7 @@ import { InputField } from "../../atoms/InputField/InputField";
 import { OutlinedButton } from "../../atoms/OutlinedButton/OutlinedButton";
 import { TextArea } from "~/components/atoms/TextArea/TextArea";
 import { SwishModal } from "../SwishModal/SwishModal";
+import { set } from "date-fns";
 
 
 interface IPassenger {
@@ -141,7 +142,6 @@ export const AwayGameForm = () => {
   if (!id) return null
   if (Array.isArray(id)) return null;
   const { data: awayGame, isLoading } = api.public.getAwayGame.useQuery({ id: id });
-  const { mutateAsync: submitForm } = api.payment.submitEventForm.useMutation();
   const { mutateAsync: createPayment } = api.payment.requestSwishPayment.useMutation();
   if (isLoading) return null;
   if (!awayGame) return null;
@@ -163,32 +163,26 @@ export const AwayGameForm = () => {
 
     const payer = participants[0];
 
-    if (!payer) return;
-
-    const payment = await createPayment({
-      participants,
-      eventId: id,
-    });
-    console.log("payment", payment);
-    if (payment.status === 201) {
+    if (!payer) {
+      toast.error("Du måste ange en betalare");
       setModalOpen(false);
-      setPassengers([{ index: 0 }]);
-      formRef.current?.reset();
-      toast.success("Nu är du anmäld! Bekräftelse skickas till din mail.");
+      return;
     }
-    // const res = await toast.promise(submitForm({
-    //   eventId: id,
-    //   participants,
-    // }), {
-    //   loading: 'Skickar anmälan...',
-    //   success: 'Anmälan skickad!',
-    //   error: 'Något gick fel, försök igen senare.',
-    // });
 
-    // if (res.status === "ok") {
-    //   setPassengers([{ index: 0 }]);
-    //   formRef.current?.reset();
-    // }
+    try {
+      const payment = await createPayment({
+        participants,
+        eventId: id,
+      });
+      if (payment?.status === 201) {
+        setPassengers([{ index: 0 }]);
+        formRef.current?.reset();
+        toast.success("Nu är du anmäld! Bekräftelse skickas till din mail.");
+      }
+    } catch (error) {
+      toast.error("Något gick fel, försök igen!");
+    }
+    setModalOpen(false);
   }
 
   return (
