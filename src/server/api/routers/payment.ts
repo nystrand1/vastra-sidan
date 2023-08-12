@@ -16,16 +16,23 @@ const resend = new Resend(env.RESEND_API_KEY);
 
 type ParticipantInput = z.infer<typeof participantSchema>;
 
-const calculateCost = (participants: ParticipantInput[], event: VastraEvent) => {
-  const youthMember = participants.filter(p => p.youth && p.member).length;
-  const member = participants.filter(p => p.member && !p.youth).length;
-  const youth = participants.filter(p => p.youth && !p.member).length;
-  const nonMember = participants.length - member - youth - youthMember;
-  return member * event.memberPrice
-    + youth * event.youthPrice
-    + nonMember * event.defaultPrice
-    + youthMember * event.youthMemberPrice;
+const getParticipantCost = (participant: Omit<ParticipantInput, 'consent'>, event: VastraEvent) => {
+  if (participant.youth && participant.member) {
+    return event.youthMemberPrice;
+  } else if (participant.youth && !participant.member) {
+    return event.youthPrice;
+  } else if (!participant.youth && participant.member) {
+    return event.memberPrice;
+  } else {
+    return event.defaultPrice;
+  }
+}
 
+const calculateCost = (participants: ParticipantInput[], event: VastraEvent) => {
+  const totalCost = participants.reduce((acc, participant) => {
+    return acc + getParticipantCost(participant, event);
+  }, 0);
+  return totalCost;
 }
 
 const sendConfirmationEmail = async (participant: Participant, event: VastraEvent) => {
@@ -104,7 +111,7 @@ export const paymentRouter = createTRPCRouter({
         "payeeAlias" : "1234679304",
         "amount" : cost,
         "currency" : "SEK",
-        "message" : message
+        "message" : message,
       };
       try {
         const res = await createPaymentRequest(data);
@@ -138,7 +145,9 @@ export const paymentRouter = createTRPCRouter({
             ctx.prisma.participant.create({
              data: {
                ...participant,
+               payAmount: getParticipantCost(participant, event),
                eventId: input.eventId,
+               swishPaymentId: swishPayment.id,
              }
            })
           ))

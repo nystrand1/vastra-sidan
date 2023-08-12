@@ -101,7 +101,6 @@ const PassengerForm = ({ index, passenger, onRemove, buses } : PassengerFormProp
         label="Medlem"
         id={`member_${index}`}
         name={`member_${index}`}
-        required
       />
       <Checkbox
         label="Ungdom (upp till 20 år)"
@@ -112,6 +111,7 @@ const PassengerForm = ({ index, passenger, onRemove, buses } : PassengerFormProp
         label="Jag har läst & förstått reglerna kring bussresorna"
         id={`consent_${index}`}
         name={`consent_${index}`}
+        required
       />
       {index > 0 && (
         <OutlinedButton type="button" onClick={() => onRemove(index)}>Ta bort</OutlinedButton>
