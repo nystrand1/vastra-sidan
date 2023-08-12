@@ -10,7 +10,7 @@ export const ParticipantInfo = (props: InferGetServerSidePropsType<typeof getSer
   if (!props) {
     return null;
   }
-  const { name, email, eventName } = props;
+  const { name, email, eventName, payAmount } = props;
 
   return (
     <div>
@@ -18,6 +18,7 @@ export const ParticipantInfo = (props: InferGetServerSidePropsType<typeof getSer
       <p>Namn: {name}</p>
       <p>Email: {email}</p>
       <p>Resa: {eventName}</p>
+      <p>Pris: {payAmount} kr</p>
       <p>
         Avbokning kan endast ske senast 48 timmar innan avresa annars debiteras du fullt pris.
       </p>
@@ -100,6 +101,7 @@ export async function getServerSideProps({ query } : GetServerSidePropsContext) 
         email: participant.email,
         cancellationToken: participant.cancellationToken,
         eventName: participant.event.name,
+        payAmount: participant.payAmount
       }
     }
   }

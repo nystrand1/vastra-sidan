@@ -11,7 +11,7 @@ export const participantSchema = z.object({
   youth: z.boolean(),
 });
 
-export const swishCallbackSchema = z.object({
+export const swishCallbackPaymentSchema = z.object({
   id: z.string(),
   payeePaymentReference: z.string(),
   paymentReference: z.string(),
@@ -26,4 +26,19 @@ export const swishCallbackSchema = z.object({
   dateCreated: z.string(),
   datePaid: z.string(),
   errorCode: z.string().nullable(),
-})
+});
+
+export const swishCallbackRefundSchema = z.object({
+    amount: z.number(),
+    originalPaymentReference: z.string(),
+    dateCreated: z.string(),
+    datePaid: z.string(),
+    payerPaymentReference: z.string().nullable(),
+    payerAlias: z.string(),
+    callbackUrl: z.string(),
+    currency: z.string(),
+    id: z.string(),
+    payeeAlias: z.string().nullable(),
+    message: z.string(),
+    status: z.string(),
+});

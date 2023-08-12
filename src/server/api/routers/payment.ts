@@ -6,9 +6,9 @@ import {
   createTRPCRouter,
   publicProcedure
 } from "~/server/api/trpc";
-import { participantSchema, swishCallbackSchema } from "~/utils/zodSchemas";
+import { participantSchema, swishCallbackPaymentSchema, swishCallbackRefundSchema } from "~/utils/zodSchemas";
 import { EventSignUp } from "~/components/emails/EventSignUp";
-import { PAYMENT_STATUS, createPaymentRequest, getPaymentStatus } from "~/utils/swishHelpers";
+import { PAYMENT_STATUS, createPaymentRequest, createRefundRequest, getPaymentStatus } from "~/utils/swishHelpers";
 import { type Participant, type PrismaClient, type VastraEvent } from "@prisma/client";
 
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
@@ -177,6 +177,10 @@ export const paymentRouter = createTRPCRouter({
       const participant = await ctx.prisma.participant.findFirst({
         where: {
           cancellationToken: input.token
+        },
+        include: {
+          swishPayment: true,
+          event: true,
         }
       });
 
@@ -187,11 +191,43 @@ export const paymentRouter = createTRPCRouter({
         })
       }
 
+      const { swishPayment, payAmount, event } = participant;
+
+      if (!swishPayment || !payAmount) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Payment not found"
+        })
+      }
+      const [eventNameShort] = event?.name.replaceAll('/', '-').split(' ');
+      const message = `Återbetalning: ${eventNameShort ?? ''}, ${participant.name}`;
+      console.log(message);
+      const refundData = {
+        originalPaymentReference: swishPayment.paymentId,
+        "callbackUrl" : `${env.API_URL}/payment/swishCallback`,
+        payerAlias: "1234679304",
+        amount: payAmount,
+        currency: "SEK",
+        message,
+      }
+
+      try {
+        const res = await createRefundRequest(refundData);
+        console.log("refundresponse", res.data);
+      } catch (err) {
+        console.error('Error creating refund request');
+        const error = err as { response: { data: any } };
+        console.error(error?.response?.data);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+        })
+      }
+
       await delay(1000);
       return "you can now see this secret message!";
   }),
-  swishCallback: publicProcedure
-    .input(swishCallbackSchema)
+  swishPaymentCallback: publicProcedure
+    .input(swishCallbackPaymentSchema)
     .mutation(async ({ input, ctx }) => {
       // TODO: Protect this endpoint with a secret
       await ctx.prisma.swishPayment.update({
@@ -212,14 +248,13 @@ export const paymentRouter = createTRPCRouter({
         status: 200
       }
     }),
-  getSwishPaymentStatus: publicProcedure
-    .query(async () => {
-      const id = "F4DB8C8DA9BB41238459A50015154AF3"
-      try {
-        const res = await getPaymentStatus(id);
-        console.log("res", res.data);
-      } catch (err) {
-        console.error(err)
-      }
-    })
+    swishRefundCallback: publicProcedure
+      .input(swishCallbackRefundSchema)
+      .mutation(({ input, ctx }) => {
+        console.log("SWISH REFUND CALLBACK", input);
+        // Figure out what to do here
+        // Either create a refund model in our DB or withdraw
+        // the payment from the participants
+        return "ok";
+      })
 });

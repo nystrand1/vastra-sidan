@@ -48,7 +48,7 @@ export const createPaymentRequest = (data: PaymentRequest) => {
   return swishClient.put(`${SWISH_PATHS.PAYMENT_REQUEST}/${instructionId}`, data);
 };
 
-export interface RefundRequest extends PaymentRequest {
+export interface RefundRequest extends Omit<PaymentRequest, 'payeeAlias'> {
   originalPaymentReference: string
 }
 
