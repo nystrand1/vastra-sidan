@@ -201,7 +201,6 @@ export const paymentRouter = createTRPCRouter({
       }
       const [eventNameShort] = event?.name.replaceAll('/', '-').split(' ');
       const message = `Återbetalning: ${eventNameShort ?? ''}, ${participant.name}`;
-      console.log(message);
       const refundData = {
         originalPaymentReference: swishPayment.paymentId,
         "callbackUrl" : `${env.API_URL}/payment/swishCallback`,
@@ -213,6 +212,12 @@ export const paymentRouter = createTRPCRouter({
 
       try {
         const res = await createRefundRequest(refundData);
+        // const refund = await ctx.prisma.swishRefund.create({
+        //   data: {
+        //     ...refundData,
+        //     status: 'CREATED',
+        //   }
+        // });
         console.log("refundresponse", res.data);
       } catch (err) {
         console.error('Error creating refund request');
@@ -250,11 +255,32 @@ export const paymentRouter = createTRPCRouter({
     }),
     swishRefundCallback: publicProcedure
       .input(swishCallbackRefundSchema)
-      .mutation(({ input, ctx }) => {
+      .mutation(async ({ input, ctx }) => {
         console.log("SWISH REFUND CALLBACK", input);
-        // Figure out what to do here
-        // Either create a refund model in our DB or withdraw
-        // the payment from the participants
+
+        try {
+          const swishPayment = await ctx.prisma.swishPayment.findFirst({
+            where: {
+              paymentId: input.originalPaymentReference
+            }
+          })
+
+          if (!swishPayment) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Payment not found"
+            })
+          }
+
+          // Refund is successful
+          if (input.status === 'PAID') {
+            // Update refund status
+          }
+
+        } catch (err) {
+          console.error(err);
+          throw err
+        }
         return "ok";
       })
 });

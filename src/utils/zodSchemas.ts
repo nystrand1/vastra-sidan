@@ -1,3 +1,4 @@
+import { SwishPaymentStatus } from "@prisma/client";
 import { z } from "zod";
 
 export const participantSchema = z.object({
@@ -21,7 +22,9 @@ export const swishCallbackPaymentSchema = z.object({
   currency: z.string(),
   message: z.string(),
   errorMessage: z.string().nullable(),
-  status: z.string(),
+  status: z.literal<SwishPaymentStatus>(
+    "CREATED" || "PAID" || "ERROR" || "REFUNDED" || "CANCELLED"
+  ),
   amount: z.number(),
   dateCreated: z.string(),
   datePaid: z.string(),
@@ -40,5 +43,5 @@ export const swishCallbackRefundSchema = z.object({
     id: z.string(),
     payeeAlias: z.string().nullable(),
     message: z.string(),
-    status: z.string(),
+    status: z.enum(["VALIDATED", "DEBITED", "PAID", "ERROR"]),
 });
