@@ -110,16 +110,14 @@ model Participant {
   busId             String?
   cancellationToken String?       @default(uuid())
   cancellationDate  DateTime?
-  swishPaymentId    String?
-  swishPayment      SwishPayment? @relation(fields: [swishPaymentId], references: [id])
+  swishPayments     SwishPayment[]
   payAmount         Float?
   member            Boolean       @default(false)
   youth             Boolean       @default(false)
-  swishRefund       SwishRefund?
+  swishRefunds      SwishRefund[]
 
   @@index([eventId])
   @@index([busId])
-  @@index([swishPaymentId])
 }
 
 model SwishPayment {
@@ -136,7 +134,6 @@ model SwishPayment {
   status            SwishPaymentStatus
   errorCode         String?
   errorMessage      String?
-  datePaid          DateTime?
   participants      Participant[]
   refunds           SwishRefund[]
 

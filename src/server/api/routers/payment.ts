@@ -1,20 +1,27 @@
+import { type Prisma, type PrismaClient, type VastraEvent } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { Resend } from 'resend';
 import { z } from "zod";
+import { EventSignUp } from "~/components/emails/EventSignUp";
 import { env } from "~/env.mjs";
 import {
   createTRPCRouter,
   publicProcedure
 } from "~/server/api/trpc";
+import { PAYMENT_STATUS, createPaymentRequest, createRefundRequest } from "~/utils/swishHelpers";
 import { participantSchema, swishCallbackPaymentSchema, swishCallbackRefundSchema } from "~/utils/zodSchemas";
-import { EventSignUp } from "~/components/emails/EventSignUp";
-import { PAYMENT_STATUS, createPaymentRequest, createRefundRequest, getPaymentStatus } from "~/utils/swishHelpers";
-import { type Participant, type PrismaClient, type VastraEvent } from "@prisma/client";
 
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 const resend = new Resend(env.RESEND_API_KEY);
 
 type ParticipantInput = z.infer<typeof participantSchema>;
+
+export type ParticipantWithBusAndEvent = Prisma.ParticipantGetPayload<{
+  include: {
+    event: true,
+    bus: true
+  }
+}>
 
 const getParticipantCost = (participant: Omit<ParticipantInput, 'consent'>, event: VastraEvent) => {
   if (participant.youth && participant.member) {
@@ -35,13 +42,13 @@ const calculateCost = (participants: ParticipantInput[], event: VastraEvent) => 
   return totalCost;
 }
 
-const sendConfirmationEmail = async (participant: Participant, event: VastraEvent) => {
+const sendConfirmationEmail = async (participant: ParticipantWithBusAndEvent) => {
   const cancellationUrl = `${env.CANCELLATION_URL}?token=${participant?.cancellationToken || ''}`;
   return await resend.sendEmail({
     from: env.BOOKING_EMAIL,
     to: participant?.email || 'filip.nystrand@gmail.com',
-    subject: `Anmälan till ${event?.name}`,
-    react: EventSignUp({ name: participant?.name || '' , cancellationUrl })
+    subject: `Anmälan till ${participant.event.name}`,
+    react: EventSignUp({participant, cancellationUrl })
   });
 }
 
@@ -140,21 +147,17 @@ export const paymentRouter = createTRPCRouter({
         }
 
         // Create participants for event
-        const participants = await ctx.prisma.$transaction(
+        await ctx.prisma.$transaction(
           input.participants.map(({ consent: _consent, ...participant }) => (
             ctx.prisma.participant.create({
              data: {
                ...participant,
                payAmount: getParticipantCost(participant, event),
                eventId: input.eventId,
-               swishPaymentId: swishPayment.id,
              }
            })
           ))
         );
-
-        // Send email confirmation to all participants
-        await Promise.all(participants.map(p => sendConfirmationEmail(p, event)));
         console.info('Payment request created');
         return {
           status: 201
@@ -179,7 +182,7 @@ export const paymentRouter = createTRPCRouter({
           cancellationToken: input.token
         },
         include: {
-          swishPayment: true,
+          swishPayments: true,
           event: true,
         }
       });
@@ -191,7 +194,9 @@ export const paymentRouter = createTRPCRouter({
         })
       }
 
-      const { swishPayment, payAmount, event } = participant;
+      const { swishPayments, payAmount, event } = participant;
+
+      const swishPayment = swishPayments?.find((p) => p.status === PAYMENT_STATUS.PAID);
 
       if (!swishPayment || !payAmount) {
         throw new TRPCError({
@@ -235,18 +240,72 @@ export const paymentRouter = createTRPCRouter({
     .input(swishCallbackPaymentSchema)
     .mutation(async ({ input, ctx }) => {
       // TODO: Protect this endpoint with a secret
-      await ctx.prisma.swishPayment.update({
+
+      const originalPayment = await ctx.prisma.swishPayment.findUnique({
         where: {
           paymentId: input.id
         },
+        include: {
+          participants: {
+            include: {
+              bus: true,
+              event: true,
+            }
+          },
+        },
+        // data: {
+        //   status: input.status,
+        //   errorCode: input.errorCode,
+        //   errorMessage: input.errorMessage,
+        //   datePaid: new Date(input.datePaid),
+        //   paymentReference: input.paymentReference,
+        // }
+      })
+
+      if (!originalPayment) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Payment not found"
+        })
+      }
+
+      const newPayment = await ctx.prisma.swishPayment.create({
+        include: {
+          participants: {
+            include: {
+              bus: true,
+              event: true,
+            }
+          }
+        },
         data: {
+          paymentId: input.id,
+          payerAlias: input.payerAlias,
+          payeeAlias: input.payeeAlias,
+          amount: input.amount,
+          message: input.message,
+          paymentReference: input.paymentReference,
+          paymentRequestUrl: originalPayment.paymentRequestUrl,
+          createdAt: new Date(input.dateCreated),
+          updatedAt: new Date(),
           status: input.status,
           errorCode: input.errorCode,
           errorMessage: input.errorMessage,
-          datePaid: new Date(input.datePaid),
-          paymentReference: input.paymentReference,
+          participants: {
+            connect: originalPayment.participants.map(p => ({ id: p.id }))
+          },
         }
       })
+
+      if (newPayment.status !== PAYMENT_STATUS.PAID) {
+        try {
+          await Promise.all(newPayment.participants.map(p => sendConfirmationEmail(p)));
+        } catch {
+          console.error("Error sending confirmation email");
+          // Don't return error to Swish
+        }
+      }
+
       console.log("SWISH CALLBACK");
       console.log("input", input);
       return {
