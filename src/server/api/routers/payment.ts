@@ -111,7 +111,7 @@ export const paymentRouter = createTRPCRouter({
         "payeeAlias" : "1234679304",
         "amount" : cost,
         "currency" : "SEK",
-        "message" : "RF07",
+        "message" : message,
       };
       try {
         // Create participants for event
