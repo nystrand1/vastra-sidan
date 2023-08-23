@@ -11,11 +11,14 @@ const swishCallback = async (req: NextApiRequest, res: NextApiResponse) => {
   const ctx = await createTRPCContext({ req, res });
   const caller = appRouter.createCaller(ctx);
   try {
+    console.log("Swish callback received", req.body);
     const isRefund = 'originalPaymentReference' in req.body;
     if (isRefund) {
+      console.info("Swish callback is a refund");
       await caller.payment.swishRefundCallback(req.body as z.infer<typeof swishCallbackRefundSchema>);
     } else {
       // It's a payment
+      console.info("Swish callback is a payment");
       await caller.payment.swishPaymentCallback(req.body as z.infer<typeof swishCallbackPaymentSchema>);
     }
 

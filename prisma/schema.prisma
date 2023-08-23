@@ -124,7 +124,7 @@ model SwishPayment {
   id                String             @id @default(cuid())
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
-  paymentId         String             @unique
+  paymentId         String
   paymentRequestUrl String
   paymentReference  String?
   payerAlias        String
@@ -152,7 +152,7 @@ model SwishRefund {
   id               String            @id @default(cuid())
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
-  refundId         String            @unique
+  refundId         String
   paymentId        String
   paymentReference String?
   payerAlias       String

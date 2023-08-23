@@ -1,3 +1,4 @@
+import { SwishPaymentStatus } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
@@ -8,23 +9,40 @@ import {
 export const publicRouter = createTRPCRouter({
   getAwayGames: publicProcedure.query(async ({ ctx }) => {
     const res = await ctx.prisma.vastraEvent.findMany({
+      where: {
+        participants: {
+          every: {
+            swishPayments: {
+              some: {
+                status: SwishPaymentStatus.PAID,
+              }
+            }
+          }
+        }
+      },
       include: {
         buses: {
           include: {
-            _count: {
+            passengers: {
               select: {
-                passengers: true,
+                id: true
+              },
+              where: {
+                swishPayments: {
+                  some: {
+                    status: SwishPaymentStatus.PAID,
+                  }
+                }
               }
             }
           }
         }
       }
     });
-
     const eventWithParticiantCount = res.map(event => ({
       ...event,
       maxSeats: event.buses.reduce((acc, bus) => acc + bus.seats, 0),
-      bookedSeats: event.buses.reduce((acc, bus) => acc + bus._count.passengers, 0),
+      bookedSeats: event.buses.reduce((acc, bus) => acc + bus.passengers.length, 0),
     }));
 
     return eventWithParticiantCount;

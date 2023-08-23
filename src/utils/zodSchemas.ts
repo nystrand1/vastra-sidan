@@ -12,6 +12,12 @@ export const participantSchema = z.object({
   youth: z.boolean(),
 });
 
+const SwishPaymentStatuses : [SwishPaymentStatus, ...SwishPaymentStatus[]] = [
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  Object.values(SwishPaymentStatus)[0]!,
+  ...Object.values(SwishPaymentStatus).slice(1),
+];
+
 export const swishCallbackPaymentSchema = z.object({
   id: z.string(),
   payeePaymentReference: z.string(),
@@ -22,12 +28,10 @@ export const swishCallbackPaymentSchema = z.object({
   currency: z.string(),
   message: z.string(),
   errorMessage: z.string().nullable(),
-  status: z.literal<SwishPaymentStatus>(
-    "CREATED" || "PAID" || "ERROR" || "REFUNDED" || "CANCELLED"
-  ),
+  status: z.enum(SwishPaymentStatuses),
   amount: z.number(),
   dateCreated: z.string(),
-  datePaid: z.string(),
+  datePaid: z.string().nullable(),
   errorCode: z.string().nullable(),
 });
 
