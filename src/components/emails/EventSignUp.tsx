@@ -1,9 +1,7 @@
-import { VastraEvent, type Participant, Bus } from "@prisma/client";
 import { Button } from '@react-email/button';
 import { Container, Head, Hr, Img, Section, Tailwind, Text } from "@react-email/components";
 import { Html } from '@react-email/html';
 import { format } from "date-fns";
-import * as React from 'react';
 import { type ParticipantWithBusAndEvent } from "~/server/api/routers/payment";
 
 interface EventSignUpProps {
@@ -48,7 +46,6 @@ const mockParticipant: EventSignUpProps['participant'] = {
   cancellationDate: new Date(),
   cancellationToken: 'testtoken',
   note: 'Testnote',
-  swishPaymentId: 'testpaymentid',
   busId: 'testbus',
   event: mockEvent,
 
