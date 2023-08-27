@@ -78,10 +78,10 @@ export const EventSignUp = ({
         <Head>
           <title>Anmälan till {eventName}</title>
         </Head>
-        <Section className="bg-slate-900">
+        <Section className="bg-slate-900 p-4">
           <Img src={`${baseUrl}/static/vss_buss.jpg`} width="40%" className="m-auto" />
         </Section>
-        <Section className="bg-slate-800 p-4 mt-4 text-white">
+        <Section className="bg-slate-800 p-4 text-white">
           <Container>
             <Text className="text-5xl text-center">Tack för anmälan</Text>
             <Hr />
@@ -101,7 +101,7 @@ export const EventSignUp = ({
               pX={20}
               pY={12}
               href={cancellationUrl}
-              className="bg-blue-500 hover:bg-blue-700 font-bold py-2 px-4 rounded"
+              className="bg-blue-500 hover:bg-blue-700 font-bold py-2 px-4 rounded text-white"
             >
               Avboka
             </Button>
