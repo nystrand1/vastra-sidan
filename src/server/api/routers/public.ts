@@ -1,4 +1,4 @@
-import { SwishPaymentStatus } from "@prisma/client";
+import { SwishPaymentStatus, SwishRefundStatus } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
@@ -16,6 +16,11 @@ const busesWithPaidPassengers = {
               swishPayments: {
                 some: {
                   status: SwishPaymentStatus.PAID,
+                }
+              },
+              swishRefunds: {
+                none: {
+                  status: SwishRefundStatus.PAID,
                 }
               }
             }
