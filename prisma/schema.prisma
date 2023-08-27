@@ -163,10 +163,12 @@ model SwishRefund {
   errorCode        String?
   errorMessage     String?
   dateRefunded     DateTime?
-  participant      Participant?      @relation(fields: [refundId], references: [id])
+  participantId    String
+  participant      Participant      @relation(fields: [participantId], references: [id])
   originalPayment  SwishPayment      @relation(fields: [paymentId], references: [id])
 
   @@index([refundId])
+  @@index([participantId])
   @@index([paymentId])
 }
 

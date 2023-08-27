@@ -60,13 +60,3 @@ export const createRefundRequest = (data: RefundRequest) => {
 export const getPaymentStatus = (id: string) => {
   return swishClient.get(`${SWISH_PATHS.PAYMENT_STATUS}/${id}`);
 };
-
-
-export const PAYMENT_STATUS = {
-  CREATED: 'CREATED',
-  PAID: 'PAID',
-  DECLINED: 'DECLINED',
-  ERROR: 'ERROR',
-  CANCELLED: 'CANCELLED',
-} as const;
-

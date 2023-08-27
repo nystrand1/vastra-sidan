@@ -6,43 +6,35 @@ import {
   publicProcedure,
 } from "~/server/api/trpc";
 
-export const publicRouter = createTRPCRouter({
-  getAwayGames: publicProcedure.query(async ({ ctx }) => {
-    const res = await ctx.prisma.vastraEvent.findMany({
-      where: {
-        participants: {
-          every: {
-            swishPayments: {
-              some: {
-                status: SwishPaymentStatus.PAID,
-              }
-            }
-          }
-        }
-      },
-      include: {
-        buses: {
-          include: {
-            passengers: {
-              select: {
-                id: true
-              },
-              where: {
-                swishPayments: {
-                  some: {
-                    status: SwishPaymentStatus.PAID,
-                  }
+const busesWithPaidPassengers = {
+  buses: {
+    include: {
+      _count: {
+        select: {
+          passengers: {
+            where: {
+              swishPayments: {
+                some: {
+                  status: SwishPaymentStatus.PAID,
                 }
               }
             }
           }
         }
       }
+    }
+  }
+}
+
+export const publicRouter = createTRPCRouter({
+  getAwayGames: publicProcedure.query(async ({ ctx }) => {
+    const res = await ctx.prisma.vastraEvent.findMany({
+      include: busesWithPaidPassengers
     });
     const eventWithParticiantCount = res.map(event => ({
       ...event,
       maxSeats: event.buses.reduce((acc, bus) => acc + bus.seats, 0),
-      bookedSeats: event.buses.reduce((acc, bus) => acc + bus.passengers.length, 0),
+      bookedSeats: event.buses.reduce((acc, bus) => acc + bus._count.passengers, 0),
     }));
 
     return eventWithParticiantCount;
@@ -54,17 +46,7 @@ export const publicRouter = createTRPCRouter({
         where: {
           id: input.id
         },
-        include: {
-          buses: {
-            include: {
-              _count: {
-                select: {
-                  passengers: true,
-                }
-              }
-            }
-          }
-        }
+        include: busesWithPaidPassengers
       });
 
       if (!res) {

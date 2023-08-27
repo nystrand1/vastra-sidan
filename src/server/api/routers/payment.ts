@@ -1,4 +1,4 @@
-import { SwishPayment, type Prisma, type PrismaClient, type VastraEvent } from "@prisma/client";
+import { SwishPayment, type Prisma, type PrismaClient, type VastraEvent, SwishRefund, SwishRefundStatus, SwishPaymentStatus } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { Resend } from 'resend';
 import { z } from "zod";
@@ -8,7 +8,7 @@ import {
   createTRPCRouter,
   publicProcedure
 } from "~/server/api/trpc";
-import { PAYMENT_STATUS, createPaymentRequest, createRefundRequest } from "~/utils/swishHelpers";
+import { createPaymentRequest, createRefundRequest } from "~/utils/swishHelpers";
 import { participantSchema, swishCallbackPaymentSchema, swishCallbackRefundSchema } from "~/utils/zodSchemas";
 
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
@@ -65,11 +65,11 @@ const pollPaymentStatus = async (paymentIntent: SwishPayment, prisma: PrismaClie
   const successfulPayment = await prisma.swishPayment.findFirst({
     where: {
       paymentId: paymentIntent.paymentId,
-      status: PAYMENT_STATUS.PAID
+      status: SwishPaymentStatus.PAID
     }
   })
   if (successfulPayment) {
-    console.info(`successfulPayment - attempt: ${attempt}`, successfulPayment?.paymentId)
+    console.info(`Payment - attempt: ${attempt}`, successfulPayment?.paymentId)
     return {
       success: true
     }
@@ -77,6 +77,34 @@ const pollPaymentStatus = async (paymentIntent: SwishPayment, prisma: PrismaClie
     // Wait 1 second before checking again
     await delay(1000);
     return pollPaymentStatus(paymentIntent, prisma, attempt + 1);
+  }
+};
+
+const pollRefundStatus = async (refundIntent: SwishRefund, prisma: PrismaClient, attempt = 0) : Promise<{ success : boolean }> => {
+  // Retry 30 times
+  if (attempt > 30) {
+    console.error(`Refund timed out - attempt: ${attempt}`);
+    console.error("Failed refund id: ", refundIntent.refundId);
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Payment timed out"
+    })
+  }
+  const successfulRefund = await prisma.swishRefund.findFirst({
+    where: {
+      refundId: refundIntent.refundId,
+      status: SwishRefundStatus.PAID
+    }
+  })
+  if (successfulRefund) {
+    console.info(`Refund - attempt: ${attempt}`, successfulRefund?.paymentId)
+    return {
+      success: true
+    }
+  } else {
+    // Wait 1 second before checking again
+    await delay(1000);
+    return pollRefundStatus(refundIntent, prisma, attempt + 1);
   }
 };
 
@@ -139,7 +167,7 @@ export const paymentRouter = createTRPCRouter({
             payeeAlias: "1234679304",
             amount: cost,
             message: message,
-            status: PAYMENT_STATUS.CREATED,
+            status: SwishPaymentStatus.CREATED,
             participants: {
               connect: participants.map((p) => ({ id: p.id }))
             }
@@ -192,7 +220,7 @@ export const paymentRouter = createTRPCRouter({
 
       const { swishPayments, payAmount, event } = participant;
 
-      const swishPayment = swishPayments?.find((p) => p.status === PAYMENT_STATUS.PAID);
+      const swishPayment = swishPayments?.find((p) => p.status === SwishPaymentStatus.PAID);
 
       if (!swishPayment || !payAmount) {
         throw new TRPCError({
@@ -220,13 +248,34 @@ export const paymentRouter = createTRPCRouter({
 
       try {
         const res = await createRefundRequest(refundData);
-        // const refund = await ctx.prisma.swishRefund.create({
-        //   data: {
-        //     ...refundData,
-        //     status: 'CREATED',
-        //   }
-        // });
-        console.log("refundresponse", res.data);
+        const refundRequestUrl = res.headers.location as string;
+        // ID is the last part of the URL
+        const refundRequestId = refundRequestUrl.split('/').pop() as string;
+        const refundIntent = await ctx.prisma.swishRefund.create({
+          data: {
+            refundId: refundRequestId,
+            paymentId: swishPayment.id,
+            paymentReference: swishPayment.paymentReference,
+            payerAlias: refundData.payerAlias,
+            payeeAlias: swishPayment.payerAlias,
+            amount: refundData.amount,
+            message: refundData.message,
+            status: 'CREATED',
+            participantId: participant.id,
+          }
+        });
+
+        // Poll refund status from our DB
+        const refundStatus = await pollRefundStatus(refundIntent, ctx.prisma);
+
+        if (!refundStatus?.success) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR"
+          })
+        }
+        return {
+          status: 201
+        }
       } catch (err) {
         console.error('Error creating refund request');
         const error = err as { response: { data: any } };
@@ -235,9 +284,6 @@ export const paymentRouter = createTRPCRouter({
           code: "INTERNAL_SERVER_ERROR",
         })
       }
-
-      await delay(1000);
-      return "you can now see this secret message!";
   }),
   swishPaymentCallback: publicProcedure
     .input(swishCallbackPaymentSchema)
@@ -288,7 +334,7 @@ export const paymentRouter = createTRPCRouter({
         }
       })
 
-      if (newPayment.status === PAYMENT_STATUS.PAID) {
+      if (newPayment.status === SwishPaymentStatus.PAID) {
         try {
           console.log("participants", newPayment.participants);
           console.log("Sending confirmation email to: ", newPayment.participants.map(p => p.email).join(", "));
@@ -310,25 +356,48 @@ export const paymentRouter = createTRPCRouter({
       .input(swishCallbackRefundSchema)
       .mutation(async ({ input, ctx }) => {
         console.log("SWISH REFUND CALLBACK", input);
-
         try {
-          const swishPayment = await ctx.prisma.swishPayment.findFirst({
+          const refundIntent = await ctx.prisma.swishRefund.findFirst({
             where: {
-              paymentId: input.originalPaymentReference
+              refundId: input.id,
+            },
+            include: {
+              participant: true,
             }
-          })
+          });
 
-          if (!swishPayment) {
+          if (!refundIntent) {
             throw new TRPCError({
               code: "BAD_REQUEST",
-              message: "Payment not found"
+              message: "Refund not found"
             })
           }
 
-          // Refund is successful
-          if (input.status === 'PAID') {
-            // Update refund status
+          if (!refundIntent.participant) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Refund has no participant"
+            })
           }
+
+          await ctx.prisma.swishRefund.create({
+            include: {
+              participant: true,
+            },
+            data: {
+              refundId: input.id,
+              paymentId: refundIntent.paymentId,
+              payerAlias: input.payerAlias,
+              payeeAlias: input.payeeAlias || refundIntent.payeeAlias,
+              amount: input.amount,
+              message: input.message,
+              paymentReference: input.originalPaymentReference,
+              createdAt: new Date(input.dateCreated),
+              updatedAt: new Date(),
+              status: input.status,
+              participantId: refundIntent.participant.id,
+            }
+          })
 
         } catch (err) {
           console.error(err);

@@ -1,4 +1,4 @@
-import { SwishPaymentStatus } from "@prisma/client";
+import { SwishPaymentStatus, SwishRefundStatus } from "@prisma/client";
 import { z } from "zod";
 
 export const participantSchema = z.object({
@@ -16,6 +16,12 @@ const SwishPaymentStatuses : [SwishPaymentStatus, ...SwishPaymentStatus[]] = [
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   Object.values(SwishPaymentStatus)[0]!,
   ...Object.values(SwishPaymentStatus).slice(1),
+];
+
+const SwishRefundStatuses : [SwishRefundStatus, ...SwishRefundStatus[]] = [
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  Object.values(SwishRefundStatus)[0]!,
+  ...Object.values(SwishRefundStatus).slice(1),
 ];
 
 export const swishCallbackPaymentSchema = z.object({
@@ -36,10 +42,10 @@ export const swishCallbackPaymentSchema = z.object({
 });
 
 export const swishCallbackRefundSchema = z.object({
-    amount: z.number(),
+    amount: z.preprocess((val) => Number(val), z.number()),
     originalPaymentReference: z.string(),
     dateCreated: z.string(),
-    datePaid: z.string(),
+    datePaid: z.string().optional(),
     payerPaymentReference: z.string().nullable(),
     payerAlias: z.string(),
     callbackUrl: z.string(),
@@ -47,5 +53,5 @@ export const swishCallbackRefundSchema = z.object({
     id: z.string(),
     payeeAlias: z.string().nullable(),
     message: z.string(),
-    status: z.enum(["VALIDATED", "DEBITED", "PAID", "ERROR"]),
+    status: z.enum(SwishRefundStatuses),
 });
