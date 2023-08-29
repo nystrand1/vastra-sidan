@@ -112,6 +112,7 @@ model Participant {
   cancellationDate  DateTime?
   swishPayments     SwishPayment[]
   payAmount         Float?
+  checkedIn         Boolean       @default(false)
   member            Boolean       @default(false)
   youth             Boolean       @default(false)
   swishRefunds      SwishRefund[]
