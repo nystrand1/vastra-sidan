@@ -48,7 +48,7 @@ const mockParticipant: EventSignUpProps['participant'] = {
   note: 'Testnote',
   busId: 'testbus',
   event: mockEvent,
-
+  checkedIn: false,
 }
 
 const baseUrl = process.env.VERCEL_URL
