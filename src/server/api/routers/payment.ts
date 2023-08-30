@@ -1,5 +1,6 @@
 import { SwishPayment, type Prisma, type PrismaClient, type VastraEvent, SwishRefund, SwishRefundStatus, SwishPaymentStatus } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
+import { isWithinInterval, subDays } from "date-fns";
 import { Resend } from 'resend';
 import { z } from "zod";
 import { EventSignUp } from "~/components/emails/EventSignUp";
@@ -215,6 +216,21 @@ export const paymentRouter = createTRPCRouter({
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Participant not found"
+        })
+      }
+
+      // You can't cancel within 48 hours of the departure
+      const twoDaysBeforeDeparture = subDays(participant.event.date, 2);
+      const today = new Date();
+      const isWithin48Hours = isWithinInterval(today, {
+        start: twoDaysBeforeDeparture,
+        end: participant.event.date
+      });
+
+      if (isWithin48Hours) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Du kan inte avboka inom 48h'
         })
       }
 

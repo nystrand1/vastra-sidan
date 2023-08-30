@@ -1,9 +1,10 @@
 import { type GetServerSidePropsContext, type InferGetServerSidePropsType } from "next";
 import { prisma } from "~/server/db";
-import { isWithinInterval, subDays } from "date-fns";
+import { isBefore, isWithinInterval, subDays } from "date-fns";
 import { Button } from "~/components/atoms/Button/Button";
 import { api } from "~/utils/api";
 import { toast } from "react-hot-toast";
+import { SwishRefundStatus } from "@prisma/client";
 
 
 export const ParticipantInfo = (props: InferGetServerSidePropsType<typeof getServerSideProps>['participant']) => {
@@ -30,10 +31,9 @@ export const ParticipantInfo = (props: InferGetServerSidePropsType<typeof getSer
 }
 
 export const CancelPage = (props: InferGetServerSidePropsType<typeof getServerSideProps>) => {
-  const { error, participant } = props;
+  const { participant, cancellationDisabled, hasCancelled } = props;
 
   const { mutateAsync: cancelBooking } = api.payment.cancelBooking.useMutation();
-
   const handleCancel = async () => {
     if (!participant) return null;
     await toast.promise(cancelBooking({
@@ -48,9 +48,14 @@ export const CancelPage = (props: InferGetServerSidePropsType<typeof getServerSi
   return (
     <div className="flex flex-col space-y-4">
       <h1 className="text-3xl">Avbokning</h1>
-      {error && <p>{error}</p>}
       {participant && <ParticipantInfo {...participant} />}
-      {participant && <Button className="w-full md:w-56" onClick={handleCancel}>Avboka</Button>}
+      {participant && !cancellationDisabled && !hasCancelled && <Button className="w-full md:w-56" onClick={handleCancel}>Avboka</Button>}
+      {hasCancelled && (
+        <p>Du har redan avbokat denna resa</p>
+      )}
+      {cancellationDisabled && !hasCancelled && (
+        <p>Du kan inte avboka inom 48h</p>
+      )}
     </div>
   )
 }
@@ -71,7 +76,8 @@ export async function getServerSideProps({ query } : GetServerSidePropsContext) 
       cancellationToken: token as string
     },
     include: {
-      event: true
+      event: true,
+      swishRefunds: true
     }
   });
 
@@ -82,20 +88,21 @@ export async function getServerSideProps({ query } : GetServerSidePropsContext) 
   }
 
   // You can't cancel within 48 hours of the departure
-  const dayBeforeYesterday = subDays(new Date(), 2);
+  const twoDaysBeforeDeparture = subDays(participant.event.date, 2);
   const today = new Date();
-  const isWithin48Hours = isWithinInterval(today, {
-    start: dayBeforeYesterday,
-    end: participant.event.date
-  })
 
-  if (isWithin48Hours) {
+  if (isBefore(participant.event.date, today)) {
     return {
-      props: {
-        error: "Du kan inte avboka inom 48 timmar från avresa"
-      }
+      notFound: true
     }
   }
+
+  const isWithin48Hours = isWithinInterval(today, {
+    start: twoDaysBeforeDeparture,
+    end: participant.event.date
+  });
+
+  const hasCancelled = participant.swishRefunds.some((x) => x.status === SwishRefundStatus.PAID);
 
   return {
     props: {
@@ -106,7 +113,9 @@ export async function getServerSideProps({ query } : GetServerSidePropsContext) 
         eventName: participant.event.name,
         payAmount: participant.payAmount,
         note: participant.note,
-      }
+      },
+      hasCancelled,
+      cancellationDisabled: isWithin48Hours,
     }
   }
 }
