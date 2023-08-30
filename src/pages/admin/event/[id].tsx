@@ -37,6 +37,9 @@ const PassengerCard = ({ passenger } : { passenger: Participant }) => {
           {passenger.youth && (
             <p className="text-md">Ungdom</p>
           )}
+          {passenger.note && (
+            <p className="text-md">Övrigt: {passenger.note}</p>
+          )}
         </div>
       </div>
       {checkedIn && (
