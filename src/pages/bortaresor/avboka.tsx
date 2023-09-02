@@ -1,10 +1,10 @@
-import { type GetServerSidePropsContext, type InferGetServerSidePropsType } from "next";
-import { prisma } from "~/server/db";
-import { isBefore, isWithinInterval, subDays } from "date-fns";
-import { Button } from "~/components/atoms/Button/Button";
-import { api } from "~/utils/api";
-import { toast } from "react-hot-toast";
 import { SwishRefundStatus } from "@prisma/client";
+import { isBefore, subDays } from "date-fns";
+import { type GetServerSidePropsContext, type InferGetServerSidePropsType } from "next";
+import { toast } from "react-hot-toast";
+import { Button } from "~/components/atoms/Button/Button";
+import { prisma } from "~/server/db";
+import { api } from "~/utils/api";
 
 
 export const ParticipantInfo = (props: InferGetServerSidePropsType<typeof getServerSideProps>['participant']) => {
@@ -33,7 +33,7 @@ export const ParticipantInfo = (props: InferGetServerSidePropsType<typeof getSer
 export const CancelPage = (props: InferGetServerSidePropsType<typeof getServerSideProps>) => {
   const { participant, cancellationDisabled, hasCancelled } = props;
 
-  const { mutateAsync: cancelBooking } = api.payment.cancelBooking.useMutation();
+  const { mutateAsync: cancelBooking, isLoading: isCancelling } = api.payment.cancelBooking.useMutation();
   const handleCancel = async () => {
     if (!participant) return null;
     await toast.promise(cancelBooking({
@@ -49,12 +49,14 @@ export const CancelPage = (props: InferGetServerSidePropsType<typeof getServerSi
     <div className="flex flex-col space-y-4">
       <h1 className="text-3xl">Avbokning</h1>
       {participant && <ParticipantInfo {...participant} />}
-      {participant && !cancellationDisabled && !hasCancelled && <Button className="w-full md:w-56" onClick={handleCancel}>Avboka</Button>}
+      {participant && !cancellationDisabled && !hasCancelled && (
+        <Button className="w-full md:w-56" disabled={isCancelling} onClick={handleCancel}>Avboka</Button>
+      )}
       {hasCancelled && (
-        <p>Du har redan avbokat denna resa</p>
+        <p className="rounded-md border p-4 text-lg md:w-fit">Du har redan avbokat denna resa</p>
       )}
       {cancellationDisabled && !hasCancelled && (
-        <p>Du kan inte avboka inom 48h</p>
+        <p>Du kan inte avboka inom 48h från avgång</p>
       )}
     </div>
   )
@@ -97,10 +99,7 @@ export async function getServerSideProps({ query } : GetServerSidePropsContext) 
     }
   }
 
-  const isWithin48Hours = isWithinInterval(today, {
-    start: twoDaysBeforeDeparture,
-    end: participant.event.date
-  });
+  const isBefore48Hours = isBefore(today, twoDaysBeforeDeparture);
 
   const hasCancelled = participant.swishRefunds.some((x) => x.status === SwishRefundStatus.PAID);
 
@@ -115,7 +114,7 @@ export async function getServerSideProps({ query } : GetServerSidePropsContext) 
         note: participant.note,
       },
       hasCancelled,
-      cancellationDisabled: isWithin48Hours,
+      cancellationDisabled: !isBefore48Hours,
     }
   }
 }
