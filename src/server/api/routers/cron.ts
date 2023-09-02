@@ -7,6 +7,7 @@ import {
 } from "~/server/api/trpc";
 import { type AwayGame } from "~/types/wordpressTypes";
 import { env } from "~/env.mjs";
+import { parseISO } from "date-fns";
 
 const apiKey = env.WORDPRESS_API_KEY;
 
@@ -45,9 +46,9 @@ export const makeRequest = async <T>(url: string, method: string, body?: BodyIni
 const awayGameToEvent = (awayGame: ReturnType<typeof awayGameMapper>) : { event: VastraEvent, buses: Bus[] }  => ({
   event: {
     id: awayGame.id.toString(),
-    name: `${awayGame.enemyTeam} - ${awayGame.date}`,
+    name: `${awayGame.enemyTeam} - ${awayGame.date.split(" ")[0] || ''}`,
     description: awayGame.busInfo || "",
-    date: new Date(),
+    date: parseISO(awayGame.date),
     createdAt: new Date(),
     updatedAt: new Date(),
     defaultPrice: Number(awayGame.nonMemberPrice),

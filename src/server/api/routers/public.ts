@@ -1,5 +1,6 @@
 import { SwishPaymentStatus, SwishRefundStatus } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
+import { subDays, subHours } from "date-fns";
 import { z } from "zod";
 import {
   createTRPCRouter,
@@ -34,7 +35,12 @@ const busesWithPaidPassengers = {
 export const publicRouter = createTRPCRouter({
   getAwayGames: publicProcedure.query(async ({ ctx }) => {
     const res = await ctx.prisma.vastraEvent.findMany({
-      include: busesWithPaidPassengers
+      include: busesWithPaidPassengers,
+      where: {
+        date: {
+          gte: subHours(new Date(), 8)
+        }
+      }
     });
     const eventWithParticiantCount = res.map(event => ({
       ...event,
