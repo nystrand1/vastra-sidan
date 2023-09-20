@@ -67,7 +67,8 @@ export const EventSignUp = ({
     event
   } = participant;
 
-  const formattedDate = format(event.date, 'yyyy-MM-dd HH:mm');
+  const formattedDate = format(event.date, 'yyyy-MM-dd');
+  const departureTime = format(event.date, 'HH:mm');
 
   const {
     name: eventName,
@@ -92,6 +93,7 @@ export const EventSignUp = ({
                 <Text className="text-lg">Buss: {bus.name}</Text>
               )}
               <Text className="text-lg">Datum: {formattedDate}</Text>
+              <Text className="text-lg">Avgångstid: {departureTime}</Text>
               <Text className="text-lg">Pris: {payAmount} kr</Text>
               {note && <Text className="text-lg">Övrigt: {note}</Text>}
             </Container>
