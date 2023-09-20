@@ -17,10 +17,10 @@ export const BusPage = () => {
         {game.name}
       </h1>
       <div className="grid grid-cols-12 gap-4">
-        <div className="col-span-12 md:col-span-6 order-2 md:order-1">
+        <div className="col-span-12 md:col-span-5 order-2 md:order-1">
           <AwayGameRules />
         </div>
-        <div className="col-span-12 md:col-span-6 order-1 md:order-2">
+        <div className="col-span-12 md:col-span-7 lg:col-span-4 lg:col-start-8 order-1 md:order-2">
           <AwayGameForm />
         </div>
       </div>
