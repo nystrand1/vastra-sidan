@@ -13,7 +13,8 @@ import { InputField } from "../../atoms/InputField/InputField";
 import { OutlinedButton } from "../../atoms/OutlinedButton/OutlinedButton";
 import { TextArea } from "~/components/atoms/TextArea/TextArea";
 import { SwishModal } from "../SwishModal/SwishModal";
-import { set } from "date-fns";
+import { delay } from "~/utils/helpers";
+import { SwishRefundStatus } from "@prisma/client";
 
 
 interface IPassenger {
@@ -143,8 +144,27 @@ export const AwayGameForm = () => {
   if (Array.isArray(id)) return null;
   const { data: awayGame, isLoading } = api.public.getAwayGame.useQuery({ id: id });
   const { mutateAsync: createPayment } = api.payment.requestSwishPayment.useMutation();
+  const { mutateAsync: checkPaymentStatus } = api.payment.checkPaymentStatus.useMutation();
+
   if (isLoading) return null;
   if (!awayGame) return null;
+
+
+  const pollPaymentStatus = async (paymentId: string, attempt = 0): Promise<{ success : boolean }> => {
+    if (attempt > 30) {
+      throw new Error("Could not poll payment status");
+    }
+    
+    const payment = await checkPaymentStatus({ paymentId });
+
+    if (payment.status === SwishRefundStatus.PAID) {
+      return {
+        success: true,
+      }
+    }
+    await delay(1000);
+    return pollPaymentStatus(paymentId, attempt + 1);
+  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -170,14 +190,17 @@ export const AwayGameForm = () => {
     }
 
     try {
-      const payment = await createPayment({
+      const paymentId = await createPayment({
         participants,
         eventId: id,
       });
-      if (payment?.status === 201) {
+
+      const payment = await pollPaymentStatus(paymentId);
+
+      if (payment.success) {
+        toast.success("Nu är du anmäld! Bekräftelse skickas till din mail.");
         setPassengers([{ index: 0 }]);
         formRef.current?.reset();
-        toast.success("Nu är du anmäld! Bekräftelse skickas till din mail.");
       }
     } catch (error) {
       toast.error("Något gick fel, försök igen!");
