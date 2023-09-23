@@ -24,14 +24,8 @@ export const env = createEnv({
     WORDPRESS_API_KEY: z.string().min(1),
     CRON_KEY: z.string().min(1),
     RESEND_API_KEY: z.string().min(1),
-    CANCELLATION_URL: z.preprocess(
-      (str) =>  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/bortaresor/avboka` : str,
-      z.string().min(1)
-    ),
-    API_URL: z.preprocess(
-      (str) =>  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/api` : str,
-      z.string().min(1)
-    ),
+    CANCELLATION_URL: z.string().min(1),
+    API_URL: z.string().min(1),
     SWISH_MERCHANT_BASEURL: z.string().url(),
     BOOKING_EMAIL: z.string().email(),
     LOCAL_SWISH_CERTS: z.literal("true").or(z.literal("false")).default("true"),
