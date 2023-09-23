@@ -1,5 +1,5 @@
 import { SwishRefundStatus } from "@prisma/client";
-import { isBefore, subDays } from "date-fns";
+import { format, isBefore, subDays } from "date-fns";
 import { type GetServerSidePropsContext, type InferGetServerSidePropsType } from "next";
 import { toast } from "react-hot-toast";
 import { Button } from "~/components/atoms/Button/Button";
@@ -11,7 +11,7 @@ export const ParticipantInfo = (props: InferGetServerSidePropsType<typeof getSer
   if (!props) {
     return null;
   }
-  const { name, email, eventName, payAmount, note } = props;
+  const { name, email, eventName, payAmount, eventDate, note } = props;
 
   return (
     <div>
@@ -19,6 +19,7 @@ export const ParticipantInfo = (props: InferGetServerSidePropsType<typeof getSer
       <p>Namn: {name}</p>
       <p>Email: {email}</p>
       <p>Resa: {eventName}</p>
+      <p>Avgångstid: {format(eventDate, "hh:mm")}</p>
       <p>Pris: {payAmount} kr</p>
       {note && (
         <p>Övrigt: {note}</p>
@@ -110,6 +111,7 @@ export async function getServerSideProps({ query } : GetServerSidePropsContext) 
         email: participant.email,
         cancellationToken: participant.cancellationToken,
         eventName: participant.event.name,
+        eventDate: participant.event.date,
         payAmount: participant.payAmount,
         note: participant.note,
       },
