@@ -1,4 +1,4 @@
-import { SwishPayment, type Prisma, type PrismaClient, type VastraEvent, SwishRefund, SwishRefundStatus, SwishPaymentStatus } from "@prisma/client";
+import { type SwishPayment, type Prisma, type PrismaClient, type VastraEvent, type SwishRefund, SwishRefundStatus, SwishPaymentStatus } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { isWithinInterval, subDays } from "date-fns";
 import { Resend } from 'resend';
@@ -75,8 +75,8 @@ const pollPaymentStatus = async (paymentIntent: SwishPayment, prisma: PrismaClie
       success: true
     }
   } else {
-    // Wait 1 second before checking again
-    await delay(1000);
+    // Wait 0.2 second before checking again
+    await delay(200);
     return pollPaymentStatus(paymentIntent, prisma, attempt + 1);
   }
 };
@@ -103,8 +103,8 @@ const pollRefundStatus = async (refundIntent: SwishRefund, prisma: PrismaClient,
       success: true
     }
   } else {
-    // Wait 1 second before checking again
-    await delay(1000);
+    // Wait 0.2 second before checking again
+    await delay(200);
     return pollRefundStatus(refundIntent, prisma, attempt + 1);
   }
 };
