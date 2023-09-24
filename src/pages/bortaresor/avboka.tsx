@@ -1,24 +1,25 @@
 import { SwishRefundStatus } from "@prisma/client";
-import { isBefore, subDays } from "date-fns";
-import { type GetServerSidePropsContext, type InferGetServerSidePropsType } from "next";
+import { type GetServerSidePropsContext } from "next";
+import { useRouter } from "next/router";
 import { toast } from "react-hot-toast";
 import { Button } from "~/components/atoms/Button/Button";
-import { prisma } from "~/server/db";
 import { api } from "~/utils/api";
+import { createSSRHelper } from "~/utils/createSSRHelper";
+import { delay } from "~/utils/helpers";
 
 
-export const ParticipantInfo = (props: InferGetServerSidePropsType<typeof getServerSideProps>['participant']) => {
-  if (!props) {
-    return null;
-  }
-  const { name, email, eventName, payAmount, note } = props;
-
+export const ParticipantInfo = () => {
+  const query = useRouter().query;
+  const { data, isLoading } = api.payment.getCancellableParticipant.useQuery({ token: query.token as string});
+  if (!data || isLoading) return null;
+  const { name, email, eventName, departureTime, payAmount, note } = data.participant;
   return (
     <div>
       <h2>Resenär</h2>
       <p>Namn: {name}</p>
       <p>Email: {email}</p>
       <p>Resa: {eventName}</p>
+      <p>Avgångstid: {departureTime}</p>
       <p>Pris: {payAmount} kr</p>
       {note && (
         <p>Övrigt: {note}</p>
@@ -30,25 +31,55 @@ export const ParticipantInfo = (props: InferGetServerSidePropsType<typeof getSer
   )
 }
 
-export const CancelPage = (props: InferGetServerSidePropsType<typeof getServerSideProps>) => {
-  const { participant, cancellationDisabled, hasCancelled } = props;
+export const CancelPage = () => {
+  const query = useRouter().query;
+  const { data, isLoading, refetch: refetchParticipant } = api.payment.getCancellableParticipant.useQuery({ token: query.token as string});
 
   const { mutateAsync: cancelBooking, isLoading: isCancelling } = api.payment.cancelBooking.useMutation();
+
+  const { mutateAsync: checkRefundStatus } = api.payment.checkRefundStatus.useMutation();
+
+  if (!data || isLoading) return null;
+
+  const { participant, cancellationDisabled, hasCancelled } = data;
+
+
+  const pollRefundStatus = async (refundId: string, attempt = 0): Promise<{ success : boolean }> => {
+    if (attempt > 30) {
+      throw new Error("Could not poll refund status");
+    }
+    
+    const refund = await checkRefundStatus({ refundId });
+
+    if (refund.status === SwishRefundStatus.PAID) {
+      return {
+        success: true,
+      }
+    }
+    await delay(1000);
+    return pollRefundStatus(refundId, attempt + 1);
+  }
+
+
   const handleCancel = async () => {
-    if (!participant) return null;
-    await toast.promise(cancelBooking({
-      token: participant.cancellationToken
-    }), {
+    if (!participant.cancellationToken) return null;
+    // Get the refund ID from cancel booking
+    // Use the refund ID to poll the refund status
+    const refundId = await cancelBooking({ token: participant.cancellationToken })
+
+
+    await toast.promise(pollRefundStatus(refundId), {
       success: "Avbokning slutförd",
       error: "Något gick fel, kontakta styrelsen",
       loading: "Avbokar..."
     })
+    await refetchParticipant();
   }
 
   return (
     <div className="flex flex-col space-y-4">
       <h1 className="text-3xl">Avbokning</h1>
-      {participant && <ParticipantInfo {...participant} />}
+      {participant && <ParticipantInfo />}
       {participant && !cancellationDisabled && !hasCancelled && (
         <Button className="w-full md:w-56" disabled={isCancelling} onClick={handleCancel}>Avboka</Button>
       )}
@@ -73,48 +104,13 @@ export async function getServerSideProps({ query } : GetServerSidePropsContext) 
     }
   }
 
-  const participant = await prisma.participant.findFirst({
-    where: {
-      cancellationToken: token as string
-    },
-    include: {
-      event: true,
-      swishRefunds: true
-    }
-  });
+  const ssr = await createSSRHelper();
 
-  if (!participant || !participant.cancellationToken) {
-    return {
-      notFound: true
-    }
-  }
-
-  // You can't cancel within 48 hours of the departure
-  const twoDaysBeforeDeparture = subDays(participant.event.date, 2);
-  const today = new Date();
-
-  if (isBefore(participant.event.date, today)) {
-    return {
-      notFound: true
-    }
-  }
-
-  const isBefore48Hours = isBefore(today, twoDaysBeforeDeparture);
-
-  const hasCancelled = participant.swishRefunds.some((x) => x.status === SwishRefundStatus.PAID);
+  await ssr.payment.getCancellableParticipant.prefetch({ token: token as string });
 
   return {
     props: {
-      participant: {
-        name: participant.name,
-        email: participant.email,
-        cancellationToken: participant.cancellationToken,
-        eventName: participant.event.name,
-        payAmount: participant.payAmount,
-        note: participant.note,
-      },
-      hasCancelled,
-      cancellationDisabled: !isBefore48Hours,
+      dehydratedState: ssr.dehydrate(),
     }
   }
 }

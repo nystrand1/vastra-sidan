@@ -1,6 +1,6 @@
-import { SwishPayment, type Prisma, type PrismaClient, type VastraEvent, SwishRefund, SwishRefundStatus, SwishPaymentStatus } from "@prisma/client";
+import { type SwishPayment, type Prisma, type PrismaClient, type VastraEvent, type SwishRefund, SwishRefundStatus, SwishPaymentStatus } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
-import { isWithinInterval, subDays } from "date-fns";
+import { format, isBefore, isWithinInterval, subDays } from "date-fns";
 import { Resend } from 'resend';
 import { z } from "zod";
 import { EventSignUp } from "~/components/emails/EventSignUp";
@@ -9,10 +9,10 @@ import {
   createTRPCRouter,
   publicProcedure
 } from "~/server/api/trpc";
+import { delay } from "~/utils/helpers";
 import { createPaymentRequest, createRefundRequest } from "~/utils/swishHelpers";
 import { participantSchema, swishCallbackPaymentSchema, swishCallbackRefundSchema } from "~/utils/zodSchemas";
 
-const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 const resend = new Resend(env.RESEND_API_KEY);
 
 type ParticipantInput = z.infer<typeof participantSchema>;
@@ -81,34 +81,6 @@ const pollPaymentStatus = async (paymentIntent: SwishPayment, prisma: PrismaClie
   }
 };
 
-const pollRefundStatus = async (refundIntent: SwishRefund, prisma: PrismaClient, attempt = 0) : Promise<{ success : boolean }> => {
-  // Retry 30 times
-  if (attempt > 30) {
-    console.error(`Refund timed out - attempt: ${attempt}`);
-    console.error("Failed refund id: ", refundIntent.refundId);
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Payment timed out"
-    })
-  }
-  const successfulRefund = await prisma.swishRefund.findFirst({
-    where: {
-      refundId: refundIntent.refundId,
-      status: SwishRefundStatus.PAID
-    }
-  })
-  if (successfulRefund) {
-    console.info(`Refund - attempt: ${attempt}`, successfulRefund?.paymentId)
-    return {
-      success: true
-    }
-  } else {
-    // Wait 1 second before checking again
-    await delay(1000);
-    return pollRefundStatus(refundIntent, prisma, attempt + 1);
-  }
-};
-
 export const paymentRouter = createTRPCRouter({
   requestSwishPayment: publicProcedure
     .input(z.object({
@@ -174,19 +146,7 @@ export const paymentRouter = createTRPCRouter({
             }
           }
         });
-
-        // Poll payment status from our DB
-        const paymentStatus = await pollPaymentStatus(paymentIntent, ctx.prisma);
-        if (!paymentStatus?.success) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR"
-          })
-        }
-
-        console.info('Payment request created');
-        return {
-          status: 201
-        };
+        return paymentIntent.paymentId;
       } catch (err) {
         console.error('Error creating payment request');
         const error = err as { response: { data: any } };
@@ -281,17 +241,7 @@ export const paymentRouter = createTRPCRouter({
           }
         });
 
-        // Poll refund status from our DB
-        const refundStatus = await pollRefundStatus(refundIntent, ctx.prisma);
-
-        if (!refundStatus?.success) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR"
-          })
-        }
-        return {
-          status: 201
-        }
+        return refundIntent.refundId
       } catch (err) {
         console.error('Error creating refund request');
         const error = err as { response: { data: any } };
@@ -301,6 +251,42 @@ export const paymentRouter = createTRPCRouter({
         })
       }
   }),
+  checkPaymentStatus: publicProcedure
+    .input(z.object({ paymentId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const payment = await ctx.prisma.swishPayment.findFirst({
+        where: {
+          paymentId: input.paymentId,
+          status: SwishPaymentStatus.PAID
+        }
+      });
+      if (!payment) {
+        return {
+          status: "Not found"
+        }
+      }
+      return {
+        status: payment.status
+      };
+    }),
+  checkRefundStatus: publicProcedure
+    .input(z.object({ refundId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const refund = await ctx.prisma.swishRefund.findFirst({
+        where: {
+          refundId: input.refundId,
+          status: SwishRefundStatus.PAID
+        }
+      });
+      if (!refund) {
+        return {
+          status: "Not found"
+        }
+      }
+      return {
+        status: refund.status
+      };
+    }),
   swishPaymentCallback: publicProcedure
     .input(swishCallbackPaymentSchema)
     .mutation(async ({ input, ctx }) => {
@@ -368,57 +354,114 @@ export const paymentRouter = createTRPCRouter({
         status: 200
       }
     }),
-    swishRefundCallback: publicProcedure
-      .input(swishCallbackRefundSchema)
-      .mutation(async ({ input, ctx }) => {
-        console.log("SWISH REFUND CALLBACK", input);
-        try {
-          const refundIntent = await ctx.prisma.swishRefund.findFirst({
-            where: {
-              refundId: input.id,
-            },
-            include: {
-              participant: true,
-            }
-          });
-
-          if (!refundIntent) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Refund not found"
-            })
+  swishRefundCallback: publicProcedure
+    .input(swishCallbackRefundSchema)
+    .mutation(async ({ input, ctx }) => {
+      console.log("SWISH REFUND CALLBACK", input);
+      try {
+        const refundIntent = await ctx.prisma.swishRefund.findFirst({
+          where: {
+            refundId: input.id,
+          },
+          include: {
+            participant: true,
           }
+        });
 
-          if (!refundIntent.participant) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Refund has no participant"
-            })
-          }
-
-          await ctx.prisma.swishRefund.create({
-            include: {
-              participant: true,
-            },
-            data: {
-              refundId: input.id,
-              paymentId: refundIntent.paymentId,
-              payerAlias: input.payerAlias,
-              payeeAlias: input.payeeAlias || refundIntent.payeeAlias,
-              amount: input.amount,
-              message: input.message,
-              paymentReference: input.originalPaymentReference,
-              createdAt: new Date(input.dateCreated),
-              updatedAt: new Date(),
-              status: input.status,
-              participantId: refundIntent.participant.id,
-            }
+        if (!refundIntent) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Refund not found"
           })
-
-        } catch (err) {
-          console.error(err);
-          throw err
         }
-        return "ok";
-      })
+
+        if (!refundIntent.participant) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Refund has no participant"
+          })
+        }
+
+        await ctx.prisma.swishRefund.create({
+          include: {
+            participant: true,
+          },
+          data: {
+            refundId: input.id,
+            paymentId: refundIntent.paymentId,
+            payerAlias: input.payerAlias,
+            payeeAlias: input.payeeAlias || refundIntent.payeeAlias,
+            amount: input.amount,
+            message: input.message,
+            paymentReference: input.originalPaymentReference,
+            createdAt: new Date(input.dateCreated),
+            updatedAt: new Date(),
+            status: input.status,
+            participantId: refundIntent.participant.id,
+          }
+        })
+
+      } catch (err) {
+        console.error(err);
+        throw err
+      }
+      return "ok";
+    }),
+  getCancellableParticipant: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const participant = await ctx.prisma.participant.findFirst({
+        where: {
+          cancellationToken: input.token
+        },
+        include: {
+          event: true,
+          swishPayments: true,
+          swishRefunds: true,
+        }
+      });
+
+      if (!participant) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Participant not found"
+        })
+      }
+      const payment = participant.swishPayments.find((x) => x.status === "PAID");
+
+      if (!payment) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Payment not found"
+        })
+      }
+
+      // You can't cancel within 48 hours of the departure
+      const twoDaysBeforeDeparture = subDays(participant.event.date, 2);
+      const today = new Date();
+
+      if (isBefore(participant.event.date, today)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Can't cancel within 48 hours of departure"
+        })
+      }
+      const isBefore48Hours = isBefore(today, twoDaysBeforeDeparture);
+
+      const hasCancelled = participant.swishRefunds.some((x) => x.status === SwishRefundStatus.PAID)
+      return {
+        participant: {
+          name: participant.name,
+          email: participant.email,
+          cancellationToken: participant.cancellationToken,
+          eventName: participant.event.name,
+          payAmount: participant.payAmount,
+          departureTime: format(participant.event.date, "hh:mm"),
+          note: participant.note,
+          paymentId: payment.paymentId,
+        },
+        hasCancelled,
+        cancellationDisabled: !isBefore48Hours
+      };
+    }),
 });

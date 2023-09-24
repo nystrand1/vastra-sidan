@@ -1,19 +1,19 @@
+import { SwishRefundStatus, type VastraEvent } from "@prisma/client";
 import { type inferRouterOutputs } from "@trpc/server";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import Checkbox from "~/components/atoms/Checkbox/Checkbox";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
+import { TextArea } from "~/components/atoms/TextArea/TextArea";
 import { type AppRouter } from "~/server/api/root";
+import { delay } from "~/utils/helpers";
 import { participantSchema } from "~/utils/zodSchemas";
 import { api } from "../../../utils/api";
 import { Button } from "../../atoms/Button/Button";
 import { InputField } from "../../atoms/InputField/InputField";
 import { OutlinedButton } from "../../atoms/OutlinedButton/OutlinedButton";
-import { TextArea } from "~/components/atoms/TextArea/TextArea";
 import { SwishModal } from "../SwishModal/SwishModal";
-import { set } from "date-fns";
 
 
 interface IPassenger {
@@ -21,20 +21,41 @@ interface IPassenger {
   lastName: string;
   phone: string;
   email: string;
-  member: "on" | "off";
-  youth: "on" | "off";
+  member: boolean;
+  youth: boolean;
+  note: string;
   consent: boolean;
   busId: string;
 }
 
+type PassengerWithIndex = Partial<IPassenger> & { index: number };
+
 interface PassengerFormProps {
-  index: number;
-  passenger?: Partial<IPassenger>;
+  passenger: PassengerWithIndex;
   onRemove: (index: number) => void;
+  onChange: (passenger: Partial<IPassenger>) => void;
   buses: inferRouterOutputs<AppRouter>['public']['getAwayGame']['buses'];
+  eventId: string;
 }
 
-const PassengerForm = ({ index, passenger, onRemove, buses } : PassengerFormProps) => {
+const getPassengerPrice = (member: boolean, youth: boolean, event: VastraEvent) => {
+  if (member && youth) {
+    return event.youthMemberPrice;
+  }
+  if (youth) {
+    return event.youthPrice;
+  }
+  if (member) {
+    return event.memberPrice;
+  }
+  return event.defaultPrice
+};
+
+const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : PassengerFormProps) => {
+  const { data: event } = api.public.getAwayGame.useQuery({ id: eventId });
+  const { index, member, youth } = passenger;
+
+  if (!event) return null;
   const busOptions = buses.map((bus) => {
     const fullyBooked = bus._count.passengers >= bus.seats;
     return {
@@ -53,7 +74,9 @@ const PassengerForm = ({ index, passenger, onRemove, buses } : PassengerFormProp
         placeholder="förnamn..."
         id={`firstName_${index}`}
         name={`firstName_${index}`}
-        defaultValue={passenger?.firstName || ""}
+        onChange={(e) => {
+          onChange({ firstName: e.target.value });
+        }}
         required
       />
        <InputField
@@ -61,7 +84,7 @@ const PassengerForm = ({ index, passenger, onRemove, buses } : PassengerFormProp
         placeholder="efternamn..."
         id={`lastName_${index}`}
         name={`lastName_${index}`}
-        defaultValue={passenger?.lastName || ""}
+        onChange={(e) => { onChange({ lastName: e.target.value }) }}
         required
       />
        <InputField
@@ -69,8 +92,8 @@ const PassengerForm = ({ index, passenger, onRemove, buses } : PassengerFormProp
         placeholder="mobil..."
         id={`phone_${index}`}
         name={`phone_${index}`}
-        defaultValue={passenger?.phone || ""}
         type="tel"
+        onChange={(e) => { onChange({ phone: e.target.value }) }}
         required
       />
       {isSwishNumber && (
@@ -81,7 +104,7 @@ const PassengerForm = ({ index, passenger, onRemove, buses } : PassengerFormProp
         placeholder="email..."
         id={`email_${index}`}
         name={`email_${index}`}
-        defaultValue={passenger?.email || ""}
+        onChange={(e) => { onChange({ email: e.target.value }) }}
         required
       />
       <SelectField
@@ -89,33 +112,43 @@ const PassengerForm = ({ index, passenger, onRemove, buses } : PassengerFormProp
         id={`busId_${index}`}
         name={`busId_${index}`}
         placeholder="Välj buss..."
+        onChange={(e) => { onChange({ busId: e.target.value }) }}
         options={busOptions}
       />
       <TextArea
         label="Övrigt"
         id={`note_${index}`}
         name={`note_${index}`}
+        onChange={(e) => { onChange({ note: e.target.value }) }}
         placeholder="Övrigt... (t.ex endast dit)"
       />
       <Checkbox
         label="Medlem"
         id={`member_${index}`}
         name={`member_${index}`}
+        onChange={(e) => { 
+          onChange({ member: e.target.checked });
+        }}
       />
       <Checkbox
         label="Ungdom (upp till 20 år)"
         id={`youth_${index}`}
         name={`youth_${index}`}
+        onChange={(e) => { 
+          onChange({ youth: e.target.checked }) 
+        }}
       />
       <Checkbox
         label="Jag har läst & förstått reglerna kring bussresorna"
         id={`consent_${index}`}
         name={`consent_${index}`}
+        onChange={(e) => { onChange({ consent: e.target.checked }) }}
         required
       />
       {index > 0 && (
         <OutlinedButton type="button" onClick={() => onRemove(index)}>Ta bort</OutlinedButton>
       )}
+      <p>Pris: {getPassengerPrice(!!member, !!youth, event)} kr</p>
     </div>
   )
 }
@@ -125,8 +158,6 @@ const formToParticipant = (form: Record<string, IPassenger>) => {
     return {
       ...input,
       name: `${input.firstName} ${input.lastName}`,
-      member: input.member === "on",
-      youth: input.youth === "on",
     }
   })
 }
@@ -135,16 +166,34 @@ const formToParticipant = (form: Record<string, IPassenger>) => {
 export const AwayGameForm = () => {
   const { query } = useRouter();
   const { id } = query;
-  const session = useSession();
-  const [passengers, setPassengers] = useState([{ index: 0 }]);
+  const [passengers, setPassengers] = useState<PassengerWithIndex[]>([{ index: 0 }]);
   const [modalOpen, setModalOpen] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
+  const formRef = useRef<HTMLFormElement>(null); 
   if (!id) return null
   if (Array.isArray(id)) return null;
   const { data: awayGame, isLoading } = api.public.getAwayGame.useQuery({ id: id });
   const { mutateAsync: createPayment } = api.payment.requestSwishPayment.useMutation();
+  const { mutateAsync: checkPaymentStatus } = api.payment.checkPaymentStatus.useMutation();
+
   if (isLoading) return null;
   if (!awayGame) return null;
+
+
+  const pollPaymentStatus = async (paymentId: string, attempt = 0): Promise<{ success : boolean }> => {
+    if (attempt > 30) {
+      throw new Error("Could not poll payment status");
+    }
+    
+    const payment = await checkPaymentStatus({ paymentId });
+
+    if (payment.status === SwishRefundStatus.PAID) {
+      return {
+        success: true,
+      }
+    }
+    await delay(1000);
+    return pollPaymentStatus(paymentId, attempt + 1);
+  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -155,12 +204,16 @@ export const AwayGameForm = () => {
       if (!acc[index]) acc[index] = {};
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       acc[index][type] = value;
+      if (["consent", "member", "youth"].includes(type)) {
+        // Handle checkbox values (on/off)
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        acc[index][type] = value === "on";
+      }
       return acc;
     }, {} as Record<string, any>);
     const participants = participantSchema.array().parse(formToParticipant(formattedValues));
     if (participants.length < 1) return;
     setModalOpen(true);
-
     const payer = participants[0];
 
     if (!payer) {
@@ -170,44 +223,50 @@ export const AwayGameForm = () => {
     }
 
     try {
-      const payment = await createPayment({
+      const paymentId = await createPayment({
         participants,
         eventId: id,
       });
-      if (payment?.status === 201) {
+
+      const payment = await pollPaymentStatus(paymentId);
+
+      if (payment.success) {
+        toast.success("Nu är du anmäld! Bekräftelse skickas till din mail.");
         setPassengers([{ index: 0 }]);
         formRef.current?.reset();
-        toast.success("Nu är du anmäld! Bekräftelse skickas till din mail.");
       }
     } catch (error) {
       toast.error("Något gick fel, försök igen!");
     }
     setModalOpen(false);
   }
-
   return (
     <>
       <SwishModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
       <form onSubmit={handleSubmit} ref={formRef}>
         <div className="grid gap-8">
-          {passengers.map(({ index }) => {
-            let passenger;
-            if (index === 0 && session.data) {
-              passenger = {
-                firstName: session.data.user?.name || "",
-                lastName: "",
-                phone: "",
-                email: session.data.user?.email || "",
-                member: "off",
-                youth: "off",
-                busId: awayGame?.buses[0]?.id || '',
-              } as IPassenger
-            }
+          {passengers.map((passenger) => {
             return (
-              <div key={index}>
-                <PassengerForm buses={awayGame.buses} index={index} passenger={passenger} onRemove={(x: number) => {
-                  setPassengers(passengers.filter((p) => p.index !== x));
-                }} />
+              <div key={passenger.index}>
+                <PassengerForm
+                  buses={awayGame.buses}
+                  passenger={passenger}
+                  eventId={id}
+                  onChange={(x: Partial<IPassenger>) => {
+                    setPassengers(passengers.map((p) => {
+                      if (p.index === passenger.index) {
+                        return {
+                          ...p,
+                          ...x,
+                        }
+                      }
+                      return p;
+                    }))
+                  }}
+                  onRemove={(x: number) => {
+                    setPassengers(passengers.filter((p) => p.index !== x));
+                  }} 
+                />
               </div>
             )
           })}
@@ -215,12 +274,15 @@ export const AwayGameForm = () => {
             <Button
               type="button"
               onClick={() => {
-                setPassengers([...passengers, { index: passengers.length + 1 }])
+                setPassengers([...passengers, { index: passengers.length }])
               }}
               >
                 Lägg till passagerare
               </Button>
             <Button type="submit">Anmäl</Button>
+              <p className="text-center">Summa: {passengers.reduce((acc, { member, youth }) => {
+                return acc + getPassengerPrice(!!member, !!youth, awayGame);
+              }, 0)} kr</p>
           </div>
         </div>
     </form>
