@@ -1,8 +1,7 @@
 import { SwishRefundStatus, type VastraEvent } from "@prisma/client";
 import { type inferRouterOutputs } from "@trpc/server";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import Checkbox from "~/components/atoms/Checkbox/Checkbox";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
@@ -18,20 +17,21 @@ import { SwishModal } from "../SwishModal/SwishModal";
 
 
 interface IPassenger {
-  index: number;
   firstName: string;
   lastName: string;
   phone: string;
   email: string;
-  member: string;
-  youth: string;
+  member: boolean;
+  youth: boolean;
   note: string;
   consent: boolean;
   busId: string;
 }
 
+type PassengerWithIndex = Partial<IPassenger> & { index: number };
+
 interface PassengerFormProps {
-  index: number;
+  passenger: PassengerWithIndex;
   onRemove: (index: number) => void;
   onChange: (passenger: Partial<IPassenger>) => void;
   buses: inferRouterOutputs<AppRouter>['public']['getAwayGame']['buses'];
@@ -51,10 +51,10 @@ const getPassengerPrice = (member: boolean, youth: boolean, event: VastraEvent) 
   return event.defaultPrice
 };
 
-const PassengerForm = ({ index, onRemove, onChange, buses, eventId } : PassengerFormProps) => {
+const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : PassengerFormProps) => {
   const { data: event } = api.public.getAwayGame.useQuery({ id: eventId });
-  const [isMember, setIsMember] = useState(false);
-  const [isYouth, setIsYouth] = useState(false);
+  const { index, member, youth } = passenger;
+
   if (!event) return null;
   const busOptions = buses.map((bus) => {
     const fullyBooked = bus._count.passengers >= bus.seats;
@@ -127,8 +127,7 @@ const PassengerForm = ({ index, onRemove, onChange, buses, eventId } : Passenger
         id={`member_${index}`}
         name={`member_${index}`}
         onChange={(e) => { 
-          onChange({ member: e.target.value });
-          setIsMember(e.target.checked);
+          onChange({ member: e.target.checked });
         }}
       />
       <Checkbox
@@ -136,8 +135,7 @@ const PassengerForm = ({ index, onRemove, onChange, buses, eventId } : Passenger
         id={`youth_${index}`}
         name={`youth_${index}`}
         onChange={(e) => { 
-          onChange({ youth: e.target.value }) 
-          setIsYouth(e.target.checked);
+          onChange({ youth: e.target.checked }) 
         }}
       />
       <Checkbox
@@ -150,7 +148,7 @@ const PassengerForm = ({ index, onRemove, onChange, buses, eventId } : Passenger
       {index > 0 && (
         <OutlinedButton type="button" onClick={() => onRemove(index)}>Ta bort</OutlinedButton>
       )}
-      <p>Pris: {getPassengerPrice(isMember, isYouth, event)} kr</p>
+      <p>Pris: {getPassengerPrice(!!member, !!youth, event)} kr</p>
     </div>
   )
 }
@@ -160,8 +158,6 @@ const formToParticipant = (form: Record<string, IPassenger>) => {
     return {
       ...input,
       name: `${input.firstName} ${input.lastName}`,
-      member: input.member === "on",
-      youth: input.youth === "on",
     }
   })
 }
@@ -170,7 +166,7 @@ const formToParticipant = (form: Record<string, IPassenger>) => {
 export const AwayGameForm = () => {
   const { query } = useRouter();
   const { id } = query;
-  const [passengers, setPassengers] = useState<(Partial<IPassenger>)[]>([{ index: 0 }]);
+  const [passengers, setPassengers] = useState<PassengerWithIndex[]>([{ index: 0 }]);
   const [modalOpen, setModalOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null); 
   if (!id) return null
@@ -208,6 +204,11 @@ export const AwayGameForm = () => {
       if (!acc[index]) acc[index] = {};
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       acc[index][type] = value;
+      if (["consent", "member", "youth"].includes(type)) {
+        // Handle checkbox values (on/off)
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        acc[index][type] = value === "on";
+      }
       return acc;
     }, {} as Record<string, any>);
     const participants = participantSchema.array().parse(formToParticipant(formattedValues));
@@ -244,16 +245,16 @@ export const AwayGameForm = () => {
       <SwishModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
       <form onSubmit={handleSubmit} ref={formRef}>
         <div className="grid gap-8">
-          {passengers.map(({ index }) => {
+          {passengers.map((passenger) => {
             return (
-              <div key={index}>
+              <div key={passenger.index}>
                 <PassengerForm
                   buses={awayGame.buses}
-                  index={index || 0}
+                  passenger={passenger}
                   eventId={id}
                   onChange={(x: Partial<IPassenger>) => {
                     setPassengers(passengers.map((p) => {
-                      if (p.index === index) {
+                      if (p.index === passenger.index) {
                         return {
                           ...p,
                           ...x,
