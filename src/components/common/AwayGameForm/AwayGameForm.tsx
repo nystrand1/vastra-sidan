@@ -158,6 +158,8 @@ const formToParticipant = (form: Record<string, IPassenger>) => {
     return {
       ...input,
       name: `${input.firstName} ${input.lastName}`,
+      member: !!input.member,
+      youth: !!input.youth,
     }
   })
 }
