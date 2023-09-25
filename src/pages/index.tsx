@@ -1,7 +1,8 @@
-import { format } from "date-fns";
+import { format, isAfter } from "date-fns";
 import Head from "next/head";
 import Card from "~/atoms/CardLink/CardLink";
 import { Progressbar } from "~/atoms/Progressbar/Progressbar";
+import { Button } from "~/components/atoms/Button/Button";
 import { api } from "~/utils/api";
 import { PATHS } from "~/utils/constants";
 import { createSSRHelper } from "~/utils/createSSRHelper";
@@ -22,6 +23,7 @@ export default function Home() {
             {isLoadingAwayGames && <p className="text-white col-span-12 text-center">Laddar resor...</p>}
             {awayGames?.map((game, index) => {
               let centerClass = "";
+              const gameExpired = isAfter(new Date(), game.date);
               if (index === 0) {
                 centerClass = awayGames.length === 1 ? "md:col-start-4 lg:col-start-5" 
                   : awayGames.length === 2 ? "md:col-start-1 lg:col-start-3"
@@ -45,6 +47,15 @@ export default function Home() {
                     maxValue={game.maxSeats}
                     currentValue={game.bookedSeats}
                   />
+                  {game.bookedSeats < game.maxSeats && (
+                    <Button>Till anmälan</Button>
+                  )}
+                  {game.bookedSeats >= game.maxSeats && !gameExpired && (
+                    <Button disabled>Fullbokat</Button>
+                  )}
+                  {gameExpired && (
+                    <Button disabled>Resan har redan varit</Button>
+                  )}
                 </Card>
               </div>
               )
