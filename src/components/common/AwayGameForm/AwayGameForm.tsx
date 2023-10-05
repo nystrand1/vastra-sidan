@@ -14,6 +14,7 @@ import { Button } from "../../atoms/Button/Button";
 import { InputField } from "../../atoms/InputField/InputField";
 import { OutlinedButton } from "../../atoms/OutlinedButton/OutlinedButton";
 import { SwishModal } from "../SwishModal/SwishModal";
+import { useSession } from "next-auth/react";
 
 
 interface IPassenger {
@@ -167,8 +168,15 @@ const formToParticipant = (form: Record<string, IPassenger>) => {
 
 export const AwayGameForm = () => {
   const { query } = useRouter();
+  const { data: sessionData } = useSession();
   const { id } = query;
-  const [passengers, setPassengers] = useState<PassengerWithIndex[]>([{ index: 0 }]);
+  const initialPassenger: PassengerWithIndex = {
+    index: 0,
+    firstName: sessionData?.user.firstName ?? '',
+    lastName: sessionData?.user.lastName ?? '',
+    email: sessionData?.user.email ?? ''
+  }
+  const [passengers, setPassengers] = useState<PassengerWithIndex[]>([initialPassenger]);
   const [modalOpen, setModalOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null); 
   if (!id) return null

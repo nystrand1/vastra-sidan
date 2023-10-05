@@ -55,3 +55,9 @@ export const swishCallbackRefundSchema = z.object({
     message: z.string(),
     status: z.enum(SwishRefundStatuses),
 });
+
+export const signupSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8).max(64),
+  confirmPassword: z.string().min(8).max(64)  
+}).refine((x) => x.confirmPassword === x.password)

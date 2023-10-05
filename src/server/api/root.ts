@@ -3,6 +3,7 @@ import { paymentRouter } from "./routers/payment";
 import { cronRouter } from "./routers/cron";
 import { adminRouter } from "./routers/admin";
 import { publicRouter } from "./routers/public";
+import { userRouter } from "./routers/user";
 
 /**
  * This is the primary router for your server.
@@ -13,7 +14,8 @@ export const appRouter = createTRPCRouter({
   public: publicRouter,
   payment: paymentRouter,
   cron: cronRouter,
-  admin: adminRouter
+  admin: adminRouter,
+  user: userRouter
 });
 
 // export type definition of API
