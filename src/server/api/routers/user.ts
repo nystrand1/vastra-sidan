@@ -12,7 +12,7 @@ export const userRouter = createTRPCRouter({
   createNewUser: publicProcedure
   .input(signupSchema)
   .mutation(async ({ ctx, input }) => {
-    const { email, password } = input;
+    const { email, password, firstName, lastName } = input;
 
     const existingUser = await ctx.prisma.user.findFirst({
       where: {
@@ -30,6 +30,8 @@ export const userRouter = createTRPCRouter({
     await ctx.prisma.user.create({
       data: {
         email,
+        firstName,
+        lastName,
         password: sha256(password),
         role: Role.USER
       }

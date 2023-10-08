@@ -1,7 +1,7 @@
 import { SwishRefundStatus, type VastraEvent } from "@prisma/client";
 import { type inferRouterOutputs } from "@trpc/server";
 import { useRouter } from "next/router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import Checkbox from "~/components/atoms/Checkbox/Checkbox";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
@@ -55,7 +55,6 @@ const getPassengerPrice = (member: boolean, youth: boolean, event: VastraEvent) 
 const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : PassengerFormProps) => {
   const { data: event } = api.public.getAwayGame.useQuery({ id: eventId });
   const { index, member, youth } = passenger;
-
   if (!event) return null;
   const busOptions = buses.map((bus) => {
     const fullyBooked = bus._count.passengers >= bus.seats;
@@ -75,6 +74,7 @@ const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : Passe
         placeholder="förnamn..."
         id={`firstName_${index}`}
         name={`firstName_${index}`}
+        value={passenger.firstName}
         onChange={(e) => {
           onChange({ firstName: e.target.value });
         }}
@@ -85,6 +85,7 @@ const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : Passe
         placeholder="efternamn..."
         id={`lastName_${index}`}
         name={`lastName_${index}`}
+        value={passenger.lastName}
         onChange={(e) => { onChange({ lastName: e.target.value }) }}
         required
       />
@@ -94,6 +95,7 @@ const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : Passe
         id={`phone_${index}`}
         name={`phone_${index}`}
         type="tel"
+        value={passenger.phone}
         onChange={(e) => { onChange({ phone: e.target.value }) }}
         required
       />
@@ -105,6 +107,7 @@ const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : Passe
         placeholder="email..."
         id={`email_${index}`}
         name={`email_${index}`}
+        value={passenger.email}
         onChange={(e) => { onChange({ email: e.target.value }) }}
         required
       />
@@ -170,15 +173,20 @@ export const AwayGameForm = () => {
   const { query } = useRouter();
   const { data: sessionData } = useSession();
   const { id } = query;
-  const initialPassenger: PassengerWithIndex = {
-    index: 0,
-    firstName: sessionData?.user.firstName ?? '',
-    lastName: sessionData?.user.lastName ?? '',
-    email: sessionData?.user.email ?? ''
-  }
-  const [passengers, setPassengers] = useState<PassengerWithIndex[]>([initialPassenger]);
+  const [passengers, setPassengers] = useState<PassengerWithIndex[]>([{ index: 0 }]);
   const [modalOpen, setModalOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null); 
+  useEffect(() => {
+    if (sessionData?.user) {
+      const initialPassenger: PassengerWithIndex = {
+        index: 0,
+        firstName: sessionData?.user.firstName ?? '',
+        lastName: sessionData?.user.lastName ?? '',
+        email: sessionData?.user.email ?? ''
+      }
+      setPassengers([initialPassenger]);
+    }
+  }, [sessionData])
   if (!id) return null
   if (Array.isArray(id)) return null;
   const { data: awayGame, isLoading } = api.public.getAwayGame.useQuery({ id: id });
