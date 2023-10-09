@@ -43,6 +43,22 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model Membership {
+  id            String    @id @default(cuid())  
+  type          MembershipType
+  startDate     DateTime
+  endDate       DateTime
+  familyPrice   Int
+  youthPrice    Int
+  regularPrice  Int
+}
+
+enum MembershipType {
+  FAMILY
+  YOUTH
+  REGULAR
+}
+
 model User {
   id            String    @id @default(cuid())
   firstName     String    @default("Västra")
@@ -51,6 +67,7 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
+  phone         String?
   role          Role      @default(USER)
   accounts      Account[]
   sessions      Session[]
