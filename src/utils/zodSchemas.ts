@@ -57,13 +57,20 @@ export const swishCallbackRefundSchema = z.object({
 });
 
 export const signupSchema = z.object({
-  email: z.string().email({message: ' Felaktig email' }),
+  email: z.string().email({ message: 'Felaktig email' }),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   password: z.string()
-    .min(8, { message: 'Lösenordet får inte vara mer än 64 tecken' })
+    .min(8, { message: 'Lösenordet måste vara minst 8 tecken' })
     .max(64, { message: 'Lösenordet får inte vara mer än 64 tecken'}),
   confirmPassword: z.string()
-    .min(8, { message: 'Lösenordet får inte vara mer än 64 tecken' })
+    .min(8, { message: 'Lösenordet måste vara minst 8 tecken' })
     .max(64, { message: 'Lösenordet får inte vara mer än 64 tecken'}), 
 }).refine((x) => x.confirmPassword === x.password, {message: 'Lösenorden matchar inte'})
+
+export const loginSchema = z.object({
+  email: z.string().email({ message: 'Felaktig email' }),
+  password: z.string()
+    .min(8, { message: 'Lösenordet måste vara minst 8 tecken' })
+    .max(64, { message: 'Lösenordet får inte vara mer än 64 tecken'}),
+})

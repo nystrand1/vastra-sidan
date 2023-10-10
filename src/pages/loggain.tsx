@@ -3,9 +3,9 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Button } from "~/components/atoms/Button/Button";
-import { ButtonLink } from "~/components/atoms/ButtonLink/ButtonLink";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { InputField } from "~/components/atoms/InputField/InputField";
+import { loginSchema } from "~/utils/zodSchemas";
 
 
 
@@ -23,7 +23,18 @@ export const LoginPage = () => {
   }, [router.query]);
 
   const handleLogin = async () => {
-    await signIn('credentials', { username: email, password, callbackUrl: "/" })
+    const loginPayload = loginSchema.safeParse({ email, password });
+    if (!loginPayload.success) {
+      loginPayload.error.issues.map((x) => toast.error(x.message))
+      return;
+    }
+    const res = await signIn('credentials', { username: email, password, redirect: false });
+    if (res?.status === 401) {
+      toast.error("Felaktig inloggning, försök igen")
+    }
+    if (res?.ok) {
+      await router.push("/");
+    }
   }
 
   return (
@@ -32,7 +43,7 @@ export const LoginPage = () => {
         title="Logga in"
         className="w-full md:w-96"
       >
-        <div className="space-y-4">
+        <form className="space-y-4">
           <InputField
             type="email"
             label="Email"
@@ -52,6 +63,7 @@ export const LoginPage = () => {
           /> 
           <Button 
             className="w-full"
+            type="submit"
             onClick={handleLogin}
           >
             Logga In
@@ -62,7 +74,7 @@ export const LoginPage = () => {
           >
             Skapa konto
           </Button>
-        </div>
+        </form>
       </Card>
     </div>
   )
