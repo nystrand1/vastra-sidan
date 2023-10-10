@@ -44,13 +44,13 @@ model Session {
 }
 
 model Membership {
-  id            String    @id @default(cuid())  
-  type          MembershipType
-  startDate     DateTime
-  endDate       DateTime
-  familyPrice   Int
-  youthPrice    Int
-  regularPrice  Int
+  id                   String                 @id @default(cuid())
+  imageUrl             String
+  type                 MembershipType
+  price                Int
+  startDate            DateTime
+  endDate              DateTime
+  users                User[]
 }
 
 enum MembershipType {
@@ -60,17 +60,18 @@ enum MembershipType {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  firstName     String    @default("Västra")
-  lastName      String    @default("Sidan")
-  email         String?   @unique
+  id            String       @id @default(cuid())
+  firstName     String       @default("Västra")
+  lastName      String       @default("Sidan")
+  email         String?      @unique
   emailVerified DateTime?
   image         String?
   password      String?
   phone         String?
-  role          Role      @default(USER)
+  role          Role         @default(USER)
   accounts      Account[]
   sessions      Session[]
+  memberShips   Membership[]
 }
 
 enum Role {
@@ -115,24 +116,24 @@ model Bus {
 }
 
 model Participant {
-  id                String        @id @default(cuid())
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  id                String         @id @default(cuid())
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
   name              String
   email             String
   phone             String
-  note              String?       @db.Text
-  event             VastraEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  note              String?        @db.Text
+  event             VastraEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId           String
-  bus               Bus?          @relation(fields: [busId], references: [id])
+  bus               Bus?           @relation(fields: [busId], references: [id])
   busId             String?
-  cancellationToken String?       @default(uuid())
+  cancellationToken String?        @default(uuid())
   cancellationDate  DateTime?
   swishPayments     SwishPayment[]
   payAmount         Float?
-  checkedIn         Boolean       @default(false)
-  member            Boolean       @default(false)
-  youth             Boolean       @default(false)
+  checkedIn         Boolean        @default(false)
+  member            Boolean        @default(false)
+  youth             Boolean        @default(false)
   swishRefunds      SwishRefund[]
 
   @@index([eventId])
@@ -183,7 +184,7 @@ model SwishRefund {
   errorMessage     String?
   dateRefunded     DateTime?
   participantId    String
-  participant      Participant      @relation(fields: [participantId], references: [id])
+  participant      Participant       @relation(fields: [participantId], references: [id])
   originalPayment  SwishPayment      @relation(fields: [paymentId], references: [id])
 
   @@index([refundId])
