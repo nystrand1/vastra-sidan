@@ -1,4 +1,4 @@
-import { SwishPaymentStatus, SwishRefundStatus } from "@prisma/client";
+import { MembershipType, SwishPaymentStatus, SwishRefundStatus } from "@prisma/client";
 import { z } from "zod";
 
 export const participantSchema = z.object({
@@ -73,4 +73,24 @@ export const loginSchema = z.object({
   password: z.string()
     .min(8, { message: 'Lösenordet måste vara minst 8 tecken' })
     .max(64, { message: 'Lösenordet får inte vara mer än 64 tecken'}),
+})
+
+export const memberSignupSchema = z.object({
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  email: z.string().email({ message: 'Felaktig email' }),
+  membershipType: z.nativeEnum(MembershipType),
+  acceptedTerms: z.literal<boolean>(true),
+  additionalMembers: z.array(z.object({
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+    email: z.string().email({ message: 'Felaktig email' }),
+    membershipType: z.nativeEnum(MembershipType),
+  })).optional(),
+}).refine((x) => {
+  // Require additional members if membership type is family
+  if (x.membershipType === MembershipType.FAMILY) {
+    return x.additionalMembers && x.additionalMembers.length > 0;
+  }
+  return true;
 })

@@ -8,9 +8,6 @@ import { InputField } from "~/components/atoms/InputField/InputField";
 import { api } from "~/utils/api";
 import { signupSchema } from "~/utils/zodSchemas";
 
-
-
-
 export const SignupPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

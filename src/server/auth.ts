@@ -70,6 +70,7 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role as Role;
         session.user.firstName = token.firstName ?? "";
         session.user.lastName = token.lastName ?? "";
+        session.user.name = `${session.user.firstName} ${session.user.lastName}`;
       }
       return session;
     },

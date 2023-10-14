@@ -51,6 +51,7 @@ model Membership {
   startDate            DateTime
   endDate              DateTime
   users                User[]
+  swishPayments        SwishPayment[]
 }
 
 enum MembershipType {
@@ -60,18 +61,20 @@ enum MembershipType {
 }
 
 model User {
-  id            String       @id @default(cuid())
-  firstName     String       @default("Västra")
-  lastName      String       @default("Sidan")
-  email         String?      @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  phone         String?
-  role          Role         @default(USER)
-  accounts      Account[]
-  sessions      Session[]
-  memberShips   Membership[]
+  id                    String       @id @default(cuid())
+  firstName             String       @default("Västra")
+  lastName              String       @default("Sidan")
+  email                 String?      @unique
+  emailVerified         DateTime?
+  image                 String?
+  password              String?
+  phone                 String?
+  role                  Role         @default(USER)
+  accounts              Account[]
+  sessions              Session[]
+  memberShips           Membership[]
+  eventParticipations   Participant[]
+  swishPayments         SwishPayment[]
 }
 
 enum Role {
@@ -135,9 +138,12 @@ model Participant {
   member            Boolean        @default(false)
   youth             Boolean        @default(false)
   swishRefunds      SwishRefund[]
+  userEmail         String?
+  user              User?          @relation(fields: [userEmail], references: [email])
 
   @@index([eventId])
   @@index([busId])
+  @@index([userEmail])
 }
 
 model SwishPayment {
@@ -156,8 +162,14 @@ model SwishPayment {
   errorMessage      String?
   participants      Participant[]
   refunds           SwishRefund[]
+  memberShipId      String?
+  memberShip        Membership? @relation(fields: [memberShipId], references: [id])
+  userId            String?
+  user              User? @relation(fields: [userId], references: [id])
 
   @@index([paymentId])
+  @@index([memberShipId])
+  @@index([userId])
 }
 
 enum SwishPaymentStatus {

@@ -3,13 +3,13 @@ import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
 import { Button } from "../atoms/Button/Button";
+import { ButtonLink } from "../atoms/ButtonLink/ButtonLink";
 
 interface UserMenuProps {
   className?: string
 }
 const UserMenu = ({ className } : UserMenuProps) => {
   const { data: sessionData } = useSession();
-
   return (
     <div className={`z-50 my-4 text-base list-none bg-white divide-y divide-gray-100 rounded-lg shadow dark:bg-gray-700 dark:divide-gray-600 hidden md:block ${className || ''}`} id="user-dropdown">
       <div className="px-4 py-3">
@@ -20,9 +20,12 @@ const UserMenu = ({ className } : UserMenuProps) => {
           </>
         )}
       </div>
-      <ul className="py-2" aria-labelledby="user-menu-button">
+      <ul className="divide-y divide-gray-100 dark:bg-gray-700 dark:divide-gray-600 shadow rounded-b-lg" aria-labelledby="user-menu-button">
         <li>
-          <p onClick={() => signOut()} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white">Logga ut</p>
+          <Link href="/profil" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white">Min profil</Link>
+        </li>
+        <li>
+          <p onClick={() => signOut()} className="rounded-b-lg block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white">Logga ut</p>
         </li>
       </ul>
     </div>
@@ -46,6 +49,9 @@ export const Navigation = () => {
           <span className="self-center text-2xl font-semibold whitespace-nowrap dark:text-white">Västra Sidan</span>
       </Link>
       <div className="flex items-center md:order-2">
+        <ButtonLink className="!mb-0 mr-3" href="/bli-medlem">
+          <p>Bli medlem</p>
+        </ButtonLink>
         {!sessionData?.user && (
           <Button className="!mb-0 mr-3" onClick={() => signIn()}>
             <p>Logga In</p>
