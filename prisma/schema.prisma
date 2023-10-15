@@ -45,6 +45,7 @@ model Session {
 
 model Membership {
   id                   String                 @id @default(cuid())
+  wordpressId          String 
   imageUrl             String
   type                 MembershipType
   price                Int
@@ -52,6 +53,10 @@ model Membership {
   endDate              DateTime
   users                User[]
   swishPayments        SwishPayment[]
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  @@index([wordpressId])
 }
 
 enum MembershipType {
