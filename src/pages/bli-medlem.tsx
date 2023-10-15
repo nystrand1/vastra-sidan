@@ -1,7 +1,6 @@
 import { MembershipType } from "@prisma/client";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import toast from "react-hot-toast";
 import { Button } from "~/components/atoms/Button/Button";
 import Card from "~/components/atoms/CardLink/CardLink";
@@ -9,7 +8,8 @@ import Checkbox from "~/components/atoms/Checkbox/Checkbox";
 import { InputField } from "~/components/atoms/InputField/InputField";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { api } from "~/utils/api";
-import { memberSignupSchema, signupSchema } from "~/utils/zodSchemas";
+import { pollPaymentStatus } from "~/utils/payment";
+import { memberSignupSchema } from "~/utils/zodSchemas";
 
 interface AdditionalMember {
   firstName: string;
@@ -25,8 +25,8 @@ export const MemberPage = () => {
   const [membershipType, setMembershipType] = useState<MembershipType>(MembershipType.REGULAR);
   const [additionalMembers, setAdditionalMembers] = useState<AdditionalMember>();
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const { mutateAsync: createUser } = api.user.createNewUser.useMutation();
-  const router = useRouter();
+  const { mutateAsync: createPayment } = api.memberPayment.requestSwishPayment.useMutation();
+  const { mutateAsync: checkPaymentStatus } = api.memberPayment.checkPaymentStatus.useMutation();
 
   const memberShipOptions = [
     {
@@ -43,9 +43,17 @@ export const MemberPage = () => {
     }
   ];
 
-  useEffect(() => {
-    console.log(membershipType);
-  }, [membershipType])
+  const becomeMember = async (payload: Zod.infer<typeof memberSignupSchema>) => {
+    try {
+      const { data } = await createPayment(payload);
+      // Poll payment status
+      const { paymentId } = data;
+      return await pollPaymentStatus(paymentId, checkPaymentStatus);
+    } catch (error) {
+      const err = error as { message: string }
+      toast.error(err.message)
+    }
+  }
 
   const handleSignup = async () => {
     const signUpPayload = {
@@ -58,17 +66,15 @@ export const MemberPage = () => {
     };
 
     const payload = memberSignupSchema.safeParse(signUpPayload);
-    console.log(payload)
     if (!payload.success) {
       payload.error.issues.map((x) => toast.error(x.message))
       return;
     }
-    try {
-      console.log("hello");
-    } catch (error) {
-      const err = error as { message: string }
-      toast.error(err.message)
-    }
+    await toast.promise(becomeMember(payload.data), {
+      loading: "Laddar...",
+      success: "Klart! Tack för att du blev medlem!",
+      error: "Något gick fel, kontakta styrelsen"
+    })
   }
 
   return (

@@ -1,9 +1,10 @@
 import { createTRPCRouter } from "~/server/api/trpc";
-import { paymentRouter } from "./routers/payment";
+import { eventPaymentRouter } from "./routers/eventPayment";
 import { cronRouter } from "./routers/cron";
 import { adminRouter } from "./routers/admin";
 import { publicRouter } from "./routers/public";
 import { userRouter } from "./routers/user";
+import { memberPaymentRouter } from "./routers/memberPayment";
 
 /**
  * This is the primary router for your server.
@@ -12,7 +13,8 @@ import { userRouter } from "./routers/user";
  */
 export const appRouter = createTRPCRouter({
   public: publicRouter,
-  payment: paymentRouter,
+  eventPayment: eventPaymentRouter,
+  memberPayment: memberPaymentRouter,
   cron: cronRouter,
   admin: adminRouter,
   user: userRouter

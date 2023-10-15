@@ -1,4 +1,4 @@
-import { type SwishPayment, type Prisma, type PrismaClient, type VastraEvent, type SwishRefund, SwishRefundStatus, SwishPaymentStatus } from "@prisma/client";
+import { SwishPaymentStatus, SwishRefundStatus, type Prisma, type VastraEvent } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { format, isBefore, isWithinInterval, subDays } from "date-fns";
 import { Resend } from 'resend';
@@ -9,7 +9,7 @@ import {
   createTRPCRouter,
   publicProcedure
 } from "~/server/api/trpc";
-import { delay } from "~/utils/helpers";
+import { checkPaymentStatus, checkRefundStatus } from "~/server/utils/payment";
 import { createPaymentRequest, createRefundRequest } from "~/utils/swishHelpers";
 import { participantSchema, swishCallbackPaymentSchema, swishCallbackRefundSchema } from "~/utils/zodSchemas";
 
@@ -53,35 +53,7 @@ const sendConfirmationEmail = async (participant: ParticipantWithBusAndEvent) =>
   });
 }
 
-const pollPaymentStatus = async (paymentIntent: SwishPayment, prisma: PrismaClient, attempt = 0) : Promise<{ success : boolean }> => {
-  // Retry 30 times
-  if (attempt > 30) {
-    console.error(`Payment timed out - attempt: ${attempt}`);
-    console.error("Failed payment id: ", paymentIntent.paymentId);
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Payment timed out"
-    })
-  }
-  const successfulPayment = await prisma.swishPayment.findFirst({
-    where: {
-      paymentId: paymentIntent.paymentId,
-      status: SwishPaymentStatus.PAID
-    }
-  })
-  if (successfulPayment) {
-    console.info(`Payment - attempt: ${attempt}`, successfulPayment?.paymentId)
-    return {
-      success: true
-    }
-  } else {
-    // Wait 1 second before checking again
-    await delay(1000);
-    return pollPaymentStatus(paymentIntent, prisma, attempt + 1);
-  }
-};
-
-export const paymentRouter = createTRPCRouter({
+export const eventPaymentRouter = createTRPCRouter({
   requestSwishPayment: publicProcedure
     .input(z.object({
       participants: participantSchema.array().min(1),
@@ -254,38 +226,12 @@ export const paymentRouter = createTRPCRouter({
   checkPaymentStatus: publicProcedure
     .input(z.object({ paymentId: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const payment = await ctx.prisma.swishPayment.findFirst({
-        where: {
-          paymentId: input.paymentId,
-          status: SwishPaymentStatus.PAID
-        }
-      });
-      if (!payment) {
-        return {
-          status: "Not found"
-        }
-      }
-      return {
-        status: payment.status
-      };
+      return checkPaymentStatus(input.paymentId, ctx.prisma);
     }),
   checkRefundStatus: publicProcedure
     .input(z.object({ refundId: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const refund = await ctx.prisma.swishRefund.findFirst({
-        where: {
-          refundId: input.refundId,
-          status: SwishRefundStatus.PAID
-        }
-      });
-      if (!refund) {
-        return {
-          status: "Not found"
-        }
-      }
-      return {
-        status: refund.status
-      };
+      return checkRefundStatus(input.refundId, ctx.prisma);
     }),
   swishPaymentCallback: publicProcedure
     .input(swishCallbackPaymentSchema)

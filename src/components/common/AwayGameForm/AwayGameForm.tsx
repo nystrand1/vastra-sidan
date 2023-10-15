@@ -7,7 +7,6 @@ import Checkbox from "~/components/atoms/Checkbox/Checkbox";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { TextArea } from "~/components/atoms/TextArea/TextArea";
 import { type AppRouter } from "~/server/api/root";
-import { delay } from "~/utils/helpers";
 import { participantSchema } from "~/utils/zodSchemas";
 import { api } from "../../../utils/api";
 import { Button } from "../../atoms/Button/Button";
@@ -15,6 +14,7 @@ import { InputField } from "../../atoms/InputField/InputField";
 import { OutlinedButton } from "../../atoms/OutlinedButton/OutlinedButton";
 import { SwishModal } from "../SwishModal/SwishModal";
 import { useSession } from "next-auth/react";
+import { pollPaymentStatus } from "~/utils/payment";
 
 
 interface IPassenger {
@@ -190,28 +190,11 @@ export const AwayGameForm = () => {
   if (!id) return null
   if (Array.isArray(id)) return null;
   const { data: awayGame, isLoading } = api.public.getAwayGame.useQuery({ id: id });
-  const { mutateAsync: createPayment } = api.payment.requestSwishPayment.useMutation();
-  const { mutateAsync: checkPaymentStatus } = api.payment.checkPaymentStatus.useMutation();
+  const { mutateAsync: createPayment } = api.eventPayment.requestSwishPayment.useMutation();
+  const { mutateAsync: checkPaymentStatus } = api.eventPayment.checkPaymentStatus.useMutation();
 
   if (isLoading) return null;
   if (!awayGame) return null;
-
-
-  const pollPaymentStatus = async (paymentId: string, attempt = 0): Promise<{ success : boolean }> => {
-    if (attempt > 30) {
-      throw new Error("Could not poll payment status");
-    }
-    
-    const payment = await checkPaymentStatus({ paymentId });
-
-    if (payment.status === SwishRefundStatus.PAID) {
-      return {
-        success: true,
-      }
-    }
-    await delay(1000);
-    return pollPaymentStatus(paymentId, attempt + 1);
-  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -246,7 +229,7 @@ export const AwayGameForm = () => {
         eventId: id,
       });
 
-      const payment = await pollPaymentStatus(paymentId);
+      const payment = await pollPaymentStatus(paymentId, checkPaymentStatus);
 
       if (payment.success) {
         toast.success("Nu är du anmäld! Bekräftelse skickas till din mail.");
