@@ -18,6 +18,9 @@ const config = {
     locales: ["en"],
     defaultLocale: "en",
   },
+  images: {
+    domains: ["cmsdev.vastrasidan.se", "api.vastrasidan.se"],
+  }
 };
 
 export default config;

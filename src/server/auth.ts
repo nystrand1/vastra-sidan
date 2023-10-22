@@ -23,11 +23,15 @@ declare module "next-auth" {
     user: {
       id: string;
       role: Role;
+      firstName: string;
+      lastName: string;
     } & DefaultSession["user"];
   }
 
   interface User {
     role: Role;
+    firstName: string;
+    lastName: string;
   }
 }
 
@@ -41,10 +45,12 @@ declare module "next-auth/jwt" {
     exp?: number;
     iat?: number;
     jti?: string;
+    firstName?: string;
+    lastName?: string;
   }
 }
 
-const sha256 = (content: string) => {
+export const sha256 = (content: string) => {
   return createHash('sha256').update(content).digest('hex')
 }
 
@@ -62,12 +68,17 @@ export const authOptions: NextAuthOptions = {
     session: ({ session, token }) => {
       if (token && session.user) {
         session.user.role = token.role as Role;
+        session.user.firstName = token.firstName ?? "";
+        session.user.lastName = token.lastName ?? "";
+        session.user.name = `${session.user.firstName} ${session.user.lastName}`;
       }
       return session;
     },
     jwt: ({ token, user }) => {
       if (user) {
         token.role = user.role;
+        token.firstName = user.firstName;
+        token.lastName = user.lastName;
       }
       return token;
     },
@@ -96,6 +107,9 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
+  pages: {
+    signIn: '/loggain'
+  }
 };
 
 /**

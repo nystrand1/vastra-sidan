@@ -1,19 +1,20 @@
 import { SwishRefundStatus, type VastraEvent } from "@prisma/client";
 import { type inferRouterOutputs } from "@trpc/server";
 import { useRouter } from "next/router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import Checkbox from "~/components/atoms/Checkbox/Checkbox";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { TextArea } from "~/components/atoms/TextArea/TextArea";
 import { type AppRouter } from "~/server/api/root";
-import { delay } from "~/utils/helpers";
 import { participantSchema } from "~/utils/zodSchemas";
 import { api } from "../../../utils/api";
 import { Button } from "../../atoms/Button/Button";
 import { InputField } from "../../atoms/InputField/InputField";
 import { OutlinedButton } from "../../atoms/OutlinedButton/OutlinedButton";
 import { SwishModal } from "../SwishModal/SwishModal";
+import { useSession } from "next-auth/react";
+import { pollPaymentStatus } from "~/utils/payment";
 
 
 interface IPassenger {
@@ -54,7 +55,6 @@ const getPassengerPrice = (member: boolean, youth: boolean, event: VastraEvent) 
 const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : PassengerFormProps) => {
   const { data: event } = api.public.getAwayGame.useQuery({ id: eventId });
   const { index, member, youth } = passenger;
-
   if (!event) return null;
   const busOptions = buses.map((bus) => {
     const fullyBooked = bus._count.passengers >= bus.seats;
@@ -71,9 +71,10 @@ const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : Passe
     <div className="flex flex-col space-y-2 p-4 bg-gray-700 rounded-md">
       <InputField
         label="Förnamn"
-        placeholder="förnamn..."
+        placeholder="Förnamn..."
         id={`firstName_${index}`}
         name={`firstName_${index}`}
+        value={passenger.firstName}
         onChange={(e) => {
           onChange({ firstName: e.target.value });
         }}
@@ -81,18 +82,20 @@ const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : Passe
       />
        <InputField
         label="Efternamn"
-        placeholder="efternamn..."
+        placeholder="Efternamn..."
         id={`lastName_${index}`}
         name={`lastName_${index}`}
+        value={passenger.lastName}
         onChange={(e) => { onChange({ lastName: e.target.value }) }}
         required
       />
        <InputField
         label="Mobilnummer"
-        placeholder="mobil..."
+        placeholder="Mobil..."
         id={`phone_${index}`}
         name={`phone_${index}`}
         type="tel"
+        value={passenger.phone}
         onChange={(e) => { onChange({ phone: e.target.value }) }}
         required
       />
@@ -101,9 +104,10 @@ const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : Passe
       )}
       <InputField
         label="Email"
-        placeholder="email..."
+        placeholder="Email..."
         id={`email_${index}`}
         name={`email_${index}`}
+        value={passenger.email}
         onChange={(e) => { onChange({ email: e.target.value }) }}
         required
       />
@@ -167,35 +171,30 @@ const formToParticipant = (form: Record<string, IPassenger>) => {
 
 export const AwayGameForm = () => {
   const { query } = useRouter();
+  const { data: sessionData } = useSession();
   const { id } = query;
   const [passengers, setPassengers] = useState<PassengerWithIndex[]>([{ index: 0 }]);
   const [modalOpen, setModalOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null); 
+  useEffect(() => {
+    if (sessionData?.user) {
+      const initialPassenger: PassengerWithIndex = {
+        index: 0,
+        firstName: sessionData?.user.firstName ?? '',
+        lastName: sessionData?.user.lastName ?? '',
+        email: sessionData?.user.email ?? ''
+      }
+      setPassengers([initialPassenger]);
+    }
+  }, [sessionData])
   if (!id) return null
   if (Array.isArray(id)) return null;
   const { data: awayGame, isLoading } = api.public.getAwayGame.useQuery({ id: id });
-  const { mutateAsync: createPayment } = api.payment.requestSwishPayment.useMutation();
-  const { mutateAsync: checkPaymentStatus } = api.payment.checkPaymentStatus.useMutation();
+  const { mutateAsync: createPayment } = api.eventPayment.requestSwishPayment.useMutation();
+  const { mutateAsync: checkPaymentStatus } = api.eventPayment.checkPaymentStatus.useMutation();
 
   if (isLoading) return null;
   if (!awayGame) return null;
-
-
-  const pollPaymentStatus = async (paymentId: string, attempt = 0): Promise<{ success : boolean }> => {
-    if (attempt > 30) {
-      throw new Error("Could not poll payment status");
-    }
-    
-    const payment = await checkPaymentStatus({ paymentId });
-
-    if (payment.status === SwishRefundStatus.PAID) {
-      return {
-        success: true,
-      }
-    }
-    await delay(1000);
-    return pollPaymentStatus(paymentId, attempt + 1);
-  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -230,7 +229,7 @@ export const AwayGameForm = () => {
         eventId: id,
       });
 
-      const payment = await pollPaymentStatus(paymentId);
+      const payment = await pollPaymentStatus(paymentId, checkPaymentStatus);
 
       if (payment.success) {
         toast.success("Nu är du anmäld! Bekräftelse skickas till din mail.");

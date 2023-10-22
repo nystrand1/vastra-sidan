@@ -2,7 +2,7 @@ import { Button } from '@react-email/button';
 import { Container, Head, Hr, Img, Section, Tailwind, Text } from "@react-email/components";
 import { Html } from '@react-email/html';
 import { format } from "date-fns";
-import { type ParticipantWithBusAndEvent } from "~/server/api/routers/payment";
+import { type ParticipantWithBusAndEvent } from "~/server/api/routers/eventPayment";
 
 interface EventSignUpProps {
   participant: ParticipantWithBusAndEvent;
@@ -35,6 +35,7 @@ const mockParticipant: EventSignUpProps['participant'] = {
   id: "testpersson",
   name: 'Test Testsson',
   email: 'test@testsson.com',
+  userEmail: 'test@testsson.com',
   payAmount: 100,
   phone: '0701234567',
   createdAt: new Date(),

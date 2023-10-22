@@ -111,3 +111,18 @@ export interface StartPage {
     hero: Hero
   }
 }
+
+export interface Membership {
+  id: number
+  title: {
+    rendered: string
+  }
+  acf: {
+    startDate: string
+    endDate: string
+    youthPrice: string
+    regularPrice: string
+    familyPrice: string
+    image: Image
+  }
+}

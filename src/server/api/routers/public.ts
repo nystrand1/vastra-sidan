@@ -1,6 +1,6 @@
-import { SwishPaymentStatus, SwishRefundStatus } from "@prisma/client";
+import { MembershipType, SwishPaymentStatus, SwishRefundStatus } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
-import { subDays, subHours } from "date-fns";
+import { subHours } from "date-fns";
 import { z } from "zod";
 import {
   createTRPCRouter,
@@ -65,5 +65,25 @@ export const publicRouter = createTRPCRouter({
       }
 
       return res;
+    }),
+  getAvailableMemberships: publicProcedure
+    .query(async ({ ctx }) => {
+      const res = await ctx.prisma.membership.findMany({
+        where: {
+          endDate: {
+            gt: new Date()
+          }
+        },
+        select: {
+          type: true,
+          id: true,
+          imageUrl: true,
+        }
+      });
+      return {
+        regular: res.find(m => m.type === MembershipType.REGULAR),
+        family: res.find(m => m.type === MembershipType.FAMILY),
+        youth: res.find(m => m.type === MembershipType.YOUTH),
+      };
     })
 });

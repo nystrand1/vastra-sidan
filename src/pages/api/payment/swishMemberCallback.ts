@@ -6,7 +6,7 @@ import { getHTTPStatusCodeFromError } from "@trpc/server/http";
 import { type swishCallbackRefundSchema, type swishCallbackPaymentSchema } from "~/utils/zodSchemas";
 import { type z } from "zod";
 
-const swishCallback = async (req: NextApiRequest, res: NextApiResponse) => {
+const swishMemberCallback = async (req: NextApiRequest, res: NextApiResponse) => {
   // Create context and caller
   const ctx = await createTRPCContext({ req, res });
   const caller = appRouter.createCaller(ctx);
@@ -15,11 +15,11 @@ const swishCallback = async (req: NextApiRequest, res: NextApiResponse) => {
     const isRefund = 'originalPaymentReference' in req.body;
     if (isRefund) {
       console.info("Swish callback is a refund");
-      await caller.payment.swishRefundCallback(req.body as z.infer<typeof swishCallbackRefundSchema>);
+      await caller.memberPayment.swishRefundCallback(req.body as z.infer<typeof swishCallbackRefundSchema>);
     } else {
       // It's a payment
       console.info("Swish callback is a payment");
-      await caller.payment.swishPaymentCallback(req.body as z.infer<typeof swishCallbackPaymentSchema>);
+      await caller.memberPayment.swishPaymentCallback(req.body as z.infer<typeof swishCallbackPaymentSchema>);
     }
 
     res.status(201).json("ok");
@@ -36,4 +36,4 @@ const swishCallback = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 };
 
-export default swishCallback;
+export default swishMemberCallback;
