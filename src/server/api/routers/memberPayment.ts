@@ -13,7 +13,7 @@ import MemberSignup from "~/components/emails/MemberSignUp";
 
 const resend = new Resend(env.RESEND_API_KEY);
 
-const friendlyMembershipNames = {
+export const friendlyMembershipNames = {
   [MembershipType.FAMILY]: "Familjemedlemskap",
   [MembershipType.REGULAR]: "Ordinarie medlemskap",
   [MembershipType.YOUTH]: "Ungdomsmedlemskap",
@@ -38,7 +38,31 @@ export const memberPaymentRouter = createTRPCRouter({
         })
       }
 
+      // Check if we have user(s) with this mail
+      const user = await ctx.prisma.user.findUnique({
+        where: {
+          email: input.email
+        },
+        include: {
+          memberShips: {
+            include: {
+              swishPayments: {
+                where: {
+                  status: SwishPaymentStatus.PAID
+                }
+              },
+            }
+          },
+        }
+      });
+
       // Check if user already has a membership
+      if (user?.memberShips.find((x) => x.wordpressId === membership.wordpressId)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "User already has this membership"
+        });
+      }
 
       const paymentIntentData = createPaymentIntentPayload({
         message: `${membership.name}, ${friendlyMembershipNames[membership.type]}`,
@@ -46,7 +70,7 @@ export const memberPaymentRouter = createTRPCRouter({
         payerAlias: phone,
         callbackEndPoint: "swishMemberCallback",
       })
-      console.log(paymentIntentData);
+
       try {
         const res = await createPaymentRequest(paymentIntentData);
         const paymentRequestUrl = res.headers.location as string;
@@ -63,6 +87,7 @@ export const memberPaymentRouter = createTRPCRouter({
             message: paymentIntentData.message,
             status: SwishPaymentStatus.CREATED,
             memberShipId: membershipId,
+            userId: user?.id,
             // Connect to a user if they are logged in
           }
         })
@@ -138,6 +163,22 @@ export const memberPaymentRouter = createTRPCRouter({
 
       if (newPayment.status === SwishPaymentStatus.PAID) {
         try {
+
+          if (newPayment.user && newPayment.memberShipId) {
+            await ctx.prisma.user.update({
+              where: {
+                id: newPayment.user.id
+              },
+              data: {
+                memberShips: {
+                  connect: {
+                    id: newPayment.memberShipId
+                  }
+                }
+              }
+            })
+          }
+
           // Send confirmation email
           await resend.sendEmail({
             from: env.BOOKING_EMAIL,

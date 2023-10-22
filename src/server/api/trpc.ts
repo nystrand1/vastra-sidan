@@ -180,3 +180,20 @@ const swishOnly = t.middleware(({ ctx, next }) => {
 });
 
 export const swishProcedure = t.procedure.use(swishOnly);
+
+export const userOnly = t.middleware(({ ctx, next }) => {
+  if (!ctx.session || !ctx.session.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+  return next({
+    ctx: {
+      // infers the `session` as non-nullable
+      session: {
+        ...ctx.session,
+        user: ctx.session.user
+      },
+    },
+  });
+});
+
+export const userProcedure = t.procedure.use(userOnly);

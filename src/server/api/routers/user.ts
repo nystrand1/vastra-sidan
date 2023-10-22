@@ -1,11 +1,20 @@
-import { Role } from "@prisma/client";
+import { type Membership, Role } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import {
   createTRPCRouter,
-  publicProcedure
+  publicProcedure,
+  userProcedure
 } from "~/server/api/trpc";
 import { sha256 } from "~/server/auth";
 import { signupSchema } from "~/utils/zodSchemas";
+import { friendlyMembershipNames } from "./memberPayment";
+
+const membershipFormatter = (membership: Membership) => ({
+  id: membership.id,
+  name: membership.name,
+  imageUrl: membership.imageUrl,
+  type: friendlyMembershipNames[membership.type],
+})
 
 
 export const userRouter = createTRPCRouter({
@@ -40,4 +49,33 @@ export const userRouter = createTRPCRouter({
       status: 201
     }
   }),
+  getProfile: userProcedure
+  .query(async ({ ctx }) => {
+    if (!ctx.session.user.email) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Bad user'
+      })
+    }
+    const user = await ctx.prisma.user.findUnique({
+      where: {
+        email: ctx.session.user.email
+      },
+      include: {
+        memberShips: {
+          where: {
+            swishPayments: {
+              some: {
+                status: 'PAID'
+              }
+            }
+          }
+        }
+      }
+    })
+
+    return {
+      memberShips: user?.memberShips.map(membershipFormatter)
+    }
+  })
 });

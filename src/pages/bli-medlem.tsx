@@ -77,7 +77,6 @@ export const MemberPage = () => {
 
     const payload = memberSignupSchema.safeParse(signUpPayload);
     if (!payload.success) {
-      console.log(payload);
       payload.error.issues.map((x) => toast.error(x.message))
       return;
     }
