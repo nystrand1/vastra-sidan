@@ -1,14 +1,15 @@
-import { type Membership, type Bus, type VastraEvent, MembershipType } from "@prisma/client";
-import { type Membership as WPMembership } from '~/types/wordpressTypes'
+import { MembershipType, type Bus, type Prisma, type VastraEvent } from "@prisma/client";
 import { type inferAsyncReturnType } from "@trpc/server";
 import { parseISO } from "date-fns";
-import { type createTRPCContext } from "../api/trpc";
 import { env } from "~/env.mjs";
-import { type AwayGame } from "~/types/wordpressTypes";
+import { type AwayGame, type Membership as WPMembership } from '~/types/wordpressTypes';
+import { type createTRPCContext } from "../api/trpc";
 
 const apiKey = env.WORDPRESS_API_KEY;
 
 export const baseUrl = env.NEXT_PUBLIC_WORDPRESS_URL;
+
+type MembershipPayload = Prisma.MembershipUpsertArgs['create']
 
 
 export const RESOURCES = {
@@ -126,26 +127,28 @@ export const upsertBus = async (bus: Bus, ctx: inferAsyncReturnType<typeof creat
 }
 
 
-export const wpMembershipToMembership = (wpMembership: WPMembership) : Omit<Membership, 'id'>[] => {
+export const wpMembershipToMembership = (wpMembership: WPMembership) : MembershipPayload[] => {
   const prices = {
     [MembershipType.FAMILY]: Number(wpMembership.acf.familyPrice),
     [MembershipType.REGULAR]: Number(wpMembership.acf.regularPrice),
     [MembershipType.YOUTH]: Number(wpMembership.acf.youthPrice),
   }
-  const memberships: Omit<Membership, 'id'>[] = [MembershipType.FAMILY, MembershipType.REGULAR, MembershipType.YOUTH].map((membershipType) => ({
+  const memberships: MembershipPayload[] = [MembershipType.FAMILY, MembershipType.REGULAR, MembershipType.YOUTH].map((membershipType) => ({
     wordpressId: wpMembership.id.toString(),
+    name: wpMembership.title.rendered,
     imageUrl: wpMembership.acf.image.url,
     type: membershipType,
     price: prices[membershipType],
     startDate: parseISO(wpMembership.acf.startDate),
     endDate: parseISO(wpMembership.acf.endDate),
+    updatedAt: new Date(),
   }))
 
   return memberships;
 }
 
 
-export const upsertMembership = async (membership: Omit<Membership, 'id'>, ctx: inferAsyncReturnType<typeof createTRPCContext>) => {
+export const upsertMembership = async (membership: MembershipPayload, ctx: inferAsyncReturnType<typeof createTRPCContext>) => {
   const existingMembership = await ctx.prisma.membership.findFirst({
     where: {
       wordpressId: membership.wordpressId,

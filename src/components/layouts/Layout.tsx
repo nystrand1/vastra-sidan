@@ -19,7 +19,7 @@ const Layout = ({ children } : PropsWithChildren) => {
         <Image style={{objectFit: 'cover'}} src="/static/background.webp" fill alt="Uppsala det är staden"/>
       </div>
       <main className="flex min-h-screen flex-col items-center justify-center z-10 relative">
-        <div className="container p-4 md:p-8 mt-16">
+        <div className="container p-4 md:p-8 mt-16 md:mt-12">
           {children}
         </div>
       </main>

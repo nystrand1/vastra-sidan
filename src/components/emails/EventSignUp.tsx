@@ -35,6 +35,7 @@ const mockParticipant: EventSignUpProps['participant'] = {
   id: "testpersson",
   name: 'Test Testsson',
   email: 'test@testsson.com',
+  userEmail: 'test@testsson.com',
   payAmount: 100,
   phone: '0701234567',
   createdAt: new Date(),

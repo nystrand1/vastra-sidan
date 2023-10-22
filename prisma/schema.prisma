@@ -45,6 +45,7 @@ model Session {
 
 model Membership {
   id                   String                 @id @default(cuid())
+  name                 String
   wordpressId          String 
   imageUrl             String
   type                 MembershipType
@@ -53,6 +54,7 @@ model Membership {
   endDate              DateTime
   users                User[]
   swishPayments        SwishPayment[]
+  swishRefunds         SwishRefund[]
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
 
@@ -80,6 +82,7 @@ model User {
   memberShips           Membership[]
   eventParticipations   Participant[]
   swishPayments         SwishPayment[]
+  swishRefunds          SwishRefund[]
 }
 
 enum Role {
@@ -200,13 +203,19 @@ model SwishRefund {
   errorCode        String?
   errorMessage     String?
   dateRefunded     DateTime?
-  participantId    String
-  participant      Participant       @relation(fields: [participantId], references: [id])
+  participantId    String?
+  participant      Participant?       @relation(fields: [participantId], references: [id])
+  memberShipId     String?
+  memberShip       Membership?       @relation(fields: [memberShipId], references: [id])
+  userId           String?
+  user             User? @relation(fields: [userId], references: [id])
   originalPayment  SwishPayment      @relation(fields: [paymentId], references: [id])
 
   @@index([refundId])
   @@index([participantId])
   @@index([paymentId])
+  @@index([memberShipId])
+  @@index([userId])
 }
 
 enum SwishRefundStatus {

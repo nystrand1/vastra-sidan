@@ -1,6 +1,6 @@
-import { MembershipType } from "@prisma/client";
-import { useRouter } from "next/router";
-import { useState } from "react";
+import { type MembershipType } from "@prisma/client";
+import Image from "next/image";
+import { useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { Button } from "~/components/atoms/Button/Button";
 import Card from "~/components/atoms/CardLink/CardLink";
@@ -8,6 +8,7 @@ import Checkbox from "~/components/atoms/Checkbox/Checkbox";
 import { InputField } from "~/components/atoms/InputField/InputField";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { api } from "~/utils/api";
+import { createSSRHelper } from "~/utils/createSSRHelper";
 import { pollPaymentStatus } from "~/utils/payment";
 import { memberSignupSchema } from "~/utils/zodSchemas";
 
@@ -19,40 +20,47 @@ interface AdditionalMember {
 }
 
 export const MemberPage = () => {
+  const formRef = useRef<HTMLFormElement>(null);
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [membershipType, setMembershipType] = useState<MembershipType>(MembershipType.REGULAR);
+  const [phone, setPhone] = useState("");
   const [additionalMembers, setAdditionalMembers] = useState<AdditionalMember>();
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const { mutateAsync: createPayment } = api.memberPayment.requestSwishPayment.useMutation();
   const { mutateAsync: checkPaymentStatus } = api.memberPayment.checkPaymentStatus.useMutation();
+  const { data: memberships } = api.public.getAvailableMemberships.useQuery();
+  const [membershipId, setMembershipId] = useState(memberships?.regular?.id);
+  const [membershipType, setMembershipType] = useState(memberships?.regular?.type);
+
+  if (!memberships || !memberships.regular || !memberships.family || !memberships.youth) {
+    return <p>Finns inga medlemskap för tillfället!</p>
+  }
 
   const memberShipOptions = [
     {
       label: "Ordinarie",
-      value: MembershipType.REGULAR
+      value: memberships.regular?.id,
+      type: memberships.regular?.type
     },
     {
       label: "Ungdom (under 18)",
-      value: MembershipType.YOUTH
+      value: memberships.youth?.id,
+      type: memberships.youth?.type
     },
     {
       label: "Familj",
-      value: MembershipType.FAMILY
+      value: memberships.family?.id,
+      type: memberships.family?.type
     }
   ];
 
+  const selectedMembership = Object.values(memberships).find((x) => x?.id === membershipId);
+
   const becomeMember = async (payload: Zod.infer<typeof memberSignupSchema>) => {
-    try {
-      const { data } = await createPayment(payload);
-      // Poll payment status
-      const { paymentId } = data;
-      return await pollPaymentStatus(paymentId, checkPaymentStatus);
-    } catch (error) {
-      const err = error as { message: string }
-      toast.error(err.message)
-    }
+    const { paymentId } = await createPayment(payload);
+    // Poll payment status
+    return await pollPaymentStatus(paymentId, checkPaymentStatus);
   }
 
   const handleSignup = async () => {
@@ -60,6 +68,8 @@ export const MemberPage = () => {
       firstName,
       lastName,
       email,
+      phone,
+      membershipId,
       membershipType,
       acceptedTerms,
       additionalMembers
@@ -67,18 +77,39 @@ export const MemberPage = () => {
 
     const payload = memberSignupSchema.safeParse(signUpPayload);
     if (!payload.success) {
+      console.log(payload);
       payload.error.issues.map((x) => toast.error(x.message))
       return;
     }
-    await toast.promise(becomeMember(payload.data), {
-      loading: "Laddar...",
-      success: "Klart! Tack för att du blev medlem!",
-      error: "Något gick fel, kontakta styrelsen"
-    })
+    try {
+      const res = await toast.promise(becomeMember(payload.data), {
+        loading: "Laddar...",
+        success: "Klart! Tack för att du blev medlem!",
+        error: "Något gick fel, kontakta styrelsen"
+      })
+      if (res?.success) {
+        formRef.current?.reset();
+        setFirstName("");
+        setLastName("");
+        setEmail("");
+        setPhone("");
+        setAcceptedTerms(false);
+        setAdditionalMembers(undefined);
+      }
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   return (
-    <form className="flex flex-col items-center justify-center">
+    <form className="flex flex-col items-center justify-center" ref={formRef}>
+      {selectedMembership?.imageUrl && (
+        <div className="flex flex-col items-center mb-2">
+          <div className="w-32 h-48 md:w-32 md:h-66 relative">
+            <Image src={selectedMembership.imageUrl} fill style={{ objectFit: 'cover' }} alt="medlemskapskort" />
+          </div>
+        </div>
+      )}
       <Card
         title="Bli medlem i Västra Sidan"
         className="w-full md:w-96"
@@ -111,12 +142,26 @@ export const MemberPage = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
+          <InputField
+            label="Mobilnummer"
+            placeholder="Mobil..."
+            name="phone"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            required
+          />
+          <span className="text-xs">Detta nummer kommer användas för Swish-betalning</span>
           <SelectField 
             label="Medlemskap"
             name="membershipType"
-            value={membershipType}
+            value={membershipId}
             options={memberShipOptions}
-            onChange={(e) => setMembershipType(e.target.value as MembershipType)}
+            onChange={(e) => {
+              setMembershipId(e.target.value);
+              const membership = memberShipOptions.find((x) => x.value === e.target.value);
+              setMembershipType(membership!.type);
+            }}
           />          
           <Checkbox
             id="terms"
@@ -140,3 +185,17 @@ export const MemberPage = () => {
 }
 
 export default MemberPage;
+
+
+export const getStaticProps = async () => {
+  const ssrHelper = await createSSRHelper();
+
+  await ssrHelper.public.getAvailableMemberships.prefetch();
+
+  return {
+    props: {
+      trpcState: ssrHelper.dehydrate(),
+    },
+    revalidate: 60,
+  };
+}

@@ -49,7 +49,7 @@ export const Navigation = () => {
           <span className="self-center text-2xl font-semibold whitespace-nowrap dark:text-white">Västra Sidan</span>
       </Link>
       <div className="flex items-center md:order-2">
-        <ButtonLink className="!mb-0 mr-3" href="/bli-medlem">
+        <ButtonLink className="!mb-0 mr-3 hidden md:block" href="/bli-medlem">
           <p>Bli medlem</p>
         </ButtonLink>
         {!sessionData?.user && (

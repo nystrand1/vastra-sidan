@@ -71,7 +71,7 @@ const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : Passe
     <div className="flex flex-col space-y-2 p-4 bg-gray-700 rounded-md">
       <InputField
         label="Förnamn"
-        placeholder="förnamn..."
+        placeholder="Förnamn..."
         id={`firstName_${index}`}
         name={`firstName_${index}`}
         value={passenger.firstName}
@@ -82,7 +82,7 @@ const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : Passe
       />
        <InputField
         label="Efternamn"
-        placeholder="efternamn..."
+        placeholder="Efternamn..."
         id={`lastName_${index}`}
         name={`lastName_${index}`}
         value={passenger.lastName}
@@ -91,7 +91,7 @@ const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : Passe
       />
        <InputField
         label="Mobilnummer"
-        placeholder="mobil..."
+        placeholder="Mobil..."
         id={`phone_${index}`}
         name={`phone_${index}`}
         type="tel"
@@ -104,7 +104,7 @@ const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : Passe
       )}
       <InputField
         label="Email"
-        placeholder="email..."
+        placeholder="Email..."
         id={`email_${index}`}
         name={`email_${index}`}
         value={passenger.email}

@@ -10,6 +10,7 @@ import {
   publicProcedure
 } from "~/server/api/trpc";
 import { checkPaymentStatus, checkRefundStatus } from "~/server/utils/payment";
+import { createPaymentIntentPayload } from "~/utils/payment";
 import { createPaymentRequest, createRefundRequest } from "~/utils/swishHelpers";
 import { participantSchema, swishCallbackPaymentSchema, swishCallbackRefundSchema } from "~/utils/zodSchemas";
 
@@ -77,15 +78,12 @@ export const eventPaymentRouter = createTRPCRouter({
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const payer = input.participants[0]!
       const message = `${event.name}. ${input.participants.length} resenärer`.slice(0, 50).replaceAll('/', '-');
-      const data = {
-        "payeePaymentReference" : "0123456789",
-        "callbackUrl" : `${env.API_URL}/payment/swishCallback`,
-        "payerAlias" : payer.phone,
-        "payeeAlias" : "1234679304",
-        "amount" : cost,
-        "currency" : "SEK",
-        "message" : message,
-      };
+      const data = createPaymentIntentPayload({
+        message,
+        payerAlias: payer.phone,
+        amount: cost,
+        callbackEndPoint: "swishEventCallback",
+      })
       try {
         // Create participants for event
         const participants = await ctx.prisma.$transaction(
@@ -109,7 +107,7 @@ export const eventPaymentRouter = createTRPCRouter({
             paymentRequestUrl,
             paymentId: paymentRequestId,
             payerAlias: payer.phone,
-            payeeAlias: "1234679304",
+            payeeAlias: data.payeeAlias,
             amount: cost,
             message: message,
             status: SwishPaymentStatus.CREATED,
@@ -128,8 +126,6 @@ export const eventPaymentRouter = createTRPCRouter({
           code: "INTERNAL_SERVER_ERROR",
         })
       }
-
-
     }),
   cancelBooking: publicProcedure
     .input(z.object({ token: z.string() }))
