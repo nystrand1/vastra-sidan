@@ -1,4 +1,5 @@
 import { type MembershipType } from "@prisma/client";
+import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { useRef, useState } from "react";
 import toast from "react-hot-toast";
@@ -21,6 +22,7 @@ interface AdditionalMember {
 
 export const MemberPage = () => {
   const formRef = useRef<HTMLFormElement>(null);
+  const session = useSession();
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -94,6 +96,7 @@ export const MemberPage = () => {
         setPhone("");
         setAcceptedTerms(false);
         setAdditionalMembers(undefined);
+        await session.update({ isMember: true });
       }
     } catch (error) {
       console.log(error);

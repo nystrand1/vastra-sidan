@@ -8,6 +8,10 @@ import {
 import { sha256 } from "~/server/auth";
 import { signupSchema } from "~/utils/zodSchemas";
 import { friendlyMembershipNames } from "./memberPayment";
+import { z } from "zod";
+import { Resend } from "resend";
+import { env } from "~/env.mjs";
+import UserSignup from "~/components/emails/UserSignup";
 
 const membershipFormatter = (membership: Membership) => ({
   id: membership.id,
@@ -16,6 +20,7 @@ const membershipFormatter = (membership: Membership) => ({
   type: friendlyMembershipNames[membership.type],
 })
 
+const resend = new Resend(env.RESEND_API_KEY);
 
 export const userRouter = createTRPCRouter({
   createNewUser: publicProcedure
@@ -36,7 +41,7 @@ export const userRouter = createTRPCRouter({
       })
     }
 
-    await ctx.prisma.user.create({
+    const user = await ctx.prisma.user.create({
       data: {
         email,
         firstName,
@@ -44,6 +49,13 @@ export const userRouter = createTRPCRouter({
         password: sha256(password),
         role: Role.USER
       }
+    })
+
+    await resend.sendEmail({
+      from: env.BOOKING_EMAIL,
+      to: email,
+      subject: 'Bekräfta email din email',
+      react: UserSignup({ token: user.id })
     })
     return {
       status: 201
@@ -75,7 +87,33 @@ export const userRouter = createTRPCRouter({
     })
 
     return {
-      memberShips: user?.memberShips.map(membershipFormatter)
+      memberShips: user?.memberShips.map(membershipFormatter),
     }
-  })
+  }),
+  verifyEmail: publicProcedure
+  .input(z.object({ id: z.string() }))
+  .mutation(async ({ ctx, input }) => {
+    const user = await ctx.prisma.user.findUnique({
+      where: {
+        id: input.id
+      }
+    })
+    if (!user) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Bad user'
+      })
+    }
+    await ctx.prisma.user.update({
+      where: {
+        id: input.id
+      },
+      data: {
+        emailVerified: new Date()
+      }
+    })
+    return {
+      status: 200
+    }
+  }),
 });

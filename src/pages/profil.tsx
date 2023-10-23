@@ -19,13 +19,12 @@ export const ProfilePage = () => {
 
   return (
     <div className="flex flex-col items-center justify-center">
-      {data.memberShips && data.memberShips?.length > 0 && (
         <Card 
           title="Mina medlemskap"
           className="w-full md:w-96"
         >
           <div className="h-0.5 border-t-0 bg-neutral-100" />
-          {data.memberShips.map((membership) => {
+          {data.memberShips && data.memberShips.map((membership) => {
             return (
               <div className="flex flex-col space-y-2" key={membership.id}>
                 <p>{membership.name}</p>
@@ -36,8 +35,10 @@ export const ProfilePage = () => {
               </div>
             )
           })}
+          {!data.memberShips?.length && (
+            <p className="text-center">Du har inget medlemskap</p>
+          )}
         </Card>
-      )}
     </div>
   )
 }

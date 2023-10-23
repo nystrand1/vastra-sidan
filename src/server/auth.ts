@@ -77,12 +77,16 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    jwt: ({ token, user }) => {
+    jwt: ({ token, user, trigger, session }) => {
       if (user) {
         token.role = user.role;
         token.firstName = user.firstName;
         token.lastName = user.lastName;
         token.isMember = user.isMember;
+      }
+      if (trigger === "update" && 'isMember' in session) {
+        const { isMember } = session as { isMember: boolean };
+        token.isMember = isMember;
       }
       return token;
     },
