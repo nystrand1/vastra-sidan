@@ -17,6 +17,7 @@ const UserMenu = ({ className } : UserMenuProps) => {
           <>
             <span className="block text-sm text-gray-900 dark:text-white">{sessionData.user.name}</span>
             <span className="block text-sm  text-gray-500 truncate dark:text-gray-400">{sessionData.user.email}</span>
+            <span className="block text-sm  text-gray-500 truncate dark:text-gray-400">{sessionData.user.isMember ? 'Medlem' : 'Inte medlem'}</span>
           </>
         )}
       </div>
@@ -49,9 +50,11 @@ export const Navigation = () => {
           <span className="self-center text-2xl font-semibold whitespace-nowrap dark:text-white">Västra Sidan</span>
       </Link>
       <div className="flex items-center md:order-2">
-        <ButtonLink className="!mb-0 mr-3 hidden md:block" href="/bli-medlem">
-          <p>Bli medlem</p>
-        </ButtonLink>
+        {!sessionData?.user.isMember && (
+          <ButtonLink className="!mb-0 mr-3 hidden md:block" href="/bli-medlem">
+            <p>Bli medlem</p>
+          </ButtonLink>
+        )}
         {!sessionData?.user && (
           <Button className="!mb-0 mr-3" onClick={() => signIn()}>
             <p>Logga In</p>
@@ -82,9 +85,11 @@ export const Navigation = () => {
           <li>
             <Link href="/" className="block py-2 pl-3 pr-4 text-white bg-blue-700 rounded md:bg-transparent md:text-blue-700 md:p-0 md:dark:text-blue-500" aria-current="page">Bussresor</Link>
           </li>
-          <li>
-            <Link href="/bli-medlem" className="block py-2 pl-3 pr-4 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 md:p-0 dark:text-white md:dark:hover:text-blue-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700">Bli Medlem</Link>
-          </li>
+          {!sessionData?.user.isMember && (
+            <li>
+              <Link href="/bli-medlem" className="block py-2 pl-3 pr-4 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 md:p-0 dark:text-white md:dark:hover:text-blue-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700">Bli Medlem</Link>
+            </li>
+          )}
         </ul>
       </div>
       </div>

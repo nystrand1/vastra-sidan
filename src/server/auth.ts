@@ -25,6 +25,7 @@ declare module "next-auth" {
       role: Role;
       firstName: string;
       lastName: string;
+      isMember: boolean
     } & DefaultSession["user"];
   }
 
@@ -32,6 +33,7 @@ declare module "next-auth" {
     role: Role;
     firstName: string;
     lastName: string;
+    isMember: boolean
   }
 }
 
@@ -71,6 +73,7 @@ export const authOptions: NextAuthOptions = {
         session.user.firstName = token.firstName ?? "";
         session.user.lastName = token.lastName ?? "";
         session.user.name = `${session.user.firstName} ${session.user.lastName}`;
+        session.user.isMember = !!token.isMember;
       }
       return session;
     },
@@ -79,6 +82,7 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.firstName = user.firstName;
         token.lastName = user.lastName;
+        token.isMember = user.isMember;
       }
       return token;
     },
@@ -99,11 +103,28 @@ export const authOptions: NextAuthOptions = {
           where: {
             email: credentials.username,
           },
+          include: {
+            memberShips: {
+              where: {
+                endDate: {
+                  gte: new Date()
+                },
+                swishPayments: {
+                  some: {
+                    status: 'PAID'
+                  }
+                }
+              }
+            }
+          }
         });
         if (!user) return null;
 
         if (user.password !== sha256(credentials.password)) return null;
-        return user;
+        return {
+          ...user,
+          isMember: !!user.memberShips.length
+        };
       },
     }),
   ],
