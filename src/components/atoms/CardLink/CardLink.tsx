@@ -7,17 +7,24 @@ interface CardProps extends PropsWithChildren {
   className?: string;
 }
 
-const Card = ({ title, link, className, children } : CardProps) => {
+const Card = ({ title, link, className, children }: CardProps) => {
+  const content = (
+    <div className="flex flex-col justify-between space-y-4">
+      {title && (
+        <h2 className="text-xl font-semibold">{title}</h2>
+      )}
+      {children}
+    </div>
+  )
   return (
     <div className={`bg-slate-800 text-slate-50 rounded-lg shadow-md p-4 overflow-hidden ${link ? 'cursor-pointer' : ''} ${className || ''}`}>
-      <Link href={link ?? ''}>
-        <div className="flex flex-col justify-between space-y-4">
-          {title && (
-            <h2 className="text-xl font-semibold">{title}</h2>
-          )}
-          {children}
-        </div>
-      </Link>
+      {link ? (
+        <Link href={link}>
+          {content}
+        </Link>
+      ) : (
+        content
+      )}
     </div>
   );
 };
