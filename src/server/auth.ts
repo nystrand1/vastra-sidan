@@ -25,7 +25,7 @@ declare module "next-auth" {
       role: Role;
       firstName: string;
       lastName: string;
-      isMember: boolean
+      isMember: boolean;
     } & DefaultSession["user"];
   }
 
@@ -33,7 +33,7 @@ declare module "next-auth" {
     role: Role;
     firstName: string;
     lastName: string;
-    isMember: boolean
+    isMember: boolean;
   }
 }
 
@@ -53,8 +53,8 @@ declare module "next-auth/jwt" {
 }
 
 export const sha256 = (content: string) => {
-  return createHash('sha256').update(content).digest('hex')
-}
+  return createHash("sha256").update(content).digest("hex");
+};
 
 /**
  * Options for NextAuth.js used to configure adapters, providers, callbacks, etc.
@@ -64,7 +64,7 @@ export const sha256 = (content: string) => {
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60 // 30 days
   },
   callbacks: {
     session: ({ session, token }) => {
@@ -84,20 +84,20 @@ export const authOptions: NextAuthOptions = {
         token.lastName = user.lastName;
         token.isMember = user.isMember;
       }
-      if (trigger === "update" && 'isMember' in session) {
+      if (trigger === "update" && "isMember" in session) {
         const { isMember } = session as { isMember: boolean };
         token.isMember = isMember;
       }
       return token;
-    },
+    }
   },
   adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
-      name: 'Credentials',
+      name: "Credentials",
       credentials: {
         username: { label: "Email", type: "text", placeholder: "email" },
-        password: {  label: "Password", type: "password" }
+        password: { label: "Password", type: "password" }
       },
       authorize: async (credentials) => {
         if (!credentials?.username || !credentials?.password) {
@@ -105,7 +105,7 @@ export const authOptions: NextAuthOptions = {
         }
         const user = await prisma.user.findFirst({
           where: {
-            email: credentials.username,
+            email: credentials.username
           },
           include: {
             memberShips: {
@@ -115,7 +115,7 @@ export const authOptions: NextAuthOptions = {
                 },
                 swishPayments: {
                   some: {
-                    status: 'PAID'
+                    status: "PAID"
                   }
                 }
               }
@@ -129,11 +129,11 @@ export const authOptions: NextAuthOptions = {
           ...user,
           isMember: !!user.memberShips.length
         };
-      },
-    }),
+      }
+    })
   ],
   pages: {
-    signIn: '/loggain'
+    signIn: "/loggain"
   }
 };
 

@@ -1,32 +1,42 @@
-import { MembershipType, type Bus, type Prisma, type VastraEvent } from "@prisma/client";
+import {
+  MembershipType,
+  type Bus,
+  type Prisma,
+  type VastraEvent
+} from "@prisma/client";
 import { type inferAsyncReturnType } from "@trpc/server";
 import { parseISO } from "date-fns";
 import { env } from "~/env.mjs";
-import { type AwayGame, type Membership as WPMembership } from '~/types/wordpressTypes';
+import {
+  type AwayGame,
+  type Membership as WPMembership
+} from "~/types/wordpressTypes";
 import { type createTRPCContext } from "../api/trpc";
 
 const apiKey = env.WORDPRESS_API_KEY;
 
 export const baseUrl = env.NEXT_PUBLIC_WORDPRESS_URL;
 
-type MembershipPayload = Prisma.MembershipUpsertArgs['create']
-
+type MembershipPayload = Prisma.MembershipUpsertArgs["create"];
 
 export const RESOURCES = {
   memberPage: "options/acf-page-options",
   awayGames: "awaygames",
-  membership: "membership",
-}
+  membership: "membership"
+};
 
 export const PATHS = {
   acfURL: baseUrl + "/wp-json/acf/v3/",
-  wpURL: baseUrl + "/wp-json/wp/v2/",
-}
+  wpURL: baseUrl + "/wp-json/wp/v2/"
+};
 
-
-export const makeRequest = async <T>(url: string, method: string, body?: BodyInit) : Promise<T> => {
+export const makeRequest = async <T>(
+  url: string,
+  method: string,
+  body?: BodyInit
+): Promise<T> => {
   const headers = new Headers();
-  headers.set("Authorization", "Bearer " + apiKey)
+  headers.set("Authorization", "Bearer " + apiKey);
   try {
     const res = await fetch(url, {
       method: method,
@@ -41,28 +51,33 @@ export const makeRequest = async <T>(url: string, method: string, body?: BodyIni
     console.error(error);
     throw error;
   }
-}
+};
 
-export const awayGameMapper = (awayGame: AwayGame) => (
-  {
-    ...awayGame.acf,
-    id: awayGame.id,
-    enemyTeam: awayGame.acf.enemyteam,
-    busInfo: awayGame.acf.businfo,
-    memberPrice: awayGame.acf.memberprice,
-    memberPriceYouth: awayGame.acf.memberprice_youth,
-    nonMemberPrice: awayGame.acf.nonmemberprice,
-    nonMemberPriceYouth: awayGame.acf.nonmemberprice_youth,
-    maxSeats: awayGame.acf.buses.reduce((acc, bus) => acc + Number(bus.maxSeats), 0),
-    bookedSeats: awayGame.acf.buses.reduce((acc, bus) => acc + Number(bus.occupiedSeats), 0),
-  }
-);
+export const awayGameMapper = (awayGame: AwayGame) => ({
+  ...awayGame.acf,
+  id: awayGame.id,
+  enemyTeam: awayGame.acf.enemyteam,
+  busInfo: awayGame.acf.businfo,
+  memberPrice: awayGame.acf.memberprice,
+  memberPriceYouth: awayGame.acf.memberprice_youth,
+  nonMemberPrice: awayGame.acf.nonmemberprice,
+  nonMemberPriceYouth: awayGame.acf.nonmemberprice_youth,
+  maxSeats: awayGame.acf.buses.reduce(
+    (acc, bus) => acc + Number(bus.maxSeats),
+    0
+  ),
+  bookedSeats: awayGame.acf.buses.reduce(
+    (acc, bus) => acc + Number(bus.occupiedSeats),
+    0
+  )
+});
 
-
-export const awayGameToEvent = (awayGame: ReturnType<typeof awayGameMapper>) : { event: VastraEvent, buses: Bus[] }  => ({
+export const awayGameToEvent = (
+  awayGame: ReturnType<typeof awayGameMapper>
+): { event: VastraEvent; buses: Bus[] } => ({
   event: {
     id: awayGame.id.toString(),
-    name: `${awayGame.enemyTeam} - ${awayGame.date.split(" ")[0] || ''}`,
+    name: `${awayGame.enemyTeam} - ${awayGame.date.split(" ")[0] || ""}`,
     description: awayGame.busInfo || "",
     date: parseISO(awayGame.date),
     createdAt: new Date(),
@@ -73,67 +88,80 @@ export const awayGameToEvent = (awayGame: ReturnType<typeof awayGameMapper>) : {
     youthMemberPrice: Number(awayGame.memberPriceYouth)
   },
   buses: awayGameToBuses(awayGame)
-})
+});
 
-const awayGameToBuses = (awayGame: ReturnType<typeof awayGameMapper>) : Bus[] => {
+const awayGameToBuses = (
+  awayGame: ReturnType<typeof awayGameMapper>
+): Bus[] => {
   return awayGame.buses.map((bus) => ({
     id: `${awayGame.id}-${bus.busName}`,
     name: bus.busName,
     seats: Number(bus.maxSeats),
     createdAt: new Date(),
     updatedAt: new Date(),
-    eventId: awayGame.id.toString(),
-  }))
-}
+    eventId: awayGame.id.toString()
+  }));
+};
 
-export const upsertEvent = async (awayGame: VastraEvent, ctx: inferAsyncReturnType<typeof createTRPCContext>) => {
+export const upsertEvent = async (
+  awayGame: VastraEvent,
+  ctx: inferAsyncReturnType<typeof createTRPCContext>
+) => {
   const existingEvent = await ctx.prisma.vastraEvent.findUnique({
     where: {
       id: awayGame.id
     }
-  })
+  });
   if (existingEvent) {
     await ctx.prisma.vastraEvent.update({
       where: {
         id: awayGame.id
       },
       data: awayGame
-    })
+    });
   } else {
     await ctx.prisma.vastraEvent.create({
       data: awayGame
-    })
+    });
   }
-}
+};
 
-export const upsertBus = async (bus: Bus, ctx: inferAsyncReturnType<typeof createTRPCContext>) => {
+export const upsertBus = async (
+  bus: Bus,
+  ctx: inferAsyncReturnType<typeof createTRPCContext>
+) => {
   const existingBus = await ctx.prisma.bus.findUnique({
     where: {
       id: bus.id
     }
-  })
+  });
   if (existingBus) {
     await ctx.prisma.bus.update({
       where: {
         id: bus.id
       },
       data: bus
-    })
+    });
   } else {
     await ctx.prisma.bus.create({
       data: bus
-    })
+    });
   }
-}
+};
 
-
-export const wpMembershipToMembership = (wpMembership: WPMembership) : MembershipPayload[] => {
+export const wpMembershipToMembership = (
+  wpMembership: WPMembership
+): MembershipPayload[] => {
   const prices = {
     [MembershipType.FAMILY]: Number(wpMembership.acf.familyPrice),
     [MembershipType.REGULAR]: Number(wpMembership.acf.regularPrice),
-    [MembershipType.YOUTH]: Number(wpMembership.acf.youthPrice),
-  }
-  const memberships: MembershipPayload[] = [MembershipType.FAMILY, MembershipType.REGULAR, MembershipType.YOUTH].map((membershipType) => ({
+    [MembershipType.YOUTH]: Number(wpMembership.acf.youthPrice)
+  };
+  const memberships: MembershipPayload[] = [
+    MembershipType.FAMILY,
+    MembershipType.REGULAR,
+    MembershipType.YOUTH
+  ].map((membershipType) => ({
     wordpressId: wpMembership.id.toString(),
     name: wpMembership.title.rendered,
     imageUrl: wpMembership.acf.image.url,
@@ -141,14 +169,16 @@ export const wpMembershipToMembership = (wpMembership: WPMembership) : Membershi
     price: prices[membershipType],
     startDate: parseISO(wpMembership.acf.startDate),
     endDate: parseISO(wpMembership.acf.endDate),
-    updatedAt: new Date(),
-  }))
+    updatedAt: new Date()
+  }));
 
   return memberships;
-}
+};
 
-
-export const upsertMembership = async (membership: MembershipPayload, ctx: inferAsyncReturnType<typeof createTRPCContext>) => {
+export const upsertMembership = async (
+  membership: MembershipPayload,
+  ctx: inferAsyncReturnType<typeof createTRPCContext>
+) => {
   const existingMembership = await ctx.prisma.membership.findFirst({
     where: {
       wordpressId: membership.wordpressId,
@@ -161,10 +191,10 @@ export const upsertMembership = async (membership: MembershipPayload, ctx: infer
         id: existingMembership.id
       },
       data: membership
-    })
+    });
   } else {
     await ctx.prisma.membership.create({
       data: membership
-    })
+    });
   }
-}
+};

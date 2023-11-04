@@ -1,6 +1,13 @@
-import { type PrismaClient, SwishPaymentStatus, SwishRefundStatus } from "@prisma/client";
+import {
+  type PrismaClient,
+  SwishPaymentStatus,
+  SwishRefundStatus
+} from "@prisma/client";
 
-export const checkPaymentStatus = async (paymentId: string, prisma: PrismaClient) => {
+export const checkPaymentStatus = async (
+  paymentId: string,
+  prisma: PrismaClient
+) => {
   const payment = await prisma.swishPayment.findFirst({
     where: {
       paymentId,
@@ -10,14 +17,17 @@ export const checkPaymentStatus = async (paymentId: string, prisma: PrismaClient
   if (!payment) {
     return {
       status: "Not found"
-    }
+    };
   }
   return {
     status: payment.status
   };
-}
+};
 
-export const checkRefundStatus = async (refundId: string, prisma: PrismaClient) => {
+export const checkRefundStatus = async (
+  refundId: string,
+  prisma: PrismaClient
+) => {
   const refund = await prisma.swishRefund.findFirst({
     where: {
       refundId,
@@ -27,9 +37,9 @@ export const checkRefundStatus = async (refundId: string, prisma: PrismaClient) 
   if (!refund) {
     return {
       status: "Not found"
-    }
+    };
   }
   return {
     status: refund.status
   };
-}
+};

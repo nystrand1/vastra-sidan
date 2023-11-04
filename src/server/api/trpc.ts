@@ -45,7 +45,7 @@ const createInnerTRPCContext = (opts: CreateContextOptions) => {
   return {
     session: opts.session,
     prisma,
-    cronKey: opts.cronKey,
+    cronKey: opts.cronKey
   };
 };
 
@@ -63,7 +63,7 @@ export const createTRPCContext = async (opts: CreateNextContextOptions) => {
   const cronKey = req.query["cron-key"] ?? null;
   return createInnerTRPCContext({
     session,
-    cronKey: cronKey as string,
+    cronKey: cronKey as string
   });
 };
 
@@ -82,18 +82,17 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
       if (value === null) return null;
       return superjson.deserialize<SuperJSONResult>(value);
     },
-    serialize: superjson.serialize,
+    serialize: superjson.serialize
   },
   errorFormatter({ shape, error }) {
     return {
       ...shape,
       data: {
         ...shape.data,
-        zodError:
-          error.cause instanceof ZodError ? error.cause.flatten() : null,
-      },
+        zodError: error.cause instanceof ZodError ? error.cause.flatten() : null
+      }
     };
-  },
+  }
 });
 
 /**
@@ -127,14 +126,17 @@ const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
   return next({
     ctx: {
       // infers the `session` as non-nullable
-      session: { ...ctx.session, user: ctx.session.user },
-    },
+      session: { ...ctx.session, user: ctx.session.user }
+    }
   });
 });
 
-
 const enforceUserIsAdmin = t.middleware(({ ctx, next }) => {
-  if (!ctx.session || !ctx.session.user || ctx.session.user.role !== Role.ADMIN) {
+  if (
+    !ctx.session ||
+    !ctx.session.user ||
+    ctx.session.user.role !== Role.ADMIN
+  ) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
   return next({
@@ -143,8 +145,8 @@ const enforceUserIsAdmin = t.middleware(({ ctx, next }) => {
       session: {
         ...ctx.session,
         user: ctx.session.user
-      },
-    },
+      }
+    }
   });
 });
 
@@ -176,7 +178,7 @@ const swishOnly = t.middleware(({ ctx, next }) => {
   // Check Swish IP addresses
   return next({
     ctx: ctx
-  })
+  });
 });
 
 export const swishProcedure = t.procedure.use(swishOnly);
@@ -191,8 +193,8 @@ export const userOnly = t.middleware(({ ctx, next }) => {
       session: {
         ...ctx.session,
         user: ctx.session.user
-      },
-    },
+      }
+    }
   });
 });
 
