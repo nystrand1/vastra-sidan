@@ -80,7 +80,8 @@ export const publicRouter = createTRPCRouter({
       select: {
         type: true,
         id: true,
-        imageUrl: true
+        imageUrl: true,
+        price: true,
       }
     });
     return {
