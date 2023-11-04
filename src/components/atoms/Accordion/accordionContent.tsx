@@ -1,3 +1,4 @@
+import { AwayGameRules } from "../AwayGameRules/AwayGameRules";
 import { type AccordionItemProps } from "./Accordion";
 
 
@@ -13,5 +14,10 @@ export const memberPerks: AccordionItemProps = {
       </p>
     </>
   )
-  
 }
+
+export const awayGameRules: AccordionItemProps = {
+  'title': 'Regler för bussresor',
+  content: <AwayGameRules />
+}
+

@@ -68,7 +68,7 @@ const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : Passe
   const isSwishNumber = index === 0;
 
   return (
-    <div className="flex flex-col space-y-2 p-4 bg-gray-700 rounded-md">
+    <div className="flex flex-col space-y-2 p-4 bg-slate-800 rounded-lg">
       <InputField
         label="Förnamn"
         placeholder="Förnamn..."
@@ -244,8 +244,8 @@ export const AwayGameForm = () => {
   return (
     <>
       <SwishModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
-      <form onSubmit={handleSubmit} ref={formRef}>
-        <div className="grid gap-8">
+      <form onSubmit={handleSubmit} ref={formRef} className="w-full md:w-96">
+        <div className="w-full grid gap-8">
           {passengers.map((passenger) => {
             return (
               <div key={passenger.index}>
