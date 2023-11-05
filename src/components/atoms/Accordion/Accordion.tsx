@@ -22,7 +22,7 @@ const AccordionItem: React.FC<AccordionItemProps> = ({
   className
 }) => {
   return (
-    <div className={`divide-y divide-gray-100/25 mb-4 mx-auto p-4 w-full md:w-96 rounded-lg transition duration-300 ease-in-out bg-slate-800 ${className || ''}`}>
+    <div className={`divide-y divide-gray-100/25 mx-auto p-4 w-full md:w-96 rounded-lg transition duration-300 ease-in-out bg-slate-800 ${className || ''}`}>
       <button
         className={`w-full text-white text-left flex flex-row justify-between items-center ${isOpen ? 'pb-2' : ''}`}
         onClick={toggle}

@@ -114,7 +114,7 @@ export const MemberPage = () => {
           </div>
         </div>
       )}
-      <Accordion items={[memberPerks]} />
+      <Accordion items={[memberPerks]} className="mb-4 w-full"/>
       <form className="w-full flex flex-col items-center justify-center" ref={formRef}>
         <Card
           title="Bli medlem i Västra Sidan"
