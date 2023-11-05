@@ -1,5 +1,9 @@
-import { type Membership, Role, type VastraEvent, Participant, Prisma } from "@prisma/client";
+import { type Prisma, Role, type Membership } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
+import { Resend } from "resend";
+import { z } from "zod";
+import UserSignup from "~/components/emails/UserSignup";
+import { env } from "~/env.mjs";
 import {
   createTRPCRouter,
   publicProcedure,
@@ -8,10 +12,6 @@ import {
 import { sha256 } from "~/server/auth";
 import { signupSchema } from "~/utils/zodSchemas";
 import { friendlyMembershipNames } from "./memberPayment";
-import { z } from "zod";
-import { Resend } from "resend";
-import { env } from "~/env.mjs";
-import UserSignup from "~/components/emails/UserSignup";
 
 const membershipFormatter = (membership: Membership) => ({
   id: membership.id,

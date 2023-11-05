@@ -43,10 +43,10 @@ export const AwayGamesProfilePage = () => {
             })}
           </div>
           <div className="divide-y divide-gray-100 space-y-4 pt-2">
-            {data.upcomingEvents && data.upcomingEvents?.length > 0 && (
+            {data.pastEvents && data.pastEvents?.length > 0 && (
               <p className="text-xl font-semibold">Tidigare</p>
             )}
-            {data.upcomingEvents && data.upcomingEvents.map((event) => {
+            {data.pastEvents && data.pastEvents.map((event) => {
               return (
                 <div className="flex flex-col pt-2" key={event.id}>
                   <p className="text-lg">{event.name}</p>
