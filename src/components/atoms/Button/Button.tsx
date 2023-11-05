@@ -1,4 +1,4 @@
-export const Button = ({ children, onClick, className, disabled, type, ...props } :  React.ButtonHTMLAttributes<HTMLButtonElement>) => {
+export const Button = ({ children, onClick, className, disabled, type, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => {
   return (
     <button
       onClick={onClick}

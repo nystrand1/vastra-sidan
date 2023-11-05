@@ -3,7 +3,6 @@
 
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["jsonProtocol"]
 }
 
 datasource db {
@@ -43,16 +42,46 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model Membership {
+  id                   String                 @id @default(cuid())
+  name                 String
+  wordpressId          String 
+  imageUrl             String
+  type                 MembershipType
+  price                Int
+  startDate            DateTime
+  endDate              DateTime
+  users                User[]
+  swishPayments        SwishPayment[]
+  swishRefunds         SwishRefund[]
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  @@index([wordpressId])
+}
+
+enum MembershipType {
+  FAMILY
+  YOUTH
+  REGULAR
+}
+
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  role          Role      @default(USER)
-  accounts      Account[]
-  sessions      Session[]
+  id                    String       @id @default(cuid())
+  firstName             String       @default("Västra")
+  lastName              String       @default("Sidan")
+  email                 String?      @unique
+  emailVerified         DateTime?
+  image                 String?
+  password              String?
+  phone                 String?
+  role                  Role         @default(USER)
+  accounts              Account[]
+  sessions              Session[]
+  memberShips           Membership[]
+  eventParticipations   Participant[]
+  swishPayments         SwishPayment[]
+  swishRefunds          SwishRefund[]
 }
 
 enum Role {
@@ -97,28 +126,31 @@ model Bus {
 }
 
 model Participant {
-  id                String        @id @default(cuid())
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  id                String         @id @default(cuid())
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
   name              String
   email             String
   phone             String
-  note              String?       @db.Text
-  event             VastraEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  note              String?        @db.Text
+  event             VastraEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId           String
-  bus               Bus?          @relation(fields: [busId], references: [id])
+  bus               Bus?           @relation(fields: [busId], references: [id])
   busId             String?
-  cancellationToken String?       @default(uuid())
+  cancellationToken String?        @default(uuid())
   cancellationDate  DateTime?
   swishPayments     SwishPayment[]
   payAmount         Float?
-  checkedIn         Boolean       @default(false)
-  member            Boolean       @default(false)
-  youth             Boolean       @default(false)
+  checkedIn         Boolean        @default(false)
+  member            Boolean        @default(false)
+  youth             Boolean        @default(false)
   swishRefunds      SwishRefund[]
+  userEmail         String?
+  user              User?          @relation(fields: [userEmail], references: [email])
 
   @@index([eventId])
   @@index([busId])
+  @@index([userEmail])
 }
 
 model SwishPayment {
@@ -137,8 +169,14 @@ model SwishPayment {
   errorMessage      String?
   participants      Participant[]
   refunds           SwishRefund[]
+  memberShipId      String?
+  memberShip        Membership? @relation(fields: [memberShipId], references: [id])
+  userId            String?
+  user              User? @relation(fields: [userId], references: [id])
 
   @@index([paymentId])
+  @@index([memberShipId])
+  @@index([userId])
 }
 
 enum SwishPaymentStatus {
@@ -164,13 +202,19 @@ model SwishRefund {
   errorCode        String?
   errorMessage     String?
   dateRefunded     DateTime?
-  participantId    String
-  participant      Participant      @relation(fields: [participantId], references: [id])
+  participantId    String?
+  participant      Participant?       @relation(fields: [participantId], references: [id])
+  memberShipId     String?
+  memberShip       Membership?       @relation(fields: [memberShipId], references: [id])
+  userId           String?
+  user             User? @relation(fields: [userId], references: [id])
   originalPayment  SwishPayment      @relation(fields: [paymentId], references: [id])
 
   @@index([refundId])
   @@index([participantId])
   @@index([paymentId])
+  @@index([memberShipId])
+  @@index([userId])
 }
 
 enum SwishRefundStatus {

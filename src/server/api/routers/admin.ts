@@ -1,9 +1,6 @@
 import { SwishPaymentStatus, SwishRefundStatus } from "@prisma/client";
 import { z } from "zod";
-import {
-  createTRPCRouter,
-  adminProcedure,
-} from "~/server/api/trpc";
+import { createTRPCRouter, adminProcedure } from "~/server/api/trpc";
 
 const busesWithPaidPassengers = {
   buses: {
@@ -12,44 +9,44 @@ const busesWithPaidPassengers = {
         where: {
           swishPayments: {
             some: {
-              status: SwishPaymentStatus.PAID,
+              status: SwishPaymentStatus.PAID
             }
           },
           swishRefunds: {
             none: {
-              status: SwishRefundStatus.PAID,
+              status: SwishRefundStatus.PAID
             }
           }
         }
       }
     }
   }
-}
+};
 
 export const adminRouter = createTRPCRouter({
   getEvents: adminProcedure.query(async ({ ctx }) => {
     const res = await ctx.prisma.vastraEvent.findMany({
-      include: busesWithPaidPassengers,
+      include: busesWithPaidPassengers
     });
     return res;
   }),
   getEvent: adminProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
-    const res = await ctx.prisma.vastraEvent.findFirst({
-      where: {
-        id: input.id,
-      },
-      include: busesWithPaidPassengers,
-    });
-    return res;
-  }),
+      const res = await ctx.prisma.vastraEvent.findFirst({
+        where: {
+          id: input.id
+        },
+        include: busesWithPaidPassengers
+      });
+      return res;
+    }),
   checkInParticipant: adminProcedure
     .input(z.object({ id: z.string(), checkedIn: z.boolean() }))
     .mutation(async ({ input, ctx }) => {
       const res = await ctx.prisma.participant.update({
         where: {
-          id: input.id,
+          id: input.id
         },
         data: {
           checkedIn: input.checkedIn

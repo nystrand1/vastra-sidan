@@ -25,12 +25,12 @@ export default function Home() {
               let centerClass = "";
               const gameExpired = isAfter(new Date(), game.date);
               if (index === 0) {
-                centerClass = awayGames.length === 1 ? "md:col-start-4 lg:col-start-5" 
-                  : awayGames.length === 2 ? "md:col-start-1 lg:col-start-3"
+                centerClass = awayGames.length === 1 ? "md:col-start-4 xl:col-start-5" 
+                  : awayGames.length === 2 ? "md:col-start-1 xl:col-start-3"
                   : "";
               }
               return (
-                <div key={game.id} className={`col-span-12 md:col-span-6 lg:col-span-4 w-full ${centerClass}`}>
+                <div key={game.id} className={`col-span-12 md:col-span-6 xl:col-span-4 w-full ${centerClass}`}>
                 <Card
                   title={game.name}
                   link={`${PATHS.awayGames}${game.id}`}

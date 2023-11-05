@@ -1,5 +1,3 @@
-
-
 export const PATHS = {
-  awayGames: "/bortaresor/",
-}
+  awayGames: "/bortaresor/"
+};

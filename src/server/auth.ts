@@ -23,11 +23,17 @@ declare module "next-auth" {
     user: {
       id: string;
       role: Role;
+      firstName: string;
+      lastName: string;
+      isMember: boolean;
     } & DefaultSession["user"];
   }
 
   interface User {
     role: Role;
+    firstName: string;
+    lastName: string;
+    isMember: boolean;
   }
 }
 
@@ -41,12 +47,14 @@ declare module "next-auth/jwt" {
     exp?: number;
     iat?: number;
     jti?: string;
+    firstName?: string;
+    lastName?: string;
   }
 }
 
-const sha256 = (content: string) => {
-  return createHash('sha256').update(content).digest('hex')
-}
+export const sha256 = (content: string) => {
+  return createHash("sha256").update(content).digest("hex");
+};
 
 /**
  * Options for NextAuth.js used to configure adapters, providers, callbacks, etc.
@@ -56,29 +64,40 @@ const sha256 = (content: string) => {
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60 // 30 days
   },
   callbacks: {
     session: ({ session, token }) => {
       if (token && session.user) {
         session.user.role = token.role as Role;
+        session.user.firstName = token.firstName ?? "";
+        session.user.lastName = token.lastName ?? "";
+        session.user.name = `${session.user.firstName} ${session.user.lastName}`;
+        session.user.isMember = !!token.isMember;
       }
       return session;
     },
-    jwt: ({ token, user }) => {
+    jwt: ({ token, user, trigger, session }) => {
       if (user) {
         token.role = user.role;
+        token.firstName = user.firstName;
+        token.lastName = user.lastName;
+        token.isMember = user.isMember;
+      }
+      if (trigger === "update" && "isMember" in session) {
+        const { isMember } = session as { isMember: boolean };
+        token.isMember = isMember;
       }
       return token;
-    },
+    }
   },
   adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
-      name: 'Credentials',
+      name: "Credentials",
       credentials: {
         username: { label: "Email", type: "text", placeholder: "email" },
-        password: {  label: "Password", type: "password" }
+        password: { label: "Password", type: "password" }
       },
       authorize: async (credentials) => {
         if (!credentials?.username || !credentials?.password) {
@@ -86,16 +105,36 @@ export const authOptions: NextAuthOptions = {
         }
         const user = await prisma.user.findFirst({
           where: {
-            email: credentials.username,
+            email: credentials.username
           },
+          include: {
+            memberShips: {
+              where: {
+                endDate: {
+                  gte: new Date()
+                },
+                swishPayments: {
+                  some: {
+                    status: "PAID"
+                  }
+                }
+              }
+            }
+          }
         });
         if (!user) return null;
 
         if (user.password !== sha256(credentials.password)) return null;
-        return user;
-      },
-    }),
+        return {
+          ...user,
+          isMember: !!user.memberShips.length
+        };
+      }
+    })
   ],
+  pages: {
+    signIn: "/loggain"
+  }
 };
 
 /**

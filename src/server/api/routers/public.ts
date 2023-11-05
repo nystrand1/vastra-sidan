@@ -1,11 +1,12 @@
-import { SwishPaymentStatus, SwishRefundStatus } from "@prisma/client";
-import { TRPCError } from "@trpc/server";
-import { subDays, subHours } from "date-fns";
-import { z } from "zod";
 import {
-  createTRPCRouter,
-  publicProcedure,
-} from "~/server/api/trpc";
+  MembershipType,
+  SwishPaymentStatus,
+  SwishRefundStatus
+} from "@prisma/client";
+import { TRPCError } from "@trpc/server";
+import { subHours } from "date-fns";
+import { z } from "zod";
+import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
 const busesWithPaidPassengers = {
   buses: {
@@ -16,12 +17,12 @@ const busesWithPaidPassengers = {
             where: {
               swishPayments: {
                 some: {
-                  status: SwishPaymentStatus.PAID,
+                  status: SwishPaymentStatus.PAID
                 }
               },
               swishRefunds: {
                 none: {
-                  status: SwishRefundStatus.PAID,
+                  status: SwishRefundStatus.PAID
                 }
               }
             }
@@ -30,7 +31,7 @@ const busesWithPaidPassengers = {
       }
     }
   }
-}
+};
 
 export const publicRouter = createTRPCRouter({
   getAwayGames: publicProcedure.query(async ({ ctx }) => {
@@ -42,16 +43,19 @@ export const publicRouter = createTRPCRouter({
         }
       }
     });
-    const eventWithParticiantCount = res.map(event => ({
+    const eventWithParticiantCount = res.map((event) => ({
       ...event,
       maxSeats: event.buses.reduce((acc, bus) => acc + bus.seats, 0),
-      bookedSeats: event.buses.reduce((acc, bus) => acc + bus._count.passengers, 0),
+      bookedSeats: event.buses.reduce(
+        (acc, bus) => acc + bus._count.passengers,
+        0
+      )
     }));
 
     return eventWithParticiantCount;
   }),
   getAwayGame: publicProcedure
-    .input(z.object({id: z.string()}))
+    .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const res = await ctx.prisma.vastraEvent.findUnique({
         where: {
@@ -65,5 +69,25 @@ export const publicRouter = createTRPCRouter({
       }
 
       return res;
-    })
+    }),
+  getAvailableMemberships: publicProcedure.query(async ({ ctx }) => {
+    const res = await ctx.prisma.membership.findMany({
+      where: {
+        endDate: {
+          gt: new Date()
+        }
+      },
+      select: {
+        type: true,
+        id: true,
+        imageUrl: true,
+        price: true,
+      }
+    });
+    return {
+      regular: res.find((m) => m.type === MembershipType.REGULAR),
+      family: res.find((m) => m.type === MembershipType.FAMILY),
+      youth: res.find((m) => m.type === MembershipType.YOUTH)
+    };
+  })
 });
