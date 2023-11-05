@@ -1,4 +1,4 @@
-import { type Membership, Role } from "@prisma/client";
+import { type Membership, Role, type VastraEvent, Participant, Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import {
   createTRPCRouter,
@@ -19,6 +19,54 @@ const membershipFormatter = (membership: Membership) => ({
   imageUrl: membership.imageUrl,
   type: friendlyMembershipNames[membership.type]
 });
+
+type UserData = Prisma.UserGetPayload<{
+  include: {
+    memberShips: {
+      where: {
+        swishPayments: {
+          some: {
+            status: "PAID"
+          }
+        }
+      }
+    },
+    eventParticipations: {
+      where: {
+        swishPayments: {
+          some: {
+            status: "PAID"
+          }
+        }
+      },
+      select: {
+        event: {
+          select: {
+            name: true,
+            date: true
+          }
+        },
+        swishPayments: {
+          where: {
+            status: "PAID"
+          },
+          select: {
+            createdAt: true,
+            amount: true,
+          }
+        }
+      }
+    }
+  }
+}>
+
+const eventFormatter = (awayGame: UserData['eventParticipations'][number]) => ({
+  id: awayGame.event.name,
+  name: awayGame.event.name,
+  date: awayGame.event.date,
+  payedAt: awayGame?.swishPayments[0]?.createdAt,
+  payAmount: awayGame?.swishPayments[0]?.amount,
+})
 
 const resend = new Resend(env.RESEND_API_KEY);
 
@@ -81,12 +129,44 @@ export const userRouter = createTRPCRouter({
               }
             }
           }
+        },
+        eventParticipations: {
+          where: {
+            swishPayments: {
+              some: {
+                status: "PAID"
+              }
+            }
+          },
+          select: {
+            event: {
+              select: {
+                name: true,
+                date: true
+              }
+            },
+            swishPayments: {
+              where: {
+                status: "PAID"
+              },
+              select: {
+                createdAt: true,
+                amount: true,
+              }
+            }
+          }
         }
       }
     });
 
     return {
-      memberShips: user?.memberShips.map(membershipFormatter)
+      memberShips: user?.memberShips.map(membershipFormatter),
+      upcomingEvents: user?.eventParticipations
+        .filter((x) => x.event.date > new Date())
+        .map(eventFormatter),
+      pastEvents: user?.eventParticipations
+        .filter((x) => x.event.date < new Date())
+        .map(eventFormatter),
     };
   }),
   verifyEmail: publicProcedure

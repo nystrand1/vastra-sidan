@@ -1,4 +1,4 @@
-import { SwishRefundStatus, type VastraEvent } from "@prisma/client";
+import { type VastraEvent } from "@prisma/client";
 import { type inferRouterOutputs } from "@trpc/server";
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
@@ -130,6 +130,7 @@ const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : Passe
         label="Medlem"
         id={`member_${index}`}
         name={`member_${index}`}
+        checked={member}
         onChange={(e) => { 
           onChange({ member: e.target.checked });
         }}
@@ -138,6 +139,7 @@ const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : Passe
         label="Ungdom (upp till 20 år)"
         id={`youth_${index}`}
         name={`youth_${index}`}
+        checked={youth}
         onChange={(e) => { 
           onChange({ youth: e.target.checked }) 
         }}
@@ -146,6 +148,7 @@ const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : Passe
         label="Jag har läst & förstått reglerna kring bussresorna"
         id={`consent_${index}`}
         name={`consent_${index}`}
+        checked={passenger.consent}
         onChange={(e) => { onChange({ consent: e.target.checked }) }}
         required
       />
@@ -182,8 +185,10 @@ export const AwayGameForm = () => {
         index: 0,
         firstName: sessionData?.user.firstName ?? '',
         lastName: sessionData?.user.lastName ?? '',
-        email: sessionData?.user.email ?? ''
+        email: sessionData?.user.email ?? '',
+        member: !!sessionData?.user.isMember,
       }
+      console.log('initialPassenger', initialPassenger);
       setPassengers([initialPassenger]);
     }
   }, [sessionData])

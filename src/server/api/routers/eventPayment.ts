@@ -114,6 +114,7 @@ export const eventPaymentRouter = createTRPCRouter({
             ctx.prisma.participant.create({
               data: {
                 ...participant,
+                userEmail: participant.email,
                 payAmount: getParticipantCost(participant, event),
                 eventId: event.id
               }
