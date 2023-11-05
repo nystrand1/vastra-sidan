@@ -28,7 +28,7 @@ export const LoginPage = () => {
       loginPayload.error.issues.map((x) => toast.error(x.message))
       return;
     }
-    const res = await signIn('credentials', { username: email, password, redirect: false });
+    const res = await signIn('credentials', { username: email, password, redirect: false, callbackUrl: "/" });
     if (res?.status === 401) {
       toast.error("Felaktig inloggning, försök igen")
     }
@@ -64,7 +64,10 @@ export const LoginPage = () => {
           <Button 
             className="w-full"
             type="submit"
-            onClick={handleLogin}
+            onClick={async (e) => {
+              e.preventDefault();
+              await handleLogin();
+            }}
           >
             Logga In
           </Button>

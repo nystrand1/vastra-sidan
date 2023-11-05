@@ -86,9 +86,14 @@ export const Navigation = () => {
               <Link href="/" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Bussresor</Link>
             </li>
             {sessionData?.user.isMember && (
-              <li>
-                <Link href="/mina-medlemskap" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Mina medlemskap</Link>
+              <>
+                <li>
+                  <Link href="/mina-medlemskap" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Mina medlemskap</Link>
+                </li>
+                <li>
+                <div onClick={() => signOut()} className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Logga ut</div>
               </li>
+              </>
             )}
             {!sessionData?.user.isMember && (
               <li>

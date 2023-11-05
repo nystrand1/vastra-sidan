@@ -21,7 +21,7 @@ export const BusPage = () => {
       <p className="text-3xl">
         Bussen avgår {format(game.date, "hh:mm")}
       </p>
-      <Accordion items={[awayGameRules]} />
+      <Accordion items={[awayGameRules]} className="w-full" />
       <AwayGameForm />
     </div>
   )
