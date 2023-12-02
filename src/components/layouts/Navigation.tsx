@@ -28,6 +28,11 @@ const UserMenu = ({ className }: UserMenuProps) => {
         <li>
           <Link href="/mina-bussresor" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white">Mina bussresor</Link>
         </li>
+        {sessionData?.user.role === 'ADMIN' && (
+          <li>
+            <Link href="/admin" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white">Admin</Link>
+          </li>
+        )}
         <li>
           <p onClick={() => signOut()} className="rounded-b-lg block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white">Logga ut</p>
         </li>
@@ -96,6 +101,11 @@ export const Navigation = () => {
                 <li>
                   <Link href="/mina-bussresor" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Mina bussresor</Link>
                 </li>
+                {sessionData?.user.role === 'ADMIN' && (
+                  <li>
+                    <Link href="/admin" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white">Admin</Link>
+                  </li>
+                )}
                 <li>
                 <div onClick={() => signOut()} className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Logga ut</div>
               </li>
