@@ -28,7 +28,10 @@ export const adminRouter = createTRPCRouter({
     const res = await ctx.prisma.vastraEvent.findMany({
       include: busesWithPaidPassengers
     });
-    return res;
+    return {
+      upcomingEvents: res.filter((event) => event.date > new Date()),
+      pastEvents: res.filter((event) => event.date <= new Date())
+    };
   }),
   getEvent: adminProcedure
     .input(z.object({ id: z.string() }))
