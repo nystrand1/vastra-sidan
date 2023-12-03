@@ -1,30 +1,9 @@
 import { Role } from "@prisma/client";
-import { type inferRouterOutputs } from "@trpc/server";
 import { useSession } from "next-auth/react";
+import { ButtonLink } from "~/components/atoms/ButtonLink/ButtonLink";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { Progressbar } from "~/components/atoms/Progressbar/Progressbar";
-import { type AppRouter } from "~/server/api/root";
 import { api } from "~/utils/api";
-
-type Events = inferRouterOutputs<AppRouter>['admin']['getEvents']['pastEvents' | 'upcomingEvents']
-
-export const EventGrid = ({ events }: { events: Events }) => {
-  return events && events.map((event) => (
-    <div key={event.id} className="col-span-12 md:col-span-4">
-      <Card link={`/admin/event/${event.id}`} title={event.name}>
-        {event.buses && event.buses.map((bus) => (
-          <Progressbar
-            key={bus.id}
-            label={bus.name}
-            maxValue={bus.seats}
-            currentValue={bus.passengers.length || 0}
-          />
-        ))}
-      </Card>
-    </div>
-  ))
-};
-
 
 export default function Admin() {
   const { data: sessionData } = useSession();
@@ -35,29 +14,55 @@ export default function Admin() {
     { enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN }
     );
 
-  if (!events) {
+  const { data: members } = api.admin.getActiveMembers.useQuery(
+    undefined,
+    { enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN }
+  );
+  if (!events || !members) {
     return <p className="text-center">Laddar...</p>
   }
+  const { upcomingEvents } = events;
 
-  const { upcomingEvents, pastEvents } = events;
+  const seats = upcomingEvents.reduce((acc, event) => {
+    const bookedSeats = event.buses.reduce((acc, bus) => {
+      return acc + bus.passengers.length
+    }, 0)
+    const totalSeats = event.buses.reduce((acc, bus) => {
+      return acc + bus.seats
+    }, 0)
+    return { bookedSeats: acc.bookedSeats + bookedSeats, totalSeats: acc.totalSeats + totalSeats }
+  }, { bookedSeats: 0, totalSeats: 0 })
   return (
     <>
       <h1 className="text-center text-3xl mb-8 mt-10">
         {title}
       </h1>
-      <div className="space-y-4">
-        <h2 className="text-center text-2xl">
-          Kommande bussresor
-        </h2>
-        <div className="grid grid-cols-12 gap-4 md:gap-8 text-black max-h-[60vh] md:max-h-[100%] overflow-auto">
-          <EventGrid events={upcomingEvents} />
-        </div>
-        <h2 className="text-center text-2xl">
-          Tidigare bussresor
-        </h2>
-        <div className="grid grid-cols-12 gap-4 md:gap-8 text-black max-h-[60vh] md:max-h-[100%] overflow-auto">
-          <EventGrid events={pastEvents} />
-        </div>
+      <div className="flex flex-col md:flex-row justify-center align-middle space-y-4">
+        <Card 
+          title="Antal medlemmar"
+          link="/admin/event"
+          className="w-full md:w-96 space-y-0 m-auto"
+        >
+          <p className="text-4xl">{members.length}</p>
+          <ButtonLink href="/admin/members" className="w-full">Hantera medlemmar</ButtonLink>
+        </Card>
+        <Card 
+          title="Kommande bussresor"
+          link="/admin/event"
+          className="w-full md:w-96 space-y-0 m-auto"
+        >
+          {seats.totalSeats > 0 && (
+            <Progressbar 
+              label="Total bokade platser"
+              maxValue={seats.totalSeats}
+              currentValue={seats.bookedSeats}
+            />
+          )}
+          {seats.totalSeats === 0 && (
+            <p className="text-center">Ingen resa planerad</p>
+          )}
+          <ButtonLink href="/admin/event" className="w-full">Se alla bussresor</ButtonLink>
+        </Card>
       </div>
     </>
   )

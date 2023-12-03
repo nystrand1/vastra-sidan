@@ -56,5 +56,25 @@ export const adminRouter = createTRPCRouter({
         }
       });
       return res.checkedIn;
+    }),
+  getActiveMembers: adminProcedure
+    .query(async ({ ctx }) => {
+      const res = await ctx.prisma.user.findMany({
+        where: {
+          memberShips: {
+            some: {
+              endDate: {
+                gte: new Date()
+              },
+              swishPayments: {
+                some: {
+                  status: "PAID"
+                }
+              }
+            }
+          }
+        }
+      });
+      return res;
     })
 });
