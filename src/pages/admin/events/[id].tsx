@@ -23,7 +23,7 @@ const PassengerCard = ({ passenger } : { passenger: Participant }) => {
     })
   }
   return (
-    <div className="w-fill border border-slate-500 rounded-md p-4 flex flex-col space-y-2">
+    <div className="w-fill border border-slate-500 rounded-md p-4 flex flex-col space-y-2 md">
       <div className="grid grid-cols-12">
         <div className="col-span-12 md:col-span-6 flex flex-col">
           <p className="text-xl">{passenger.name}</p>
@@ -72,7 +72,7 @@ export const AdminEventPage = () => {
   }
 
   return (
-    <div className="flex flex-col space-y-2">
+    <div className="flex flex-col space-y-2 md:w-5/12 m-auto">
       <h1 className="text-center text-3xl mb-8 mt-10">
         {event?.name}
       </h1>

@@ -11,7 +11,7 @@ type Events = inferRouterOutputs<AppRouter>['admin']['getEvents']['pastEvents' |
 export const EventGrid = ({ events }: { events: Events }) => {
   return events && events.map((event) => (
     <div key={event.id} className="col-span-12 md:col-span-4">
-      <Card link={`/admin/event/${event.id}`} title={event.name}>
+      <Card link={`/admin/events/${event.id}`} title={event.name}>
         {event.buses && event.buses.map((bus) => (
           <Progressbar
             key={bus.id}
@@ -28,7 +28,6 @@ export const EventGrid = ({ events }: { events: Events }) => {
 
 export default function AdminEvent() {
   const { data: sessionData } = useSession();
-  const title = sessionData?.user?.role === Role.ADMIN ? `Admin - ${sessionData.user?.name || ''}` : "Logga in för att se adminsidan";
 
   const { data: events } = api.admin.getEvents.useQuery(
     undefined,
@@ -41,24 +40,19 @@ export default function AdminEvent() {
 
   const { upcomingEvents, pastEvents } = events;
   return (
-    <>
-      <h1 className="text-center text-3xl mb-8 mt-10">
-        {title}
-      </h1>
-      <div className="space-y-4">
-        <h2 className="text-center text-2xl">
-          Kommande bussresor
-        </h2>
-        <div className="grid grid-cols-12 gap-4 md:gap-8 text-black max-h-[60vh] md:max-h-[100%] overflow-auto">
-          <EventGrid events={upcomingEvents} />
-        </div>
-        <h2 className="text-center text-2xl">
-          Tidigare bussresor
-        </h2>
-        <div className="grid grid-cols-12 gap-4 md:gap-8 text-black max-h-[60vh] md:max-h-[100%] overflow-auto">
-          <EventGrid events={pastEvents} />
-        </div>
+    <div className="space-y-4">
+      <h2 className="text-center text-2xl">
+        Kommande bussresor
+      </h2>
+      <div className="grid grid-cols-12 gap-4 md:gap-8 text-black max-h-[60vh] md:max-h-[100%] overflow-auto">
+        <EventGrid events={upcomingEvents} />
       </div>
-    </>
+      <h2 className="text-center text-2xl">
+        Tidigare bussresor
+      </h2>
+      <div className="grid grid-cols-12 gap-4 md:gap-8 text-black max-h-[60vh] md:max-h-[100%] overflow-auto">
+        <EventGrid events={pastEvents} />
+      </div>
+    </div>
   )
 }

@@ -1,16 +1,19 @@
 import { type Session } from "next-auth";
 import { SessionProvider } from "next-auth/react";
 import { type AppType } from "next/app";
-import { api } from "~/utils/api";
-import "~/styles/globals.css";
-import Layout from "~/components/layouts/Layout";
-import { Toaster } from "react-hot-toast";
 import Head from "next/head";
-
-const MyApp: AppType<{ session: Session | null }> = ({
+import { useRouter } from "next/router";
+import { Toaster } from "react-hot-toast";
+import AdminLayout from "~/components/layouts/AdminLayout";
+import Layout from "~/components/layouts/Layout";
+import "~/styles/globals.css";
+import { api } from "~/utils/api";
+ 
+const MyApp: AppType<{ session: Session | null}> = ({
   Component,
   pageProps: { session, ...pageProps },
 }) => {
+  const { route } = useRouter();
   return (
     <>
     <Head>
@@ -32,7 +35,13 @@ const MyApp: AppType<{ session: Session | null }> = ({
     <SessionProvider session={session}>
       <Toaster position="bottom-center" />
       <Layout>
-        <Component {...pageProps} />
+        {route.includes('/admin') ? (
+          <AdminLayout>
+            <Component {...pageProps} />
+          </AdminLayout>
+        ) : (
+          <Component {...pageProps} />
+        )}
       </Layout>
     </SessionProvider>
     </>
