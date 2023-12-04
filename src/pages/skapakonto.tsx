@@ -45,7 +45,7 @@ export const SignupPage = () => {
   return (
     <div className="flex flex-col items-center justify-center">
       <Card 
-        title="Logga in"
+        title="Skapa konto"
         className="w-full md:w-96"
       >
         <div className="space-y-4">

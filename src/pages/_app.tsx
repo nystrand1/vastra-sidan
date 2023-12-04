@@ -14,6 +14,7 @@ const MyApp: AppType<{ session: Session | null}> = ({
   pageProps: { session, ...pageProps },
 }) => {
   const { route } = useRouter();
+  const isAdminRoute = route.includes('/admin');
   return (
     <>
     <Head>
@@ -35,7 +36,7 @@ const MyApp: AppType<{ session: Session | null}> = ({
     <SessionProvider session={session}>
       <Toaster position="bottom-center" />
       <Layout>
-        {route.includes('/admin') ? (
+        {isAdminRoute ? (
           <AdminLayout>
             <Component {...pageProps} />
           </AdminLayout>

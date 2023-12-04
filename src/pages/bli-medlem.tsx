@@ -25,9 +25,10 @@ interface AdditionalMember {
 export const MemberPage = () => {
   const formRef = useRef<HTMLFormElement>(null);
   const session = useSession();
-  const [email, setEmail] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const { user } = session.data ?? {};
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [firstName, setFirstName] = useState(user?.firstName ?? "");
+  const [lastName, setLastName] = useState(user?.lastName ?? "");
   const [phone, setPhone] = useState("");
   const [additionalMembers, setAdditionalMembers] = useState<AdditionalMember>();
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -179,6 +180,7 @@ export const MemberPage = () => {
             />
             <Button
               className="w-full"
+              type="submit"
               onClick={handleSignup}
               disabled={!acceptedTerms}
             >
