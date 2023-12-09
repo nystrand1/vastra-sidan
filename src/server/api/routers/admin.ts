@@ -1,6 +1,8 @@
-import { SwishPaymentStatus, SwishRefundStatus } from "@prisma/client";
+import { type Prisma, SwishPaymentStatus, SwishRefundStatus } from "@prisma/client";
+import { format } from "date-fns";
 import { z } from "zod";
 import { createTRPCRouter, adminProcedure } from "~/server/api/trpc";
+import { friendlyMembershipNames } from "~/server/utils/membership";
 
 const busesWithPaidPassengers = {
   buses: {
@@ -22,6 +24,45 @@ const busesWithPaidPassengers = {
     }
   }
 };
+
+export type User = Prisma.UserGetPayload<{
+  select: {
+    id: true,
+    firstName: true,
+    lastName: true,
+    memberShips: {
+      select: {
+        type: true,
+        swishPayments: {
+          select: {
+            createdAt: true
+          }
+        }
+      }
+    }
+  },
+  where: {
+    memberShips: {
+      some: {
+        endDate: {
+          gte: true,
+        },
+        swishPayments: {
+          some: {
+            status: "PAID"
+          }
+        }
+      }
+    }
+  }
+}>;
+
+const userFormatter = (user: User) => ({
+  name: `${user.firstName} ${user.lastName}`,
+  id: user.id,
+  activeMembershipType: user.memberShips[0] ? friendlyMembershipNames[user.memberShips[0].type] : "Inget medlemskap",
+  datePaid: user.memberShips[0]?.swishPayments[0] ? format(user.memberShips[0].swishPayments[0].createdAt, "yyyy-MM-dd hh:mm") : "Inget medlemskap",
+})
 
 export const adminRouter = createTRPCRouter({
   getEvents: adminProcedure.query(async ({ ctx }) => {
@@ -60,6 +101,21 @@ export const adminRouter = createTRPCRouter({
   getActiveMembers: adminProcedure
     .query(async ({ ctx }) => {
       const res = await ctx.prisma.user.findMany({
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          memberShips: {
+            select: {
+              type: true,
+              swishPayments: {
+                select: {
+                  createdAt: true
+                }
+              }
+            }
+          }
+        },
         where: {
           memberShips: {
             some: {
@@ -75,6 +131,6 @@ export const adminRouter = createTRPCRouter({
           }
         }
       });
-      return res;
+      return [...res, ...res, ...res, ...res].map(userFormatter);
     })
 });
