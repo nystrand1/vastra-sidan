@@ -1,4 +1,3 @@
-import Card from "../CardLink/CardLink";
 
 
 interface SelectFieldProps extends React.InputHTMLAttributes<HTMLSelectElement>  {
@@ -10,7 +9,7 @@ interface SelectFieldProps extends React.InputHTMLAttributes<HTMLSelectElement> 
 
 export const SelectField = ({ id, label, options, name, labelProps, placeholder, onChange, ...props } : SelectFieldProps) => {
   return (
-    <Card>
+    <div>
       <label
         htmlFor={id}
         className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
@@ -31,6 +30,6 @@ export const SelectField = ({ id, label, options, name, labelProps, placeholder,
             </option>
           ))}
         </select>
-    </Card>
+    </div>
   );
 };

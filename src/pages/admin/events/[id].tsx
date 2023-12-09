@@ -79,17 +79,19 @@ export const AdminEventPage = () => {
       <h1 className="text-center text-3xl mb-8 mt-10">
         {event?.name}
       </h1>
-      <SelectField
-        label="Buss"
-        options={event?.buses.map((bus) => ({ label: bus.name, value: bus.id })) || []}
-        value={selectedBus?.id || ""}
-        onChange={(e) => {
-          const bus = event?.buses.find((bus) => bus.id === e.target.value);
-          if (bus) {
-            setSelectedBus(bus);
-          }
-        }}
-      />
+      <Card>
+        <SelectField
+          label="Buss"
+          options={event?.buses.map((bus) => ({ label: bus.name, value: bus.id })) || []}
+          value={selectedBus?.id || ""}
+          onChange={(e) => {
+            const bus = event?.buses.find((bus) => bus.id === e.target.value);
+            if (bus) {
+              setSelectedBus(bus);
+            }
+          }}
+        />
+      </Card>
       {selectedBus && selectedBus.passengers.length > 0 && (
         <div key={selectedBus.id} className="flex flex-col space-y-4">
         {selectedBus.passengers.map((passenger) => <PassengerCard key={passenger.id} passenger={passenger} />)}
