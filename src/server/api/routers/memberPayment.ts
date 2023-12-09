@@ -1,27 +1,21 @@
 import { z } from "zod";
 import { checkPaymentStatus } from "~/server/utils/payment";
-import { delay } from "~/utils/helpers";
 import {
   memberSignupSchema,
   swishCallbackPaymentSchema,
   swishCallbackRefundSchema
 } from "~/utils/zodSchemas";
 import { createTRPCRouter, publicProcedure } from "../trpc";
-import { MembershipType, SwishPaymentStatus } from "@prisma/client";
+import { SwishPaymentStatus } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { createPaymentIntentPayload } from "~/utils/payment";
 import { createPaymentRequest } from "~/utils/swishHelpers";
 import { Resend } from "resend";
 import { env } from "~/env.mjs";
 import MemberSignup from "~/components/emails/MemberSignUp";
+import { friendlyMembershipNames } from "~/server/utils/membership";
 
 const resend = new Resend(env.RESEND_API_KEY);
-
-export const friendlyMembershipNames = {
-  [MembershipType.FAMILY]: "Familjemedlemskap",
-  [MembershipType.REGULAR]: "Ordinarie medlemskap",
-  [MembershipType.YOUTH]: "Ungdomsmedlemskap"
-};
 
 export const memberPaymentRouter = createTRPCRouter({
   requestSwishPayment: publicProcedure
@@ -124,7 +118,7 @@ export const memberPaymentRouter = createTRPCRouter({
       console.info("SWISH PAYMENT CALLBACK", input);
       const originalPayment = await ctx.prisma.swishPayment.findFirst({
         where: {
-          paymentId: input.id
+          paymentId: input.id,
         },
         include: {
           memberShip: true,
@@ -166,7 +160,7 @@ export const memberPaymentRouter = createTRPCRouter({
           errorMessage: input.errorMessage,
           userId: originalPayment.userId,
           memberShipId: originalPayment.memberShipId
-        }
+        },
       });
 
       if (newPayment.status === SwishPaymentStatus.PAID) {
@@ -186,10 +180,17 @@ export const memberPaymentRouter = createTRPCRouter({
             });
           }
 
+          if (!newPayment.user?.email) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "User email not found for payment id " + newPayment.id
+            })
+          }
+
           // Send confirmation email
           await resend.sendEmail({
             from: env.BOOKING_EMAIL,
-            to: newPayment.user?.email || "filip.nystrand@gmail.com",
+            to: env.USE_DEV_MODE ? "filip.nystrand@gmail.com" : newPayment.user.email,
             subject: "Tack för att du blivit medlem i Västra Sidan",
             react: MemberSignup({
               membership: newPayment.memberShip || originalPayment.memberShip

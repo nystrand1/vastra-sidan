@@ -5,6 +5,7 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Button } from "~/components/atoms/Button/Button";
+import Card from "~/components/atoms/CardLink/CardLink";
 import { OutlinedButton } from "~/components/atoms/OutlinedButton/OutlinedButton";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { prisma } from "~/server/db";
@@ -23,32 +24,34 @@ const PassengerCard = ({ passenger } : { passenger: Participant }) => {
     })
   }
   return (
-    <div className="w-fill border border-slate-500 rounded-md p-4 flex flex-col space-y-2">
-      <div className="grid grid-cols-12">
-        <div className="col-span-12 md:col-span-6 flex flex-col">
-          <p className="text-xl">{passenger.name}</p>
-          <a className="underline text-md" href={`mailto:${passenger.email}`}>{passenger.email}</a>
-          <a className="underline text-md" href={`tel:${passenger.phone}`}>{passenger.phone}</a>
+    <Card>
+      <div className="w-fill rounded-md flex flex-col space-y-2 md">
+        <div className="grid grid-cols-12">
+          <div className="col-span-12 md:col-span-6 flex flex-col">
+            <p className="text-xl">{passenger.name}</p>
+            <a className="underline text-md" href={`mailto:${passenger.email}`}>{passenger.email}</a>
+            <a className="underline text-md" href={`tel:${passenger.phone}`}>{passenger.phone}</a>
+          </div>
+          <div className="col-span-12 md:col-span-6">
+            {passenger.member && (
+              <p className="text-md">Medlem</p>
+            )}
+            {passenger.youth && (
+              <p className="text-md">Ungdom</p>
+            )}
+            {passenger.note && (
+              <p className="text-md">Övrigt: {passenger.note}</p>
+            )}
+          </div>
         </div>
-        <div className="col-span-12 md:col-span-6">
-          {passenger.member && (
-            <p className="text-md">Medlem</p>
-          )}
-          {passenger.youth && (
-            <p className="text-md">Ungdom</p>
-          )}
-          {passenger.note && (
-            <p className="text-md">Övrigt: {passenger.note}</p>
-          )}
-        </div>
+        {checkedIn && (
+          <OutlinedButton className="dark:text-white text-white" onClick={handleCheckIn}>{checkedIn ? 'Checka Ut' : 'Checka In'}</OutlinedButton>
+        )}
+        {!checkedIn && (
+          <Button onClick={handleCheckIn}>{checkedIn ? 'Checka Ut' : 'Checka In'}</Button>
+        )}
       </div>
-      {checkedIn && (
-        <OutlinedButton className="dark:text-white text-white" onClick={handleCheckIn}>{checkedIn ? 'Checka Ut' : 'Checka In'}</OutlinedButton>
-      )}
-      {!checkedIn && (
-        <Button onClick={handleCheckIn}>{checkedIn ? 'Checka Ut' : 'Checka In'}</Button>
-      )}
-    </div>
+    </Card>
   )
 }
 
@@ -68,25 +71,27 @@ export const AdminEventPage = () => {
   }, [event])
 
   if (!event && isLoading) {
-    return <p>Laddar event...</p>
+    return <p className="text-center">Laddar event...</p>
   }
 
   return (
-    <div className="flex flex-col space-y-2">
+    <div className="flex flex-col space-y-2 md:w-5/12 m-auto">
       <h1 className="text-center text-3xl mb-8 mt-10">
         {event?.name}
       </h1>
-      <SelectField
-        label="Buss"
-        options={event?.buses.map((bus) => ({ label: bus.name, value: bus.id })) || []}
-        value={selectedBus?.id || ""}
-        onChange={(e) => {
-          const bus = event?.buses.find((bus) => bus.id === e.target.value);
-          if (bus) {
-            setSelectedBus(bus);
-          }
-        }}
-      />
+      <Card>
+        <SelectField
+          label="Buss"
+          options={event?.buses.map((bus) => ({ label: bus.name, value: bus.id })) || []}
+          value={selectedBus?.id || ""}
+          onChange={(e) => {
+            const bus = event?.buses.find((bus) => bus.id === e.target.value);
+            if (bus) {
+              setSelectedBus(bus);
+            }
+          }}
+        />
+      </Card>
       {selectedBus && selectedBus.passengers.length > 0 && (
         <div key={selectedBus.id} className="flex flex-col space-y-4">
         {selectedBus.passengers.map((passenger) => <PassengerCard key={passenger.id} passenger={passenger} />)}

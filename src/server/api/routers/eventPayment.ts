@@ -5,12 +5,13 @@ import {
   type VastraEvent
 } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
-import { format, isBefore, isWithinInterval, subDays } from "date-fns";
+import { format, isWithinInterval, subDays } from "date-fns";
 import { Resend } from "resend";
 import { z } from "zod";
 import { EventSignUp } from "~/components/emails/EventSignUp";
 import { env } from "~/env.mjs";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { isEventCancelable } from "~/server/utils/event";
 import { checkPaymentStatus, checkRefundStatus } from "~/server/utils/payment";
 import { createPaymentIntentPayload } from "~/utils/payment";
 import {
@@ -67,7 +68,7 @@ const sendConfirmationEmail = async (
   }`;
   return await resend.sendEmail({
     from: env.BOOKING_EMAIL,
-    to: participant?.email || "filip.nystrand@gmail.com",
+    to: env.USE_DEV_MODE ? "filip.nystrand@gmail.com" : participant.email,
     subject: `Anmälan till ${participant?.event?.name}`,
     react: EventSignUp({ participant, cancellationUrl })
   });
@@ -211,7 +212,7 @@ export const eventPaymentRouter = createTRPCRouter({
       }`;
       const refundData = {
         originalPaymentReference: swishPayment.paymentId,
-        callbackUrl: `${env.API_URL}/payment/swishCallback`,
+        callbackUrl: `${env.API_URL}/payment/swishEventCallback`,
         payerAlias: "1234679304",
         amount: payAmount,
         currency: "SEK",
@@ -375,6 +376,15 @@ export const eventPaymentRouter = createTRPCRouter({
             participantId: refundIntent.participant.id
           }
         });
+
+        await ctx.prisma.participant.update({
+          where: {
+            id: refundIntent.participant.id
+          },
+          data: {
+            cancellationDate: new Date()
+          }
+        });
       } catch (err) {
         console.error(err);
         throw err;
@@ -412,17 +422,14 @@ export const eventPaymentRouter = createTRPCRouter({
         });
       }
 
-      // You can't cancel within 48 hours of the departure
-      const twoDaysBeforeDeparture = subDays(participant.event.date, 2);
-      const today = new Date();
-
-      if (isBefore(participant.event.date, today)) {
+      const isCancelable = isEventCancelable(participant.event.date);
+      
+      if (!isCancelable) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Can't cancel within 48 hours of departure"
         });
       }
-      const isBefore48Hours = isBefore(today, twoDaysBeforeDeparture);
 
       const hasCancelled = participant.swishRefunds.some(
         (x) => x.status === SwishRefundStatus.PAID
@@ -439,7 +446,7 @@ export const eventPaymentRouter = createTRPCRouter({
           paymentId: payment.paymentId
         },
         hasCancelled,
-        cancellationDisabled: !isBefore48Hours
+        cancellationDisabled: !isCancelable
       };
     })
 });

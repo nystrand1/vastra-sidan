@@ -1,5 +1,4 @@
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/router";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { Button } from "~/components/atoms/Button/Button";
@@ -15,7 +14,6 @@ export const SignupPage = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const { mutateAsync: createUser } = api.user.createNewUser.useMutation();
-  const router = useRouter();
 
   const handleSignup = async () => {
     const signUpPayload = {
@@ -34,8 +32,7 @@ export const SignupPage = () => {
     }
     try {
       await createUser(payload.data)
-      await signIn('credentials', { username: email, password });
-      await router.push("/");
+      await signIn('credentials', { username: email, password, callbackUrl: "/" });
     } catch(error) {
       const err = error as { message: string }
       toast.error(err.message)
@@ -45,7 +42,7 @@ export const SignupPage = () => {
   return (
     <div className="flex flex-col items-center justify-center">
       <Card 
-        title="Logga in"
+        title="Skapa konto"
         className="w-full md:w-96"
       >
         <div className="space-y-4">
@@ -94,7 +91,11 @@ export const SignupPage = () => {
           /> 
           <Button 
             className="w-full"
-            onClick={handleSignup}
+            type="submit"
+            onClick={(e) => {
+              e.preventDefault();
+              void handleSignup();
+            }}
           >
             Skapa konto
           </Button>

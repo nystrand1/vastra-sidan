@@ -1,6 +1,7 @@
 import { type MembershipType } from "@prisma/client";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
+import { useRouter } from "next/router";
 import { useRef, useState } from "react";
 import toast from "react-hot-toast";
 import Accordion from "~/components/atoms/Accordion/Accordion";
@@ -25,9 +26,10 @@ interface AdditionalMember {
 export const MemberPage = () => {
   const formRef = useRef<HTMLFormElement>(null);
   const session = useSession();
-  const [email, setEmail] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const { user } = session.data ?? {};
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [firstName, setFirstName] = useState(user?.firstName ?? "");
+  const [lastName, setLastName] = useState(user?.lastName ?? "");
   const [phone, setPhone] = useState("");
   const [additionalMembers, setAdditionalMembers] = useState<AdditionalMember>();
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -36,7 +38,7 @@ export const MemberPage = () => {
   const { data: memberships } = api.public.getAvailableMemberships.useQuery();
   const [membershipId, setMembershipId] = useState(memberships?.regular?.id);
   const [membershipType, setMembershipType] = useState(memberships?.regular?.type);
-
+  const router = useRouter();
   if (!memberships || !memberships.regular || !memberships.family || !memberships.youth) {
     return <p>Finns inga medlemskap för tillfället!</p>
   }
@@ -99,6 +101,7 @@ export const MemberPage = () => {
         setAcceptedTerms(false);
         setAdditionalMembers(undefined);
         await session.update({ isMember: true });
+        await router.push("/");
       }
     } catch (error) {
       console.log(error);
@@ -179,7 +182,11 @@ export const MemberPage = () => {
             />
             <Button
               className="w-full"
-              onClick={handleSignup}
+              type="submit"
+              onClick={(e) => {
+                e.preventDefault();
+                void handleSignup();
+              }}
               disabled={!acceptedTerms}
             >
               Bli Medlem

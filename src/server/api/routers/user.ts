@@ -1,4 +1,4 @@
-import { type Prisma, Role, type Membership } from "@prisma/client";
+import { type Prisma, Role, type Membership, SwishRefundStatus, SwishPaymentStatus } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { Resend } from "resend";
 import { z } from "zod";
@@ -11,7 +11,9 @@ import {
 } from "~/server/api/trpc";
 import { sha256 } from "~/server/auth";
 import { signupSchema } from "~/utils/zodSchemas";
-import { friendlyMembershipNames } from "./memberPayment";
+import { isEventCancelable } from "~/server/utils/event";
+import { format } from "date-fns";
+import { friendlyMembershipNames } from "~/server/utils/membership";
 
 const membershipFormatter = (membership: Membership) => ({
   id: membership.id,
@@ -19,6 +21,8 @@ const membershipFormatter = (membership: Membership) => ({
   imageUrl: membership.imageUrl,
   type: friendlyMembershipNames[membership.type]
 });
+
+
 
 type UserData = Prisma.UserGetPayload<{
   include: {
@@ -32,14 +36,9 @@ type UserData = Prisma.UserGetPayload<{
       }
     },
     eventParticipations: {
-      where: {
-        swishPayments: {
-          some: {
-            status: "PAID"
-          }
-        }
-      },
       select: {
+        cancellationToken: true,
+        cancellationDate: true,
         event: {
           select: {
             name: true,
@@ -54,8 +53,23 @@ type UserData = Prisma.UserGetPayload<{
             createdAt: true,
             amount: true,
           }
+        },
+        swishRefunds: {
+          select: {
+            status: true,
+          },
+          where: {
+            status: "PAID",
+          },
         }
-      }
+      },
+      where: {
+        swishPayments: {
+          some: {
+            status: "PAID"
+          }
+        }
+      },
     }
   }
 }>
@@ -66,6 +80,10 @@ const eventFormatter = (awayGame: UserData['eventParticipations'][number]) => ({
   date: awayGame.event.date,
   payedAt: awayGame?.swishPayments[0]?.createdAt,
   payAmount: awayGame?.swishPayments[0]?.amount,
+  hasCancelled: awayGame?.swishRefunds.length > 0,
+  isCancelable: isEventCancelable(awayGame.event.date),
+  cancellationToken: awayGame.cancellationToken,
+  cancellationDate: awayGame.cancellationDate ? format(awayGame.cancellationDate, "yyyy-MM-dd hh:mm") : null,
 })
 
 const resend = new Resend(env.RESEND_API_KEY);
@@ -101,7 +119,7 @@ export const userRouter = createTRPCRouter({
 
       await resend.sendEmail({
         from: env.BOOKING_EMAIL,
-        to: email,
+        to: env.USE_DEV_MODE ? "filip.nystrand@gmail.com" : email,
         subject: "Bekräfta email din email",
         react: UserSignup({ token: user.id })
       });
@@ -131,30 +149,40 @@ export const userRouter = createTRPCRouter({
           }
         },
         eventParticipations: {
+          select: {
+            cancellationToken: true,
+            cancellationDate: true,
+            event: {
+              select: {
+                name: true,
+                date: true,
+              }
+            },
+            swishPayments: {
+              select: {
+                createdAt: true,
+                amount: true,
+              },
+              where: {
+                status: SwishPaymentStatus.PAID
+              },
+            },
+            swishRefunds: {
+              select: {
+                status: true,
+              },
+              where: {
+                status: SwishRefundStatus.PAID
+              },
+            }
+          },
           where: {
             swishPayments: {
               some: {
                 status: "PAID"
               }
-            }
-          },
-          select: {
-            event: {
-              select: {
-                name: true,
-                date: true
-              }
             },
-            swishPayments: {
-              where: {
-                status: "PAID"
-              },
-              select: {
-                createdAt: true,
-                amount: true,
-              }
-            }
-          }
+          },
         }
       }
     });

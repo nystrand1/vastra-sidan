@@ -3,11 +3,11 @@ import { useSession } from "next-auth/react";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { api } from "~/utils/api";
 import LoginPage from "./loggain";
+import { ButtonLink } from "~/components/atoms/ButtonLink/ButtonLink";
 
 export const AwayGamesProfilePage = () => {
   const session = useSession();
   const { data } = api.user.getProfile.useQuery(undefined, { enabled: !!session.data?.user });
-  console.log(data);
   if (!session.data?.user) {
     return <LoginPage />
   }
@@ -37,6 +37,12 @@ export const AwayGamesProfilePage = () => {
                   )}
                   {event.payAmount && (
                     <p>Pris: {event.payAmount} kr</p>
+                  )}
+                  {event.isCancelable && event.cancellationToken && !event.hasCancelled && (
+                    <ButtonLink className="mt-2" href={`/bortaresor/avboka?token=${event.cancellationToken}`}>Avboka</ButtonLink>
+                  )}
+                  {event.hasCancelled && (
+                    <p className="mt-2 rounded-md border p-2 text-center">Avbokad: {event.cancellationDate}</p>
                   )}
                 </div>
               )
