@@ -2,6 +2,7 @@ import { type GetServerSidePropsContext } from "next";
 import { useRouter } from "next/router";
 import { toast } from "react-hot-toast";
 import { Button } from "~/components/atoms/Button/Button";
+import Card from "~/components/atoms/CardLink/CardLink";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 import { pollRefundStatus } from "~/utils/payment";
@@ -61,19 +62,18 @@ export const CancelPage = () => {
   }
 
   return (
-    <div className="flex flex-col space-y-4">
-      <h1 className="text-3xl">Avbokning</h1>
-      {participant && <ParticipantInfo />}
-      {participant && !cancellationDisabled && !hasCancelled && (
-        <Button className="w-full md:w-56" disabled={isCancelling} onClick={handleCancel}>Avboka</Button>
-      )}
-      {hasCancelled && (
-        <p className="rounded-md border p-4 text-lg md:w-fit">Du har redan avbokat denna resa</p>
-      )}
-      {cancellationDisabled && !hasCancelled && (
-        <p>Du kan inte avboka inom 48h från avgång</p>
-      )}
-    </div>
+    <Card title="Avbokning" titleClassName="!text-3xl" className="w-96 m-auto">
+        {participant && <ParticipantInfo />}
+        {participant && !cancellationDisabled && !hasCancelled && (
+          <Button disabled={isCancelling} onClick={handleCancel}>Avboka</Button>
+        )}
+        {hasCancelled && (
+          <p className="rounded-md border p-4 text-lg text-center">Du har redan avbokat denna resa</p>
+        )}
+        {cancellationDisabled && !hasCancelled && (
+          <p>Du kan inte avboka inom 48h från avgång</p>
+        )}
+    </Card>
   )
 }
 
