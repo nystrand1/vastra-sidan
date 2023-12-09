@@ -1,13 +1,7 @@
-import { Prisma, type Membership, type User, MembershipType } from '@prisma/client';
+import { type Prisma } from '@prisma/client';
 import { Container, Head, Hr, Img, Section, Tailwind, Text } from "@react-email/components";
 import { Html } from '@react-email/html';
-
-
-const friendlyMembershipNames = {
-  [MembershipType.FAMILY]: "Familjemedlemskap",
-  [MembershipType.REGULAR]: "Ordinarie medlemskap",
-  [MembershipType.YOUTH]: "Ungdomsmedlemskap",
-}
+import { friendlyMembershipNames } from '~/server/utils/membership';
 
 interface MemberSignupProps {
   membership: Prisma.MembershipGetPayload<{
