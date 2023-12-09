@@ -68,7 +68,7 @@ const sendConfirmationEmail = async (
   }`;
   return await resend.sendEmail({
     from: env.BOOKING_EMAIL,
-    to: participant?.email || "filip.nystrand@gmail.com",
+    to: env.USE_DEV_MODE ? "filip.nystrand@gmail.com" : participant.email,
     subject: `Anmälan till ${participant?.event?.name}`,
     react: EventSignUp({ participant, cancellationUrl })
   });

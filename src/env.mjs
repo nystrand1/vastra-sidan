@@ -32,6 +32,7 @@ export const env = createEnv({
     SWISH_CERT: process.env.VERCEL_URL ? z.string().min(1) : z.string().min(1).optional(),
     SWISH_KEY: process.env.VERCEL_URL ? z.string().min(1) : z.string().min(1).optional(),
     SWISH_CA: process.env.VERCEL_URL ? z.string().min(1) : z.string().min(1).optional(),
+    USE_DEV_MODE: z.literal("true").or(z.literal("false")).default("false"),
   },
 
   /**
@@ -65,6 +66,7 @@ export const env = createEnv({
     SWISH_CA: process.env.SWISH_CA,
     SWISH_CERT: process.env.SWISH_CERT,
     SWISH_KEY: process.env.SWISH_KEY,
+    USE_DEV_MODE: process.env.USE_DEV_MODE,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.

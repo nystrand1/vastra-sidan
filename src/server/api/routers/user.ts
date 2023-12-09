@@ -11,9 +11,9 @@ import {
 } from "~/server/api/trpc";
 import { sha256 } from "~/server/auth";
 import { signupSchema } from "~/utils/zodSchemas";
-import { friendlyMembershipNames } from "./memberPayment";
 import { isEventCancelable } from "~/server/utils/event";
 import { format } from "date-fns";
+import { friendlyMembershipNames } from "~/server/utils/membership";
 
 const membershipFormatter = (membership: Membership) => ({
   id: membership.id,
@@ -119,7 +119,7 @@ export const userRouter = createTRPCRouter({
 
       await resend.sendEmail({
         from: env.BOOKING_EMAIL,
-        to: email,
+        to: env.USE_DEV_MODE ? "filip.nystrand@gmail.com" : email,
         subject: "Bekräfta email din email",
         react: UserSignup({ token: user.id })
       });
