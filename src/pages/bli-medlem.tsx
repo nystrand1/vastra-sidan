@@ -40,7 +40,7 @@ export const MemberPage = () => {
   const [membershipType, setMembershipType] = useState(memberships?.regular?.type);
   const router = useRouter();
   if (!memberships || !memberships.regular || !memberships.family || !memberships.youth) {
-    return <p>Finns inga medlemskap för tillfället!</p>
+    return <p className="text-center text-xl">Finns inga medlemskap för tillfället!</p>
   }
 
   const memberShipOptions = [
