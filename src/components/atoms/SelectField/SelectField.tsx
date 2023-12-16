@@ -12,7 +12,7 @@ export const SelectField = ({ id, label, options, name, labelProps, placeholder,
     <div>
       <label
         htmlFor={id}
-        className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+        className="block mb-2 text-sm font-mediumtext-white"
         {...labelProps}>
           {label}
         </label>
