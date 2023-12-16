@@ -83,7 +83,7 @@ const eventFormatter = (awayGame: UserData['eventParticipations'][number]) => ({
   hasCancelled: awayGame?.swishRefunds.length > 0,
   isCancelable: isEventCancelable(awayGame.event.date),
   cancellationToken: awayGame.cancellationToken,
-  cancellationDate: awayGame.cancellationDate ? format(awayGame.cancellationDate, "yyyy-MM-dd hh:mm") : null,
+  cancellationDate: awayGame.cancellationDate ? format(awayGame.cancellationDate, "yyyy-MM-dd HH:mm") : null,
 })
 
 const resend = new Resend(env.RESEND_API_KEY);

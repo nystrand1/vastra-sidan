@@ -441,7 +441,7 @@ export const eventPaymentRouter = createTRPCRouter({
           cancellationToken: participant.cancellationToken,
           eventName: participant.event.name,
           payAmount: participant.payAmount,
-          departureTime: format(participant.event.date, "hh:mm"),
+          departureTime: format(participant.event.date, "HH:mm"),
           note: participant.note,
           paymentId: payment.paymentId
         },

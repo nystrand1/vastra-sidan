@@ -19,7 +19,7 @@ export const BusPage = () => {
         {game.name}
       </h1>
       <p className="text-3xl">
-        Bussen avgår {format(game.date, "hh:mm")}
+        Bussen avgår {format(game.date, "HH:mm")}
       </p>
       <Accordion
         items={[
