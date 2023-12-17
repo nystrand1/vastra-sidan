@@ -12,6 +12,7 @@ import { EventSignUp } from "~/components/emails/EventSignUp";
 import { env } from "~/env.mjs";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { isEventCancelable } from "~/server/utils/event";
+import { isSamePhoneNumber } from "~/server/utils/helpers";
 import { checkPaymentStatus, checkRefundStatus } from "~/server/utils/payment";
 import { createPaymentIntentPayload } from "~/utils/payment";
 import {
@@ -33,6 +34,24 @@ export type ParticipantWithBusAndEvent = Prisma.ParticipantGetPayload<{
     event: true;
     bus: true;
   };
+}>;
+
+export type ParticipantWithParticipants = Prisma.ParticipantGetPayload<{
+  select: {
+    phone: true,
+    event: true,
+    swishPayments: {
+      select: {
+        id: true,
+        participants: {
+          include: {
+            event: true,
+            swishRefunds: true
+          }
+        },
+      },      
+    }
+  }
 }>;
 
 const getParticipantCost = (
@@ -68,10 +87,31 @@ const sendConfirmationEmail = async (
   }`;
   return await resend.sendEmail({
     from: env.BOOKING_EMAIL,
-    to: env.USE_DEV_MODE ? "filip.nystrand@gmail.com" : participant.email,
+    to: env.USE_DEV_MODE === "true" ? "filip.nystrand@gmail.com" : participant.email,
     subject: `Anmälan till ${participant?.event?.name}`,
     react: EventSignUp({ participant, cancellationUrl })
   });
+};
+
+
+const participantFormatter = (participant: ParticipantWithParticipants['swishPayments'][number]['participants'][number]) => {
+  const isCancelable = isEventCancelable(participant.event.date);
+  const hasCancelled = participant.swishRefunds.some(
+    (x) => x.status === SwishRefundStatus.PAID
+  );
+
+  const res = {
+    name: participant.name,
+    email: participant.email,
+    cancellationToken: participant.cancellationToken,
+    eventName: participant.event.name,
+    payAmount: participant.payAmount,
+    departureTime: format(participant.event.date, "HH:mm"),
+    note: participant.note,
+    cancellationDisabled: !isCancelable,
+    hasCancelled,
+  }
+  return res;
 };
 
 export const eventPaymentRouter = createTRPCRouter({
@@ -391,29 +431,47 @@ export const eventPaymentRouter = createTRPCRouter({
       }
       return "ok";
     }),
-  getCancellableParticipant: publicProcedure
+  getManagableBooking: publicProcedure
     .input(z.object({ token: z.string() }))
     .query(async ({ input, ctx }) => {
-      const participant = await ctx.prisma.participant.findFirst({
+      const payer = await ctx.prisma.participant.findFirst({
         where: {
-          cancellationToken: input.token
+          cancellationToken: input.token,
         },
-        include: {
+        select: {
+          phone: true,
           event: true,
-          swishPayments: true,
-          swishRefunds: true
+          swishPayments: {
+            select: {
+              id: true,
+              payerAlias: true,
+              participants: {
+                include: {
+                  event: true,
+                  swishRefunds: true
+                }
+              },
+            },
+            where: {
+              status: SwishPaymentStatus.PAID,
+              participants: {
+                some: {
+                  cancellationToken: input.token,
+                }
+              }
+            }
+          }
         }
       });
 
-      if (!participant) {
+      if (!payer) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Participant not found"
         });
       }
-      const payment = participant.swishPayments.find(
-        (x) => x.status === "PAID"
-      );
+
+      const [payment] = payer.swishPayments;
 
       if (!payment) {
         throw new TRPCError({
@@ -422,31 +480,19 @@ export const eventPaymentRouter = createTRPCRouter({
         });
       }
 
-      const isCancelable = isEventCancelable(participant.event.date);
-      
-      if (!isCancelable) {
+      const participants = payment.participants.map(participantFormatter); 
+      const isPayer = isSamePhoneNumber(payer.phone, payment.payerAlias);
+      if (!isPayer) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Can't cancel within 48 hours of departure"
+          message: "You are not the payer"
         });
       }
 
-      const hasCancelled = participant.swishRefunds.some(
-        (x) => x.status === SwishRefundStatus.PAID
-      );
       return {
-        participant: {
-          name: participant.name,
-          email: participant.email,
-          cancellationToken: participant.cancellationToken,
-          eventName: participant.event.name,
-          payAmount: participant.payAmount,
-          departureTime: format(participant.event.date, "hh:mm"),
-          note: participant.note,
-          paymentId: payment.paymentId
-        },
-        hasCancelled,
-        cancellationDisabled: !isCancelable
-      };
+        participants,
+        eventName: payer.event.name,
+        departureTime: format(payer.event.date, "HH:mm"),
+      }
     })
 });

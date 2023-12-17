@@ -36,7 +36,7 @@ export default function Home() {
                   link={`${PATHS.awayGames}${game.id}`}
                 >
                   <div className="space-y-1">
-                    <p className="text-md font-semibold">Bussen avgår {format(game.date, "hh:mm")}</p>
+                    <p className="text-md font-semibold">Bussen avgår {format(game.date, "HH:mm")}</p>
                     <p className="text-sm">Pris vuxen medlem: {game.memberPrice} kr</p>
                     <p className="text-sm">Pris vuxen icke medlem: {game.defaultPrice} kr</p>
                     <p className="text-sm">Pris ungdom medlem: {game.youthMemberPrice} kr</p>

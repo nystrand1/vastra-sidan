@@ -45,7 +45,7 @@ const PassengerCard = ({ passenger } : { passenger: Participant }) => {
           </div>
         </div>
         {checkedIn && (
-          <OutlinedButton className="dark:text-white text-white" onClick={handleCheckIn}>{checkedIn ? 'Checka Ut' : 'Checka In'}</OutlinedButton>
+          <OutlinedButton className="text-white" onClick={handleCheckIn}>{checkedIn ? 'Checka Ut' : 'Checka In'}</OutlinedButton>
         )}
         {!checkedIn && (
           <Button onClick={handleCheckIn}>{checkedIn ? 'Checka Ut' : 'Checka In'}</Button>

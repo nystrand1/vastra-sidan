@@ -5,7 +5,7 @@ import {
   swishCallbackPaymentSchema,
   swishCallbackRefundSchema
 } from "~/utils/zodSchemas";
-import { createTRPCRouter, publicProcedure } from "../trpc";
+import { createTRPCRouter, membershipProcedure } from "../trpc";
 import { SwishPaymentStatus } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { createPaymentIntentPayload } from "~/utils/payment";
@@ -18,7 +18,7 @@ import { friendlyMembershipNames } from "~/server/utils/membership";
 const resend = new Resend(env.RESEND_API_KEY);
 
 export const memberPaymentRouter = createTRPCRouter({
-  requestSwishPayment: publicProcedure
+  requestSwishPayment: membershipProcedure
     .input(memberSignupSchema)
     .mutation(async ({ ctx, input }) => {
       const { membershipId, phone } = input;
@@ -106,12 +106,12 @@ export const memberPaymentRouter = createTRPCRouter({
         });
       }
     }),
-  checkPaymentStatus: publicProcedure
+  checkPaymentStatus: membershipProcedure
     .input(z.object({ paymentId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return checkPaymentStatus(input.paymentId, ctx.prisma);
     }),
-  swishPaymentCallback: publicProcedure
+  swishPaymentCallback: membershipProcedure
     .input(swishCallbackPaymentSchema)
     .mutation(async ({ input, ctx }) => {
       // TODO: Protect this endpoint with a secret
@@ -175,7 +175,8 @@ export const memberPaymentRouter = createTRPCRouter({
                   connect: {
                     id: newPayment.memberShipId
                   }
-                }
+                },
+                phone: input.payerAlias
               }
             });
           }
@@ -190,7 +191,7 @@ export const memberPaymentRouter = createTRPCRouter({
           // Send confirmation email
           await resend.sendEmail({
             from: env.BOOKING_EMAIL,
-            to: env.USE_DEV_MODE ? "filip.nystrand@gmail.com" : newPayment.user.email,
+            to: env.USE_DEV_MODE === "true" ? "filip.nystrand@gmail.com" : newPayment.user.email,
             subject: "Tack för att du blivit medlem i Västra Sidan",
             react: MemberSignup({
               membership: newPayment.memberShip || originalPayment.memberShip
@@ -209,7 +210,7 @@ export const memberPaymentRouter = createTRPCRouter({
         status: 200
       };
     }),
-  swishRefundCallback: publicProcedure
+  swishRefundCallback: membershipProcedure
     .input(swishCallbackRefundSchema)
     .mutation(async ({ input, ctx }) => {
       console.log("SWISH REFUND CALLBACK", input);

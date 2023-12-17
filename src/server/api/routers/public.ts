@@ -6,7 +6,7 @@ import {
 import { TRPCError } from "@trpc/server";
 import { subHours } from "date-fns";
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, membershipProcedure, publicProcedure } from "~/server/api/trpc";
 
 const busesWithPaidPassengers = {
   buses: {
@@ -70,7 +70,7 @@ export const publicRouter = createTRPCRouter({
 
       return res;
     }),
-  getAvailableMemberships: publicProcedure.query(async ({ ctx }) => {
+  getAvailableMemberships: membershipProcedure.query(async ({ ctx }) => {
     const res = await ctx.prisma.membership.findMany({
       where: {
         endDate: {

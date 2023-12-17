@@ -2,6 +2,7 @@ import { type Prisma, SwishPaymentStatus, SwishRefundStatus } from "@prisma/clie
 import { format } from "date-fns";
 import { z } from "zod";
 import { createTRPCRouter, adminProcedure } from "~/server/api/trpc";
+import { isEventCancelable } from "~/server/utils/event";
 import { friendlyMembershipNames } from "~/server/utils/membership";
 
 const busesWithPaidPassengers = {
@@ -30,6 +31,8 @@ export type User = Prisma.UserGetPayload<{
     id: true,
     firstName: true,
     lastName: true,
+    phone: true,
+    email: true,
     memberShips: {
       select: {
         type: true,
@@ -57,12 +60,56 @@ export type User = Prisma.UserGetPayload<{
   }
 }>;
 
-const userFormatter = (user: User) => ({
+export type AdminUserProfile = Prisma.UserGetPayload<{
+  select: {
+    id: true,
+    firstName: true,
+    lastName: true,
+    phone: true,
+    email: true,
+    eventParticipations: {
+      include: {
+        event: true,
+        swishPayments: true,
+        swishRefunds: true,
+      }
+    },
+    memberShips: {
+      select: {
+        type: true,
+        swishPayments: {
+          select: {
+            createdAt: true
+          }
+        }
+      }
+    }
+  },
+  where: {
+    id: true
+  }
+}>
+
+const adminUserFormatter = (user: User) => ({
   name: `${user.firstName} ${user.lastName}`,
   id: user.id,
   activeMembershipType: user.memberShips[0] ? friendlyMembershipNames[user.memberShips[0].type] : "Inget medlemskap",
-  datePaid: user.memberShips[0]?.swishPayments[0] ? format(user.memberShips[0].swishPayments[0].createdAt, "yyyy-MM-dd hh:mm") : "Inget medlemskap",
-})
+  datePaid: user.memberShips[0]?.swishPayments[0] ? format(user.memberShips[0].swishPayments[0].createdAt, "yyyy-MM-dd HH:mm") : "Inget medlemskap",
+  phone: user.phone,
+  email: user.email,
+});
+
+const adminEventFormatter = (awayGame: AdminUserProfile['eventParticipations'][number]) => ({
+  id: awayGame.event.name,
+  name: awayGame.event.name,
+  date: awayGame.event.date,
+  payedAt: awayGame?.swishPayments[0]?.createdAt ? format(awayGame?.swishPayments[0]?.createdAt, "yyyy-MM-dd HH:mm") : null,
+  payAmount: awayGame?.swishPayments[0]?.amount,
+  hasCancelled: awayGame?.swishRefunds.length > 0,
+  isCancelable: isEventCancelable(awayGame.event.date),
+  cancellationToken: awayGame.cancellationToken,
+  cancellationDate: awayGame.cancellationDate ? format(awayGame.cancellationDate, "yyyy-MM-dd HH:mm") : null,
+});
 
 export const adminRouter = createTRPCRouter({
   getEvents: adminProcedure.query(async ({ ctx }) => {
@@ -105,6 +152,8 @@ export const adminRouter = createTRPCRouter({
           id: true,
           firstName: true,
           lastName: true,
+          phone: true,
+          email: true,
           memberShips: {
             select: {
               type: true,
@@ -131,6 +180,49 @@ export const adminRouter = createTRPCRouter({
           }
         }
       });
-      return [...res, ...res, ...res, ...res].map(userFormatter);
-    })
+      return [...res, ...res, ...res, ...res].map(adminUserFormatter);
+    }),
+    getMemberById: adminProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const res = await ctx.prisma.user.findFirst({
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          email: true,
+          eventParticipations: {
+            include: {
+              event: true,
+              swishPayments: true,
+              swishRefunds: true,
+            }
+          },
+          memberShips: {
+            select: {
+              type: true,
+              swishPayments: {
+                select: {
+                  createdAt: true
+                }
+              }
+            }
+          }
+        },
+        where: {
+          id: input.id
+        }
+      });
+
+      if (!res) {
+        return null;
+      }
+      return {
+        ...adminUserFormatter(res),
+        ...res,
+        upcomingEvents: res.eventParticipations.filter((x) => x.event.date > new Date()).map(adminEventFormatter),
+        pastEvents: res.eventParticipations.filter((x) => x.event.date < new Date()).map(adminEventFormatter),
+      };
+    }),
 });

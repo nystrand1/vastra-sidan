@@ -12,7 +12,7 @@ export const Progressbar = ({ label, maxValue, currentValue } : ProgressbarProps
   return (
     <div className="w-full">
       <p className="text-center mb-2">{label}</p>
-      <div className="w-full h-10 bg-gray-200 rounded-md dark:bg-gray-700 relative">
+      <div className="w-full h-10 rounded-md bg-gray-700 relative">
         <div className="text-slate-50 flex justify-center items-center h-full absolute left-0 right-0 w-full z-10">
           {currentValue} / {maxValue}
         </div>

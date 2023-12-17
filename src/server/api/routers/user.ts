@@ -1,5 +1,6 @@
-import { type Prisma, Role, type Membership, SwishRefundStatus, SwishPaymentStatus } from "@prisma/client";
+import { Role, SwishPaymentStatus, SwishRefundStatus, type Membership, type Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
+import { format } from "date-fns";
 import { Resend } from "resend";
 import { z } from "zod";
 import UserSignup from "~/components/emails/UserSignup";
@@ -10,10 +11,9 @@ import {
   userProcedure
 } from "~/server/api/trpc";
 import { sha256 } from "~/server/auth";
-import { signupSchema } from "~/utils/zodSchemas";
-import { isEventCancelable } from "~/server/utils/event";
-import { format } from "date-fns";
+import { isSamePhoneNumber } from "~/server/utils/helpers";
 import { friendlyMembershipNames } from "~/server/utils/membership";
+import { signupSchema } from "~/utils/zodSchemas";
 
 const membershipFormatter = (membership: Membership) => ({
   id: membership.id,
@@ -39,6 +39,7 @@ type UserData = Prisma.UserGetPayload<{
       select: {
         cancellationToken: true,
         cancellationDate: true,
+        phone: true,
         event: {
           select: {
             name: true,
@@ -52,6 +53,7 @@ type UserData = Prisma.UserGetPayload<{
           select: {
             createdAt: true,
             amount: true,
+            payerAlias: true,
           }
         },
         swishRefunds: {
@@ -80,10 +82,9 @@ const eventFormatter = (awayGame: UserData['eventParticipations'][number]) => ({
   date: awayGame.event.date,
   payedAt: awayGame?.swishPayments[0]?.createdAt,
   payAmount: awayGame?.swishPayments[0]?.amount,
-  hasCancelled: awayGame?.swishRefunds.length > 0,
-  isCancelable: isEventCancelable(awayGame.event.date),
   cancellationToken: awayGame.cancellationToken,
-  cancellationDate: awayGame.cancellationDate ? format(awayGame.cancellationDate, "yyyy-MM-dd hh:mm") : null,
+  cancellationDate: awayGame.cancellationDate ? format(awayGame.cancellationDate, "yyyy-MM-dd HH:mm") : null,
+  isPayer: isSamePhoneNumber(awayGame.phone, awayGame.swishPayments[0]?.payerAlias || ''),
 })
 
 const resend = new Resend(env.RESEND_API_KEY);
@@ -119,7 +120,7 @@ export const userRouter = createTRPCRouter({
 
       await resend.sendEmail({
         from: env.BOOKING_EMAIL,
-        to: env.USE_DEV_MODE ? "filip.nystrand@gmail.com" : email,
+        to: env.USE_DEV_MODE === "true" ? "filip.nystrand@gmail.com" : email,
         subject: "Bekräfta email din email",
         react: UserSignup({ token: user.id })
       });
@@ -152,6 +153,7 @@ export const userRouter = createTRPCRouter({
           select: {
             cancellationToken: true,
             cancellationDate: true,
+            phone: true,
             event: {
               select: {
                 name: true,
@@ -162,6 +164,7 @@ export const userRouter = createTRPCRouter({
               select: {
                 createdAt: true,
                 amount: true,
+                payerAlias: true,
               },
               where: {
                 status: SwishPaymentStatus.PAID
