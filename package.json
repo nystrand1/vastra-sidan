@@ -10,9 +10,12 @@
     "start": "next start",
     "dev:email": "email dev -p 3001 --dir ./src/components/emails",
     "export:email": "email export",
-    "prettier-format": "prettier --config ./.prettierrc.json 'src/**/*.ts' --write"
+    "prettier-format": "prettier --config ./.prettierrc.json 'src/**/*.ts' --write",
+    "compile": "graphql-codegen",
+    "watch": "graphql-codegen -w"
   },
   "dependencies": {
+    "@apollo/client": "^3.8.8",
     "@next-auth/prisma-adapter": "^1.0.5",
     "@prisma/client": "^5.7.0",
     "@react-email/components": "^0.0.7",
@@ -26,6 +29,7 @@
     "@trpc/server": "^10.35.0",
     "date-fns": "^2.30.0",
     "fuse.js": "^7.0.0",
+    "graphql": "^16.8.1",
     "next": "^13.5.2",
     "next-auth": "^4.22.1",
     "react": "18.2.0",
@@ -38,6 +42,10 @@
     "zod": "^3.21.4"
   },
   "devDependencies": {
+    "@graphql-codegen/add": "^5.0.0",
+    "@graphql-codegen/cli": "^5.0.0",
+    "@graphql-codegen/typed-document-node": "^5.0.1",
+    "@graphql-codegen/typescript-operations": "^4.0.1",
     "@types/eslint": "^8.37.0",
     "@types/node": "^18.16.0",
     "@types/prettier": "^2.7.2",

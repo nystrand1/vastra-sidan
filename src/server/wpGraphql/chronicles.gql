@@ -1,0 +1,14 @@
+query GetChronicles {
+  chronicles {
+    nodes {
+      chronicle {
+        title
+        text
+        chronicleImage {
+          sourceUrl
+        }
+      }
+      slug
+    }
+  }
+}
