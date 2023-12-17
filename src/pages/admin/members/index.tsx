@@ -12,7 +12,8 @@ const fuseOptions = {
 	keys: [
 		"name",
 		"activeMembershipType",
-    "id"
+    "id",
+    "email",
 	]
 };
 
@@ -43,14 +44,17 @@ export default function Admin() {
           label="Sök"
         />
         <div className="h-96 space-y-4 overflow-auto">
-          {filteredMembers?.map((member) => (
+          {filteredMembers?.map((member, index) => (
             <Card 
               title={member.name}
-              key={member.id}
+              key={`${index}-${member.id}`}
               link={`/admin/members/${member.id}`}
             >
               <p>{member.activeMembershipType}</p>
               <p>Blev medlem {member.datePaid}</p>
+              {member.email && (
+                <p>{member.email}</p>
+              )}
             </Card>
           ))}
         </div>

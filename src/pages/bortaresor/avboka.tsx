@@ -1,39 +1,33 @@
+import { type inferRouterOutputs } from "@trpc/server";
 import { type GetServerSidePropsContext } from "next";
 import { useRouter } from "next/router";
 import { toast } from "react-hot-toast";
 import { Button } from "~/components/atoms/Button/Button";
 import Card from "~/components/atoms/CardLink/CardLink";
+import { type AppRouter } from "~/server/api/root";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 import { pollRefundStatus } from "~/utils/payment";
 
 
-export const ParticipantInfo = () => {
-  const query = useRouter().query;
-  const { data, isLoading } = api.eventPayment.getCancellableParticipant.useQuery({ token: query.token as string});
-  if (!data || isLoading) return null;
-  const { name, email, eventName, departureTime, payAmount, note } = data.participant;
+type Participant = inferRouterOutputs<AppRouter>['eventPayment']['getManagableBooking']['participants'][number];
+
+export const ParticipantInfo = ({ name, email, payAmount, note }: Participant ) => {
   return (
     <div>
-      <h2>Resenär</h2>
       <p>Namn: {name}</p>
       <p>Email: {email}</p>
-      <p>Resa: {eventName}</p>
-      <p>Avgångstid: {departureTime}</p>
       <p>Pris: {payAmount} kr</p>
       {note && (
         <p>Övrigt: {note}</p>
       )}
-      <p>
-        Avbokning kan endast ske senast 48 timmar innan avresa annars debiteras du fullt pris.
-      </p>
     </div>
   )
 }
 
 export const CancelPage = () => {
   const query = useRouter().query;
-  const { data, isLoading, refetch: refetchParticipant } = api.eventPayment.getCancellableParticipant.useQuery({ token: query.token as string});
+  const { data, isLoading, refetch: refetchParticipant } = api.eventPayment.getManagableBooking.useQuery({ token: query.token as string});
 
   const { mutateAsync: cancelBooking, isLoading: isCancelling } = api.eventPayment.cancelBooking.useMutation();
 
@@ -41,9 +35,9 @@ export const CancelPage = () => {
 
   if (!data || isLoading) return null;
 
-  const { participant, cancellationDisabled, hasCancelled } = data;
+  const { participants, departureTime, eventName } = data;
 
-  const handleCancel = async () => {
+  const handleCancel = async (participant: typeof participants[number]) => {
     if (!participant.cancellationToken) return null;
     // Get the refund ID from cancel booking
     // Use the refund ID to poll the refund status
@@ -62,17 +56,29 @@ export const CancelPage = () => {
   }
 
   return (
-    <Card title="Avbokning" titleClassName="!text-3xl" className="w-96 m-auto">
-        {participant && <ParticipantInfo />}
-        {participant && !cancellationDisabled && !hasCancelled && (
-          <Button disabled={isCancelling} onClick={handleCancel}>Avboka</Button>
-        )}
-        {hasCancelled && (
-          <p className="rounded-md border p-4 text-lg text-center">Du har redan avbokat denna resa</p>
-        )}
-        {cancellationDisabled && !hasCancelled && (
-          <p>Du kan inte avboka inom 48h från avgång</p>
-        )}
+    <Card title={eventName} titleClassName="!text-3xl" className="w-full md:w-96 m-auto">
+        <div className="divide-y divide-gray-100 space-y-4">
+          <div>
+            <p className="font-bold">Avgångstid: {departureTime}</p>
+            <p>
+              Avbokning kan endast ske senast 48 timmar innan avresa annars debiteras du fullt pris.
+            </p>
+          </div>
+          {participants.map((participant) => (
+            <div key={participant.cancellationToken} className="space-y-2 pt-2">
+              <ParticipantInfo {...participant} /> 
+              {!participant.cancellationDisabled && !participant.hasCancelled && (
+                <Button className="w-full" disabled={isCancelling} onClick={() => handleCancel(participant)}>Avboka</Button>
+              )}
+              {participant.hasCancelled && (
+                <p className="rounded-md border p-2 text-lg text-center">Du har redan avbokat denna resa</p>
+              )}
+              {participant.cancellationDisabled && !participant.hasCancelled && (
+                <p>Du kan inte avboka inom 48h från avgång</p>
+              )}
+            </div>
+          ))}
+        </div>
     </Card>
   )
 }
@@ -90,7 +96,7 @@ export async function getServerSideProps({ query } : GetServerSidePropsContext) 
 
   const ssr = await createSSRHelper();
 
-  await ssr.eventPayment.getCancellableParticipant.prefetch({ token: token as string });
+  await ssr.eventPayment.getManagableBooking.prefetch({ token: token as string });
 
   return {
     props: {

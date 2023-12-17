@@ -35,6 +35,24 @@ export type ParticipantWithBusAndEvent = Prisma.ParticipantGetPayload<{
   };
 }>;
 
+export type ParticipantWithParticipants = Prisma.ParticipantGetPayload<{
+  select: {
+    phone: true,
+    event: true,
+    swishPayments: {
+      select: {
+        id: true,
+        participants: {
+          include: {
+            event: true,
+            swishRefunds: true
+          }
+        },
+      },      
+    }
+  }
+}>;
+
 const getParticipantCost = (
   participant: Omit<ParticipantInput, "consent">,
   event: VastraEvent
@@ -72,6 +90,27 @@ const sendConfirmationEmail = async (
     subject: `Anmälan till ${participant?.event?.name}`,
     react: EventSignUp({ participant, cancellationUrl })
   });
+};
+
+
+const participantFormatter = (participant: ParticipantWithParticipants['swishPayments'][number]['participants'][number]) => {
+  const isCancelable = isEventCancelable(participant.event.date);
+  const hasCancelled = participant.swishRefunds.some(
+    (x) => x.status === SwishRefundStatus.PAID
+  );
+
+  const res = {
+    name: participant.name,
+    email: participant.email,
+    cancellationToken: participant.cancellationToken,
+    eventName: participant.event.name,
+    payAmount: participant.payAmount,
+    departureTime: format(participant.event.date, "HH:mm"),
+    note: participant.note,
+    cancellationDisabled: !isCancelable,
+    hasCancelled,
+  }
+  return res;
 };
 
 export const eventPaymentRouter = createTRPCRouter({
@@ -391,29 +430,46 @@ export const eventPaymentRouter = createTRPCRouter({
       }
       return "ok";
     }),
-  getCancellableParticipant: publicProcedure
+  getManagableBooking: publicProcedure
     .input(z.object({ token: z.string() }))
     .query(async ({ input, ctx }) => {
-      const participant = await ctx.prisma.participant.findFirst({
+      const payee = await ctx.prisma.participant.findFirst({
         where: {
-          cancellationToken: input.token
+          cancellationToken: input.token,
         },
-        include: {
+        select: {
+          phone: true,
           event: true,
-          swishPayments: true,
-          swishRefunds: true
+          swishPayments: {
+            select: {
+              id: true,
+              participants: {
+                include: {
+                  event: true,
+                  swishRefunds: true
+                }
+              },
+            },
+            where: {
+              status: SwishPaymentStatus.PAID,
+              participants: {
+                some: {
+                  cancellationToken: input.token,
+                }
+              }
+            }
+          }
         }
       });
 
-      if (!participant) {
+      if (!payee) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Participant not found"
         });
       }
-      const payment = participant.swishPayments.find(
-        (x) => x.status === "PAID"
-      );
+
+      const [payment] = payee.swishPayments;
 
       if (!payment) {
         throw new TRPCError({
@@ -422,31 +478,12 @@ export const eventPaymentRouter = createTRPCRouter({
         });
       }
 
-      const isCancelable = isEventCancelable(participant.event.date);
-      
-      if (!isCancelable) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Can't cancel within 48 hours of departure"
-        });
-      }
+      const participants = payment.participants.map(participantFormatter); 
 
-      const hasCancelled = participant.swishRefunds.some(
-        (x) => x.status === SwishRefundStatus.PAID
-      );
       return {
-        participant: {
-          name: participant.name,
-          email: participant.email,
-          cancellationToken: participant.cancellationToken,
-          eventName: participant.event.name,
-          payAmount: participant.payAmount,
-          departureTime: format(participant.event.date, "HH:mm"),
-          note: participant.note,
-          paymentId: payment.paymentId
-        },
-        hasCancelled,
-        cancellationDisabled: !isCancelable
-      };
+        participants,
+        eventName: payee.event.name,
+        departureTime: format(payee.event.date, "HH:mm"),
+      }
     })
 });

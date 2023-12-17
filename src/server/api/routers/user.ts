@@ -1,4 +1,4 @@
-import { type Prisma, Role, type Membership, SwishRefundStatus, SwishPaymentStatus } from "@prisma/client";
+import { Role, SwishPaymentStatus, SwishRefundStatus, type Membership, type Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { Resend } from "resend";
 import { z } from "zod";
@@ -10,10 +10,8 @@ import {
   userProcedure
 } from "~/server/api/trpc";
 import { sha256 } from "~/server/auth";
-import { signupSchema } from "~/utils/zodSchemas";
-import { isEventCancelable } from "~/server/utils/event";
-import { format } from "date-fns";
 import { friendlyMembershipNames } from "~/server/utils/membership";
+import { signupSchema } from "~/utils/zodSchemas";
 
 const membershipFormatter = (membership: Membership) => ({
   id: membership.id,
@@ -38,7 +36,6 @@ type UserData = Prisma.UserGetPayload<{
     eventParticipations: {
       select: {
         cancellationToken: true,
-        cancellationDate: true,
         event: {
           select: {
             name: true,
@@ -80,10 +77,7 @@ const eventFormatter = (awayGame: UserData['eventParticipations'][number]) => ({
   date: awayGame.event.date,
   payedAt: awayGame?.swishPayments[0]?.createdAt,
   payAmount: awayGame?.swishPayments[0]?.amount,
-  hasCancelled: awayGame?.swishRefunds.length > 0,
-  isCancelable: isEventCancelable(awayGame.event.date),
   cancellationToken: awayGame.cancellationToken,
-  cancellationDate: awayGame.cancellationDate ? format(awayGame.cancellationDate, "yyyy-MM-dd HH:mm") : null,
 })
 
 const resend = new Resend(env.RESEND_API_KEY);
@@ -151,7 +145,6 @@ export const userRouter = createTRPCRouter({
         eventParticipations: {
           select: {
             cancellationToken: true,
-            cancellationDate: true,
             event: {
               select: {
                 name: true,
