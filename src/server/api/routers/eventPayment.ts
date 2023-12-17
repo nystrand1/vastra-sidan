@@ -433,7 +433,7 @@ export const eventPaymentRouter = createTRPCRouter({
   getManagableBooking: publicProcedure
     .input(z.object({ token: z.string() }))
     .query(async ({ input, ctx }) => {
-      const payee = await ctx.prisma.participant.findFirst({
+      const payer = await ctx.prisma.participant.findFirst({
         where: {
           cancellationToken: input.token,
         },
@@ -443,6 +443,7 @@ export const eventPaymentRouter = createTRPCRouter({
           swishPayments: {
             select: {
               id: true,
+              payerAlias: true,
               participants: {
                 include: {
                   event: true,
@@ -462,14 +463,14 @@ export const eventPaymentRouter = createTRPCRouter({
         }
       });
 
-      if (!payee) {
+      if (!payer) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Participant not found"
         });
       }
 
-      const [payment] = payee.swishPayments;
+      const [payment] = payer.swishPayments;
 
       if (!payment) {
         throw new TRPCError({
@@ -479,11 +480,18 @@ export const eventPaymentRouter = createTRPCRouter({
       }
 
       const participants = payment.participants.map(participantFormatter); 
+      const isPayer = payer.phone === payment.payerAlias;
+      if (!isPayer) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "You are not the payer"
+        });
+      }
 
       return {
         participants,
-        eventName: payee.event.name,
-        departureTime: format(payee.event.date, "HH:mm"),
+        eventName: payer.event.name,
+        departureTime: format(payer.event.date, "HH:mm"),
       }
     })
 });

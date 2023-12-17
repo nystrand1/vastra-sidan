@@ -38,7 +38,13 @@ export const AwayGamesProfilePage = () => {
                   {event.payAmount && (
                     <p>Pris: {event.payAmount} kr</p>
                   )}
-                  {event.cancellationToken && (
+                  {!event.isPayer && (
+                    <p className="mt-2 rounded-md border p-2 text-center">Resan hanteras av betalaren</p>
+                  )}
+                  {!event.isPayer && event.cancellationDate && (
+                    <p className="mt-2 rounded-md border p-2 text-center">Avbokad: {event.cancellationDate}</p>
+                  )}
+                  {event.cancellationToken && event.isPayer && (
                     <ButtonLink className="mt-2" href={`/bortaresor/avboka?token=${event.cancellationToken}`}>Hantera</ButtonLink>
                   )}
                 </div>

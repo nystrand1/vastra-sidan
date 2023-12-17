@@ -1,5 +1,6 @@
 import { Role, SwishPaymentStatus, SwishRefundStatus, type Membership, type Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
+import { format } from "date-fns";
 import { Resend } from "resend";
 import { z } from "zod";
 import UserSignup from "~/components/emails/UserSignup";
@@ -36,6 +37,8 @@ type UserData = Prisma.UserGetPayload<{
     eventParticipations: {
       select: {
         cancellationToken: true,
+        cancellationDate: true,
+        phone: true,
         event: {
           select: {
             name: true,
@@ -49,6 +52,7 @@ type UserData = Prisma.UserGetPayload<{
           select: {
             createdAt: true,
             amount: true,
+            payerAlias: true,
           }
         },
         swishRefunds: {
@@ -78,6 +82,8 @@ const eventFormatter = (awayGame: UserData['eventParticipations'][number]) => ({
   payedAt: awayGame?.swishPayments[0]?.createdAt,
   payAmount: awayGame?.swishPayments[0]?.amount,
   cancellationToken: awayGame.cancellationToken,
+  cancellationDate: awayGame.cancellationDate ? format(awayGame.cancellationDate, "yyyy-MM-dd HH:mm") : null,
+  isPayer: awayGame.swishPayments[0]?.payerAlias === awayGame.phone,
 })
 
 const resend = new Resend(env.RESEND_API_KEY);
@@ -145,6 +151,8 @@ export const userRouter = createTRPCRouter({
         eventParticipations: {
           select: {
             cancellationToken: true,
+            cancellationDate: true,
+            phone: true,
             event: {
               select: {
                 name: true,
@@ -155,6 +163,7 @@ export const userRouter = createTRPCRouter({
               select: {
                 createdAt: true,
                 amount: true,
+                payerAlias: true,
               },
               where: {
                 status: SwishPaymentStatus.PAID
