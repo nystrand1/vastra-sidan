@@ -175,7 +175,8 @@ export const memberPaymentRouter = createTRPCRouter({
                   connect: {
                     id: newPayment.memberShipId
                   }
-                }
+                },
+                phone: input.payerAlias
               }
             });
           }
