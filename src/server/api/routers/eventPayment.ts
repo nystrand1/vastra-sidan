@@ -12,6 +12,7 @@ import { EventSignUp } from "~/components/emails/EventSignUp";
 import { env } from "~/env.mjs";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { isEventCancelable } from "~/server/utils/event";
+import { isSamePhoneNumber } from "~/server/utils/helpers";
 import { checkPaymentStatus, checkRefundStatus } from "~/server/utils/payment";
 import { createPaymentIntentPayload } from "~/utils/payment";
 import {
@@ -480,7 +481,7 @@ export const eventPaymentRouter = createTRPCRouter({
       }
 
       const participants = payment.participants.map(participantFormatter); 
-      const isPayer = payer.phone === payment.payerAlias;
+      const isPayer = isSamePhoneNumber(payer.phone, payment.payerAlias);
       if (!isPayer) {
         throw new TRPCError({
           code: "BAD_REQUEST",

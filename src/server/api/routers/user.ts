@@ -11,6 +11,7 @@ import {
   userProcedure
 } from "~/server/api/trpc";
 import { sha256 } from "~/server/auth";
+import { isSamePhoneNumber } from "~/server/utils/helpers";
 import { friendlyMembershipNames } from "~/server/utils/membership";
 import { signupSchema } from "~/utils/zodSchemas";
 
@@ -83,7 +84,7 @@ const eventFormatter = (awayGame: UserData['eventParticipations'][number]) => ({
   payAmount: awayGame?.swishPayments[0]?.amount,
   cancellationToken: awayGame.cancellationToken,
   cancellationDate: awayGame.cancellationDate ? format(awayGame.cancellationDate, "yyyy-MM-dd HH:mm") : null,
-  isPayer: awayGame.swishPayments[0]?.payerAlias === awayGame.phone,
+  isPayer: isSamePhoneNumber(awayGame.phone, awayGame.swishPayments[0]?.payerAlias || ''),
 })
 
 const resend = new Resend(env.RESEND_API_KEY);
