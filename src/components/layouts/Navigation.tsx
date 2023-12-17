@@ -69,9 +69,14 @@ export const Navigation = () => {
             </ButtonLink>
           )}
           {!sessionData?.user && (
-            <Button className="!mb-0 mr-3" onClick={() => signIn()}>
-              <p>Logga In</p>
-            </Button>
+            <>
+              <ButtonLink className="!mb-0 hidden md:block mr-3" href="/skapakonto">
+                <p>Skapa konto</p>
+              </ButtonLink>
+              <Button className="!mb-0 mr-3" onClick={() => signIn()}>
+                <p>Logga In</p>
+              </Button>
+            </>
           )}
           {firstNameInitial && lastNameInitial && (
             <div
@@ -98,6 +103,11 @@ export const Navigation = () => {
             <li className="divide-y divide-gray-100">
               <Link href="/" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Bussresor</Link>
             </li>
+            {!sessionData?.user && (
+              <li className="divide-y divide-gray-100">
+                <Link href="/skapakonto" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Skapa konto</Link>
+              </li>
+            )}
             {sessionData?.user.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
               <li>
                 <Link href="/mina-medlemskap" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Mina medlemskap</Link>
@@ -108,12 +118,16 @@ export const Navigation = () => {
                 <Link href="/admin" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white">Admin</Link>
               </li>
             )}
-              <li>
-                <Link href="/mina-bussresor" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Mina bussresor</Link>
-              </li>
-              <li>
-                <div onClick={() => signOut()} className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Logga ut</div>
-              </li>
+            {sessionData?.user && (
+              <>
+                <li>
+                  <Link href="/mina-bussresor" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Mina bussresor</Link>
+                </li>
+                <li>
+                  <div onClick={() => signOut()} className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Logga ut</div>
+                </li>
+              </>
+            )}
             {!sessionData?.user.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
               <li>
                 <Link href="/bli-medlem" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white">Bli Medlem</Link>

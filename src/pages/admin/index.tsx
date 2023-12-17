@@ -4,6 +4,7 @@ import { ButtonLink } from "~/components/atoms/ButtonLink/ButtonLink";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { Progressbar } from "~/components/atoms/Progressbar/Progressbar";
 import { api } from "~/utils/api";
+import { featureFlags } from "~/utils/featureFlags";
 
 export default function Admin() {
   const { data: sessionData } = useSession();
@@ -33,15 +34,17 @@ export default function Admin() {
   }, { bookedSeats: 0, totalSeats: 0 })
   return (
     <div className="flex flex-col md:flex-row justify-center align-middle gap-4">
-      <Card 
-        title="Antal medlemmar"
-        link="/admin/event"
-        className="w-full md:w-96 space-y-0 md:h-52"
-        contentClassName="flex flex-col justify-between h-full"
-      >
-        <p className="text-4xl">{members.length}</p>
-        <ButtonLink href="/admin/members" className="w-full">Hantera medlemmar</ButtonLink>
-      </Card>
+      {featureFlags.ENABLE_MEMBERSHIPS && (
+        <Card 
+          title="Antal medlemmar"
+          link="/admin/event"
+          className="w-full md:w-96 space-y-0 md:h-52"
+          contentClassName="flex flex-col justify-between h-full"
+        >
+          <p className="text-4xl">{members.length}</p>
+          <ButtonLink href="/admin/members" className="w-full">Hantera medlemmar</ButtonLink>
+        </Card>
+      )}
       <Card 
         title="Kommande bussresor"
         link="/admin/event"
