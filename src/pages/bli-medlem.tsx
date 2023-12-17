@@ -13,6 +13,7 @@ import { InputField } from "~/components/atoms/InputField/InputField";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
+import { featureFlags } from "~/utils/featureFlags";
 import { pollPaymentStatus } from "~/utils/payment";
 import { memberSignupSchema } from "~/utils/zodSchemas";
 
@@ -203,7 +204,11 @@ export default MemberPage;
 
 export const getStaticProps = async () => {
   const ssrHelper = await createSSRHelper();
-
+  if (!featureFlags.ENABLE_MEMBERSHIPS) {
+    return {
+      notFound: true,
+    }
+  }
   await ssrHelper.public.getAvailableMemberships.prefetch();
 
   return {

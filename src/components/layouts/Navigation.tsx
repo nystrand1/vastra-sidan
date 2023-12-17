@@ -1,7 +1,8 @@
 import { signIn, signOut, useSession } from "next-auth/react";
-import Image from "next/image"
-import Link from "next/link"
-import { useState } from "react"
+import Image from "next/image";
+import Link from "next/link";
+import { useState } from "react";
+import { featureFlags } from "~/utils/featureFlags";
 import { Button } from "../atoms/Button/Button";
 import { ButtonLink } from "../atoms/ButtonLink/ButtonLink";
 
@@ -17,14 +18,18 @@ const UserMenu = ({ className }: UserMenuProps) => {
           <>
             <span className="block text-sm text-white">{sessionData.user.name}</span>
             <span className="block text-sm truncate text-gray-400">{sessionData.user.email}</span>
-            <span className="block text-sm truncate text-gray-400">{sessionData.user.isMember ? 'Medlem' : 'Inte medlem'}</span>
+            {featureFlags.ENABLE_MEMBERSHIPS && (
+              <span className="block text-sm truncate text-gray-400">{sessionData.user.isMember ? 'Medlem' : 'Inte medlem'}</span>
+            )}
           </>
         )}
       </div>
       <ul className="divide-ybg-gray-700 divide-gray-600 shadow rounded-b-lg" aria-labelledby="user-menu-button">
-        <li>
-          <Link href="/mina-medlemskap" className="block px-4 py-2 text-sm hover:bg-gray-600 text-gray-200 hover:text-white">Mina medlemskap</Link>
-        </li>
+        {featureFlags.ENABLE_MEMBERSHIPS && (
+          <li>
+            <Link href="/mina-medlemskap" className="block px-4 py-2 text-sm hover:bg-gray-600 text-gray-200 hover:text-white">Mina medlemskap</Link>
+          </li>
+        )}
         <li>
           <Link href="/mina-bussresor" className="block px-4 py-2 text-sm hover:bg-gray-600 text-gray-200 hover:text-white">Mina bussresor</Link>
         </li>
@@ -58,7 +63,7 @@ export const Navigation = () => {
           <span className="self-center text-2xl font-semibold whitespace-nowrap text-white">Västra Sidan</span>
         </Link>
         <div className="flex items-center md:order-2">
-          {!sessionData?.user.isMember && (
+          {!sessionData?.user.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
             <ButtonLink className="!mb-0 mr-3 hidden md:block" href="/bli-medlem">
               <p>Bli medlem</p>
             </ButtonLink>
@@ -93,25 +98,23 @@ export const Navigation = () => {
             <li className="divide-y divide-gray-100">
               <Link href="/" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Bussresor</Link>
             </li>
-            {sessionData?.user.isMember && (
-              <>
-                <li>
-                  <Link href="/mina-medlemskap" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Mina medlemskap</Link>
-                </li>
-                <li>
-                  <Link href="/mina-bussresor" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Mina bussresor</Link>
-                </li>
-                {sessionData?.user.role === 'ADMIN' && (
-                  <li>
-                    <Link href="/admin" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white">Admin</Link>
-                  </li>
-                )}
-                <li>
+            {sessionData?.user.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
+              <li>
+                <Link href="/mina-medlemskap" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Mina medlemskap</Link>
+              </li>
+            )} 
+            {sessionData?.user.role === 'ADMIN' && (
+              <li>
+                <Link href="/admin" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white">Admin</Link>
+              </li>
+            )}
+              <li>
+                <Link href="/mina-bussresor" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Mina bussresor</Link>
+              </li>
+              <li>
                 <div onClick={() => signOut()} className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Logga ut</div>
               </li>
-              </>
-            )}
-            {!sessionData?.user.isMember && (
+            {!sessionData?.user.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
               <li>
                 <Link href="/bli-medlem" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white">Bli Medlem</Link>
               </li>

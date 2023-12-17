@@ -43,6 +43,7 @@ export const env = createEnv({
   client: {
     // NEXT_PUBLIC_CLIENTVAR: z.string().min(1),
     NEXT_PUBLIC_WORDPRESS_URL: z.string(),
+    NEXT_PUBLIC_ENABLE_MEMBERSHIPS: z.literal("true").or(z.literal("false")).default("false"),
   },
 
   /**
@@ -67,6 +68,7 @@ export const env = createEnv({
     SWISH_CERT: process.env.SWISH_CERT,
     SWISH_KEY: process.env.SWISH_KEY,
     USE_DEV_MODE: process.env.USE_DEV_MODE,
+    NEXT_PUBLIC_ENABLE_MEMBERSHIPS: process.env.NEXT_PUBLIC_ENABLE_MEMBERSHIPS,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.

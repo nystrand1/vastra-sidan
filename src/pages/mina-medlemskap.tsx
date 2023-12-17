@@ -2,6 +2,7 @@ import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { api } from "~/utils/api";
+import { featureFlags } from "~/utils/featureFlags";
 import LoginPage from "./loggain";
 
 
@@ -45,3 +46,16 @@ export const ProfilePage = () => {
 
 
 export default ProfilePage;
+
+
+export const getStaticProps = () => {
+  if (!featureFlags.ENABLE_MEMBERSHIPS) {
+    return {
+      notFound: true,
+    }
+  }
+
+  return {
+    revalidate: 60,
+  };
+}

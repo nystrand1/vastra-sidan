@@ -17,6 +17,7 @@ import { ZodError } from "zod";
 import { env } from "~/env.mjs";
 import { getServerAuthSession } from "~/server/auth";
 import { prisma } from "~/server/db";
+import { featureFlags } from "~/utils/featureFlags";
 
 /**
  * 1. CONTEXT
@@ -117,6 +118,18 @@ export const createTRPCRouter = t.router;
  * are logged in.
  */
 export const publicProcedure = t.procedure;
+
+
+const membershipOnly = t.middleware(({ ctx, next }) => {
+  if (!featureFlags.ENABLE_MEMBERSHIPS) {
+    throw new TRPCError({ code: "NOT_FOUND" });
+  }
+  return next({
+    ctx: ctx
+  });
+});
+
+export const membershipProcedure = t.procedure.use(membershipOnly);
 
 /** Reusable middleware that enforces users are logged in before running the procedure. */
 const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
