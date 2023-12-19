@@ -5,6 +5,6 @@ interface WysiwygProps {
 
 export const Wysiwyg = ({ content } : WysiwygProps) => {
   return (
-    <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: content }} />
+    <div className="[&_p]:mb-4 [&_h3]:mb-4" dangerouslySetInnerHTML={{ __html: content }} />
   )
 }
