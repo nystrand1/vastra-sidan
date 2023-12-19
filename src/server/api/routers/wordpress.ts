@@ -17,8 +17,6 @@ const stripHtmlTags = (html: string) => {
 export const wordpressRouter = createTRPCRouter({
   getChronicles: publicProcedure
     .query(async ({ ctx }) => {
-      console.log("asdkljasdklasjd");
-      console.log(ctx.apolloClient);
       const res = await ctx.apolloClient.query({
         query: GetChroniclesDocument
       });

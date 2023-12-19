@@ -48,7 +48,7 @@ export const getStaticProps = async () => {
 
   return {
     props: {
-      dehydratedState: ssrHelper.dehydrate(),
+      trpcState: ssrHelper.dehydrate(),
     },
     revalidate: 60,
   }

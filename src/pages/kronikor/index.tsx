@@ -2,6 +2,7 @@ import { ButtonLink } from "~/components/atoms/ButtonLink/ButtonLink";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { Wysiwyg } from "~/components/atoms/Wysiwyg/Wysiwyg";
 import { api } from "~/utils/api";
+import { createSSRHelper } from "~/utils/createSSRHelper";
 
 export default function ChroniclesPage() {
   const { data: chronicles } = api.wordpress.getChronicles.useQuery();
@@ -23,3 +24,15 @@ export default function ChroniclesPage() {
     </div>
   );
 }
+
+export const getStaticProps = async () => {
+  const ssrHelper = await createSSRHelper();
+  await ssrHelper.wordpress.getChronicles.prefetch();
+
+  return {
+    props: {
+      trpcState: ssrHelper.dehydrate(),
+    },
+    revalidate: 60,
+  }
+};
