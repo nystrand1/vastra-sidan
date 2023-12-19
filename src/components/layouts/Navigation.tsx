@@ -62,7 +62,10 @@ export const Navigation = () => {
           </div>
           <span className="self-center text-2xl font-semibold whitespace-nowrap text-white">Västra Sidan</span>
         </Link>
-        <Link className="hidden md:block" href="/kronikor">Krönikor</Link>
+        <div className="flex flex-1 ml-10 flex-row space-x-4">
+          <Link className="hidden md:block hover:text-gray-200" href="/kronikor">Krönikor</Link>
+          <Link className="hidden md:block hover:text-gray-200" href="/bortaguiden">Bortaguiden</Link>
+        </div>
         <div className="flex items-center md:order-2">
           {!sessionData?.user.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
             <ButtonLink className="!mb-0 mr-3 hidden md:block" href="/bli-medlem">

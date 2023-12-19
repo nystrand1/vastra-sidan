@@ -1,0 +1,47 @@
+query getAwayGuidesSlugs {
+  awayguides {
+  nodes {
+      id
+      slug
+    }
+  }
+}
+
+query getAwayGuides {
+  awayguides(first: 1000) {
+    nodes {
+      id
+      title
+      awayGuide {
+        sport
+        division
+      }
+      slug
+    }
+  }
+}
+
+query getAwayGuideBySlug($slug: ID!) {
+  awayguide(id: $slug, idType: SLUG) {
+    id
+    title
+    date
+    awayGuide {
+      sport
+      division
+      farger
+      avstand
+      hemsida
+      matcher
+      lag
+      bildad
+      logo {
+        sourceUrl
+      }
+    }
+    awayGuideContent {
+      text
+    }
+    slug
+  }
+}

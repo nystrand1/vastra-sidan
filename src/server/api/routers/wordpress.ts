@@ -1,8 +1,9 @@
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { GetChronicleDocument, GetChroniclesDocument } from "~/types/wordpresstypes/graphql";
+import { GetAwayGuidesDocument, GetChronicleDocument, GetChroniclesDocument } from "~/types/wordpresstypes/graphql";
 import { format, parseISO } from 'date-fns'
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { bandyDivisions, fotballDivisions } from "~/server/utils/awayGuideSorter";
 
 const parseDateString = (dateString: string, dateFormat = "d MMMM yyyy HH:mm") => {
   const date = parseISO(dateString);
@@ -48,5 +49,33 @@ export const wordpressRouter = createTRPCRouter({
         ...chronicle,
         date: parseDateString(chronicle.date),
       };
+    }),
+    getAwayGuides: publicProcedure
+    .query(async ({ ctx }) => {
+      const res = await ctx.apolloClient.query({
+        query: GetAwayGuidesDocument
+      });
+
+      const fotballGuides = res.data.awayguides.nodes.filter((guide) => guide.awayGuide.sport === "Fotboll");
+      const bandyGuides = res.data.awayguides.nodes.filter((guide) => guide.awayGuide.sport === "Bandy");
+
+      const fotballByDivision = fotballDivisions.map((division) => {
+        return {
+          division,
+          guides: fotballGuides.filter((guide) => guide.awayGuide.division === division)
+        }
+      }).filter((division) => division.guides.length > 0);
+
+      const bandyByDivision = bandyDivisions.map((division) => {
+        return {
+          division,
+          guides: bandyGuides.filter((guide) => guide.awayGuide.division === division)
+        }
+      }).filter((division) => division.guides.length > 0);
+
+      return {
+        fotball: fotballByDivision,
+        bandy: bandyByDivision,
+      }
     }),
 });
