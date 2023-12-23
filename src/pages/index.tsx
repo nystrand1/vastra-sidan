@@ -68,7 +68,7 @@ export default function Home() {
 }
 
 
-export async function getServerSideProps() {
+export async function getStaticProps() {
   const ssrHelper = await createSSRHelper();
 
   await ssrHelper.public.getAwayGames.prefetch();
