@@ -15,8 +15,8 @@ const config = {
    * @see https://github.com/vercel/next.js/issues/41980
    */
   i18n: {
-    locales: ["en"],
-    defaultLocale: "en",
+    locales: ["sv-SE"],
+    defaultLocale: "sv-SE",
   },
   images: {
     domains: ["cmsdev.vastrasidan.se", "api.vastrasidan.se"],
