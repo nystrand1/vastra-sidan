@@ -7,8 +7,12 @@ query getAwayGuidesSlugs {
   }
 }
 
-query getAwayGuides {
-  awayguides(first: 1000) {
+query getAwayGuides($after: String) {
+  awayguides(first: 100, after: $after) {
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
     nodes {
       id
       title

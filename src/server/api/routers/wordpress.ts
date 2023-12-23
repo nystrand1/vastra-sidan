@@ -1,5 +1,5 @@
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { GetAwayGuidesDocument, GetChronicleDocument, GetChroniclesDocument } from "~/types/wordpresstypes/graphql";
+import { GetAwayGuideBySlugDocument, GetAwayGuidesDocument, GetChronicleDocument, GetChroniclesDocument } from "~/types/wordpresstypes/graphql";
 import { format, parseISO } from 'date-fns'
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -51,11 +51,21 @@ export const wordpressRouter = createTRPCRouter({
     getAwayGuides: publicProcedure
     .query(async ({ ctx }) => {
       const res = await ctx.apolloClient.query({
-        query: GetAwayGuidesDocument
+        query: GetAwayGuidesDocument,
       });
-
-      const fotballGuides = res.data.awayguides.nodes.filter((guide) => guide.awayGuide.sport === "Fotboll");
-      const bandyGuides = res.data.awayguides.nodes.filter((guide) => guide.awayGuide.sport === "Bandy");
+      let guides = res.data.awayguides.nodes;
+      let { hasNextPage, endCursor } = res.data.awayguides.pageInfo;
+      while (hasNextPage) {
+        const nextPage = await ctx.apolloClient.query({
+          query: GetAwayGuidesDocument,
+          variables: { after: endCursor }
+        });
+        guides = [...guides, ...nextPage.data.awayguides.nodes];
+        hasNextPage = nextPage.data.awayguides.pageInfo.hasNextPage;
+        endCursor = nextPage.data.awayguides.pageInfo.endCursor;
+      }
+      const fotballGuides = guides.filter((guide) => guide.awayGuide.sport === "Fotboll");
+      const bandyGuides = guides.filter((guide) => guide.awayGuide.sport === "Bandy");
 
       const fotballByDivision = fotballDivisions.map((division) => {
         return {
@@ -74,6 +84,29 @@ export const wordpressRouter = createTRPCRouter({
       return {
         fotball: fotballByDivision,
         bandy: bandyByDivision,
+        slugs: res.data.awayguides.nodes.map((guide) => guide.slug)
       }
+    }),
+    getAwayGuideBySlug: publicProcedure
+    .input(z.object({ slug: z.string()}))
+    .query(async ({ ctx, input }) => {
+      const { data } = await ctx.apolloClient.query({
+        query: GetAwayGuideBySlugDocument,
+        variables: { slug: input.slug }
+      });
+
+      const guide = data.awayguide
+
+      if (!guide) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Guide not found",
+        });
+      }
+
+      return {
+        ...guide,
+        date: parseDateString(guide.date)
+      };
     }),
 });
