@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Accordion from "~/components/atoms/Accordion/Accordion";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
@@ -12,28 +13,44 @@ export default function AwayGuidePage() {
     <div>
       <h1 className="text-center mb-4 text-5xl">Bortaguiden</h1>
       <div className="flex flex-col md:flex-row gap-4 md:items-stretch flex-wrap justify-center">
-        <Card title="Bandy" className="w-full md:w-96">
+        <Card title="Bandy" className="w-full md:w-96" titleClassName="!text-3xl">
           {awayGuides.bandy?.map((x) => (
-            <>
-              <p key={x.division} className="font-bold">{x.division}</p>
-              {x.guides.map((guide) => (
-                <Link className="ml-4 hover:text-gray-200" href={guide.slug} key={guide.title}>
-                  {guide.title}
-                </Link>
-              ))}
-            </>
+            <Accordion
+              key={`bandy-${x.division}`}
+              items={[
+               {
+                 title: x.division,
+                 className: 'md:w-full pl-0 py-2',
+                 content: <div className="flex flex-col space-y-2">
+                   {x.guides.map((guide) => (
+                   <Link className="ml-4 hover:text-gray-200" href={guide.slug} key={guide.title}>
+                     {guide.title}
+                   </Link>
+                 ))}
+                 </div>
+               }
+             ]}
+            />
           ))}
         </Card>
-        <Card title="Fotboll" className="w-full md:w-96">
+        <Card title="Fotboll" className="w-full md:w-96" titleClassName="!text-3xl">
           {awayGuides.fotball?.map((x) => (
-            <>
-              <p key={x.division} className="font-bold">{x.division}</p>
-              {x.guides.map((guide) => (
-                <Link className="ml-4 hover:text-gray-200" href={guide.slug} key={guide.title}>
-                  {guide.title}
-                </Link>
-              ))}
-            </>
+            <Accordion
+              key={`fotball-${x.division}`}
+              items={[
+               {
+                 title: x.division,
+                 className: 'md:w-full pl-0 py-2',
+                 content: <div className="flex flex-col space-y-2">
+                   {x.guides.map((guide) => (
+                   <Link className="ml-4 hover:text-gray-200" href={guide.slug} key={guide.title}>
+                     {guide.title}
+                   </Link>
+                 ))}
+                 </div>
+               }
+             ]}
+            />
           ))}
         </Card>
        
