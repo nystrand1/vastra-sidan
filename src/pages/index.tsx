@@ -75,7 +75,8 @@ export async function getServerSideProps() {
 
   return {
     props: {
-      dehydratedState: ssrHelper.dehydrate()
-    }
+      trpcState: ssrHelper.dehydrate()
+    },
+    revalidate: 60
   }
 }

@@ -48,7 +48,7 @@ export const getStaticPaths = async () => {
   const paths = chronicles?.map(({ slug }) => ({ params: { id: slug } }));
   return {
     paths,
-    fallback: false
+    fallback: "blocking"
   };
 };
 
@@ -65,6 +65,7 @@ export const getStaticProps = async (props: GetStaticPropsContext ) => {
   return {
     props: {
       trpcState: ssrHelper.dehydrate(),
-    }
+    },
+    revalidate: 3600 * 24
   };
 };

@@ -1,10 +1,12 @@
 import { format } from "date-fns";
+import { type GetStaticPropsContext } from "next";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import Accordion from "~/components/atoms/Accordion/Accordion";
 import { awayGameRules } from "~/components/atoms/Accordion/accordionContent";
 import { AwayGameForm } from "~/components/common/AwayGameForm/AwayGameForm";
 import { api } from "~/utils/api";
+import { createSSRHelper } from "~/utils/createSSRHelper";
 
 
 export const BusPage = () => {
@@ -44,3 +46,28 @@ export const BusPage = () => {
 };
 
 export default BusPage;
+
+export const getStaticPaths = () => {
+  return {
+    paths: [],
+    fallback: "blocking"
+  };
+};
+
+export const getStaticProps = async (props: GetStaticPropsContext) => {
+  const id = props.params?.id as string;
+  if (!id) {
+    return { notFound: true };
+  }
+  const ssrHelper = await createSSRHelper();
+  const game = await ssrHelper.public.getAwayGame.fetch({ id });
+  if (!game) {
+    return { notFound: true };
+  }
+  return {
+    props: {
+      trpcState: ssrHelper.dehydrate(),
+    },
+    revalidate: 60
+  };
+};
