@@ -1,4 +1,5 @@
 import { type GetStaticPropsContext } from "next";
+import Head from "next/head";
 import { useRouter } from "next/router";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { Wysiwyg } from "~/components/atoms/Wysiwyg/Wysiwyg";
@@ -13,19 +14,31 @@ export default function ChroniclesPage() {
   }
   const { date, chronicle, slug } = data;
 
+  const textWithoutHtml = chronicle.text.replace(/<[^>]*>?/gm, '');
+
+  const seoDescription = textWithoutHtml.length > 160 ? textWithoutHtml.substring(0, 160) : textWithoutHtml;
+
   return (
-    <div>
-      <Card 
-        key={slug} 
-        title={chronicle.title}
-        titleClassName="text-center !text-3xl"
-        className="w-full md:w-7/12 m-auto" 
-        contentClassName="justify-start"
-      >
-        <p className="text-gray-400">{date}</p>
-        <Wysiwyg content={chronicle.text} />
-      </Card>
-    </div>
+    <>
+      <Head>
+        <title>{chronicle.title}</title>
+        <meta name="title" key="title" content={chronicle.title} />
+        <meta name="description" key="description" content={seoDescription} />
+      </Head>
+      <div>
+        <Card 
+          key={slug} 
+          title={chronicle.title}
+          titleClassName="text-center !text-3xl"
+          className="w-full md:w-7/12 m-auto" 
+          contentClassName="justify-start"
+          titleAsH1
+        >
+          <p className="text-gray-400">{date}</p>
+          <Wysiwyg content={chronicle.text} />
+        </Card>
+      </div>
+    </>
   );
 }
 
