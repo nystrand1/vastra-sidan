@@ -63,6 +63,7 @@ export const Navigation = () => {
           <span className="self-center text-2xl font-semibold whitespace-nowrap text-white">Västra Sidan</span>
         </Link>
         <div className="flex flex-1 ml-10 flex-row space-x-4">
+          <Link className="hidden md:block hover:text-gray-200" href="/nyheter">Nyheter</Link>
           <Link className="hidden md:block hover:text-gray-200" href="/kronikor">Krönikor</Link>
           <Link className="hidden md:block hover:text-gray-200" href="/bortaguiden">Bortaguiden</Link>
         </div>
@@ -105,7 +106,13 @@ export const Navigation = () => {
         <div className={`items-center justify-between w-full md:hidden md:w-auto md:order-1 ${open ? '' : 'hidden'}`} id="navbar-user">
           <ul onClick={() => setOpen(false)} className="divide-y flex flex-col font-medium mt-4 border rounded-lg bg-gray-800 border-gray-700">
             <li className="divide-y divide-gray-100">
+              <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/nyheter">Nyheter</Link>
+            </li>
+            <li className="divide-y divide-gray-100">
               <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/kronikor">Krönikor</Link>
+            </li>
+            <li className="divide-y divide-gray-100">
+              <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/bortaguiden">Bortaguiden</Link>
             </li>
             <li className="divide-y divide-gray-100">
               <Link href="/" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Bussresor</Link>

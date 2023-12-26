@@ -8,7 +8,7 @@ import AdminLayout from "~/components/layouts/AdminLayout";
 import Layout from "~/components/layouts/Layout";
 import "~/styles/globals.css";
 import { api } from "~/utils/api";
-import { sv } from 'date-fns/locale'
+import sv from 'date-fns/locale/sv'
 import setDefaultOptions from "date-fns/setDefaultOptions";
 setDefaultOptions({ locale: sv })
  

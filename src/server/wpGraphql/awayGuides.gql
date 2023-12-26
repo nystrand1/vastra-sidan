@@ -1,4 +1,4 @@
-query getAwayGuidesSlugs {
+query GetAwayGuidesSlugs {
   awayguides {
   nodes {
       id
@@ -7,7 +7,7 @@ query getAwayGuidesSlugs {
   }
 }
 
-query getAwayGuides($after: String) {
+query GetAwayGuides($after: String) {
   awayguides(first: 100, after: $after) {
     pageInfo {
       hasNextPage
@@ -25,7 +25,7 @@ query getAwayGuides($after: String) {
   }
 }
 
-query getAwayGuideBySlug($slug: ID!) {
+query GetAwayGuideBySlug($slug: ID!) {
   awayguide(id: $slug, idType: SLUG) {
     id
     title

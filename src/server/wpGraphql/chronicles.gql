@@ -12,7 +12,7 @@ query GetChronicles {
   }
 }
 
-query getChronicle($slug: ID!) {
+query GetChronicle($slug: ID!) {
   chronicle(id: $slug, idType: SLUG) {
     date
     chronicle {
