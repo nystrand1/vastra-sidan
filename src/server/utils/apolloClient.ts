@@ -3,6 +3,7 @@ import {
   InMemoryCache,
   type DefaultOptions
 } from '@apollo/client';
+import { env } from '~/env.mjs';
 
 /**
  * Disable InMemoryCache at the moment
@@ -21,7 +22,7 @@ const defaultOptions: DefaultOptions = {
 
 const createApolloClient = () => new ApolloClient({
   // Replace rest endpoint with GraphQL
-  uri: "https://cmsdev.vastrasidan.se/graphql",
+  uri: env.NEXT_PUBLIC_WORDPRESS_URL + '/graphql',
   ssrMode: true,
   cache: new InMemoryCache(),
   defaultOptions,
