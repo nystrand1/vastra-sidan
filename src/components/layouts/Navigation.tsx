@@ -64,6 +64,7 @@ export const Navigation = () => {
         </Link>
         <div className="hidden md:flex flex-1 ml-10 flex-row space-x-4">
           <Link className="hover:text-gray-200" href="/nyheter">Nyheter</Link>
+          <Link className="hover:text-gray-200" href="/bortaresor">Bortaresor</Link>
           <Link className="hover:text-gray-200" href="/kronikor">Krönikor</Link>
           <Link className="hover:text-gray-200" href="/bortaguiden">Bortaguiden</Link>
         </div>
@@ -107,6 +108,9 @@ export const Navigation = () => {
           <ul onClick={() => setOpen(false)} className="divide-y flex flex-col font-medium mt-4 border rounded-lg bg-gray-800 border-gray-700">
             <li className="divide-y divide-gray-100">
               <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/nyheter">Nyheter</Link>
+            </li>
+            <li className="divide-y divide-gray-100">
+              <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/bortaresor">Bortaresor</Link>
             </li>
             <li className="divide-y divide-gray-100">
               <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/kronikor">Krönikor</Link>

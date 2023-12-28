@@ -7,17 +7,20 @@ import { api } from "~/utils/api";
 import { PATHS } from "~/utils/constants";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 
-export default function Home() {
+export default function AwaygamesPage() {
   const { data: awayGames, isLoading: isLoadingAwayGames } = api.public.getAwayGames.useQuery();
-  
+
+  const seoDescription = "Bussresor med Västra Sidan. Som medlem åker du billigare. Häng med och stötta Sirius på bortaplan!";
+
   return (
     <>
       <Head>
-        <title>Västra Sidan | Startsida</title>
+        <title>Västra Sidan | Bortaresor</title>
+        <meta name="description" key="description" content={seoDescription} />
       </Head>
         <div className="flex flex-col items-center justify-center gap-12">
           <h1 className="text-[2.3rem] md:text-[4rem] lg:text-[5rem] font-extrabold text-white">
-            Västra Sidan
+            Bussresor
           </h1>
           <div className="grid grid-cols-12 gap-4 md:gap-8 text-black w-full">
             {isLoadingAwayGames && <p className="text-white col-span-12 text-center">Laddar resor...</p>}
