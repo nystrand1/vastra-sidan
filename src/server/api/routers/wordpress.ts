@@ -120,7 +120,7 @@ export const wordpressRouter = createTRPCRouter({
         id: news.id,
         slug: news.slug,
         title: news.newsContent.title,
-        excerpt: stripHtmlTags(news.newsContent.text).split(".").splice(0, 3).join(" ") + ".",
+        excerpt: stripHtmlTags(news.newsContent.text).split(".").splice(0, 4).join(" ") + ".",
         date: parseDateString(news.date),
         image: news.newsContent.newsImg,
         author: news.newsContent.author,

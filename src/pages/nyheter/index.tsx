@@ -34,10 +34,12 @@ export default function NewsPage() {
               </div>
               <div className="flex flex-col space-y-4">
                 <h2 className="text-2xl font-semibold text-center">{title}</h2>
-                <p className="text-gray-400">{date}</p>
-                <p className="text-gray-400 !mt-0">{author}</p>
+                <div className="md:flex md:flex-row md:justify-between">
+                  <p className="text-gray-400">{date}</p>
+                  <p className="text-gray-400 !mt-0">{author}</p>
+                </div>
                 <Wysiwyg content={excerpt} />
-                <ButtonLink className="justify-end" href={`/nyheter/${slug}`}>Läs mer</ButtonLink>
+                <ButtonLink className="justify-end md:w-96 md:m-auto" href={`/nyheter/${slug}`}>Läs mer</ButtonLink>
               </div>
             </Card>
           ))}

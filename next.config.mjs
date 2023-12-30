@@ -19,7 +19,12 @@ const config = {
     defaultLocale: "sv-SE",
   },
   images: {
-    domains: ["cmsdev.vastrasidan.se", "api.vastrasidan.se"],
+    remotePatterns: [
+      {
+        hostname: "*.vastrasidan.se",
+        protocol: "https",
+      }
+    ]
   }
 };
 
