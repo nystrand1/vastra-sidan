@@ -7,13 +7,18 @@ interface CardProps extends PropsWithChildren {
   className?: string;
   contentClassName?: string;
   titleClassName?: string;
+  titleAsH1?: boolean;
 }
 
-const Card = ({ title, link, className, children, contentClassName, titleClassName }: CardProps) => {
+const Card = ({ title, link, className, children, contentClassName, titleClassName, titleAsH1 }: CardProps) => {
   const content = (
     <div className={`flex flex-col justify-between space-y-4 ${contentClassName || ''}`}>
       {title && (
-        <h2 className={`text-xl font-semibold ${titleClassName || ''}`}>{title}</h2>
+        titleAsH1 ? (
+            <h1 className={`text-xl font-semibold ${titleClassName || ''}`}>{title}</h1>
+          ) : (
+            <h2 className={`text-xl font-semibold ${titleClassName || ''}`}>{title}</h2>
+          )
       )}
       {children}
     </div>

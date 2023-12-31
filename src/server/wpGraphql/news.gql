@@ -1,0 +1,35 @@
+query GetNews {
+  newsPosts {
+    nodes {
+      id
+      date
+      newsContent {
+        text
+        title
+        author
+        newsImg {
+          sourceUrl
+          altText
+        }
+      }
+      slug
+    }
+  }
+}
+
+query GetNewsBySlug($slug: ID!) {
+  newsPost(id: $slug, idType: SLUG) {
+    id
+    date
+    newsContent {
+      text
+      title
+      author
+      newsImg {
+        sourceUrl
+        altText
+      }
+    }
+    slug
+  }
+}

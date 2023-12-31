@@ -64,6 +64,7 @@ const Accordion: React.FC<AccordionProps> = ({ items, className = '' }) => {
           key={index}
           title={item.title}
           content={item.content}
+          className={item.className}
           isOpen={index === openItemIndex}
           toggle={() => toggleItem(index)}
         />

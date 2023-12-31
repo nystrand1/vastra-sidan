@@ -1,0 +1,51 @@
+query GetAwayGuidesSlugs {
+  awayguides {
+  nodes {
+      id
+      slug
+    }
+  }
+}
+
+query GetAwayGuides($after: String) {
+  awayguides(first: 100, after: $after) {
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      id
+      title
+      awayGuide {
+        sport
+        division
+      }
+      slug
+    }
+  }
+}
+
+query GetAwayGuideBySlug($slug: ID!) {
+  awayguide(id: $slug, idType: SLUG) {
+    id
+    title
+    date
+    awayGuide {
+      sport
+      division
+      farger
+      avstand
+      hemsida
+      matcher
+      lag
+      bildad
+      logo {
+        sourceUrl
+      }
+    }
+    awayGuideContent {
+      text
+    }
+    slug
+  }
+}
