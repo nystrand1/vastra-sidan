@@ -33,6 +33,9 @@ export const env = createEnv({
     SWISH_KEY: process.env.VERCEL_URL ? z.string().min(1) : z.string().min(1).optional(),
     SWISH_CA: process.env.VERCEL_URL ? z.string().min(1) : z.string().min(1).optional(),
     USE_DEV_MODE: z.literal("true").or(z.literal("false")).default("false"),
+    CARDSKIPPER_USERNAME: z.string().min(1),
+    CARDSKIPPER_PASSWORD: z.string().min(1),
+    CARDSKIPPER_ORG_NUMBER: z.string().min(1),
   },
 
   /**
@@ -68,6 +71,9 @@ export const env = createEnv({
     SWISH_CERT: process.env.SWISH_CERT,
     SWISH_KEY: process.env.SWISH_KEY,
     USE_DEV_MODE: process.env.USE_DEV_MODE,
+    CARDSKIPPER_USERNAME: process.env.CARDSKIPPER_USERNAME,
+    CARDSKIPPER_PASSWORD: process.env.CARDSKIPPER_PASSWORD,
+    CARDSKIPPER_ORG_NUMBER: process.env.CARDSKIPPER_ORG_NUMBER,
     NEXT_PUBLIC_ENABLE_MEMBERSHIPS: process.env.NEXT_PUBLIC_ENABLE_MEMBERSHIPS,
   },
   /**

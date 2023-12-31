@@ -188,7 +188,6 @@ export const AwayGameForm = () => {
         email: sessionData?.user.email ?? '',
         member: !!sessionData?.user.isMember,
       }
-      console.log('initialPassenger', initialPassenger);
       setPassengers([initialPassenger]);
     }
   }, [sessionData])

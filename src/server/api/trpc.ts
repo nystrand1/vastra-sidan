@@ -18,6 +18,7 @@ import { env } from "~/env.mjs";
 import { getServerAuthSession } from "~/server/auth";
 import { prisma } from "~/server/db";
 import { featureFlags } from "~/utils/featureFlags";
+import { apolloClient } from "../utils/apolloClient";
 
 /**
  * 1. CONTEXT
@@ -30,6 +31,7 @@ import { featureFlags } from "~/utils/featureFlags";
 type CreateContextOptions = {
   session: Session | null;
   cronKey: string | null;
+  apolloClient: typeof apolloClient | null,
 };
 
 /**
@@ -46,7 +48,8 @@ const createInnerTRPCContext = (opts: CreateContextOptions) => {
   return {
     session: opts.session,
     prisma,
-    cronKey: opts.cronKey
+    cronKey: opts.cronKey,
+    apolloClient,
   };
 };
 
@@ -64,7 +67,8 @@ export const createTRPCContext = async (opts: CreateNextContextOptions) => {
   const cronKey = req.query["cron-key"] ?? null;
   return createInnerTRPCContext({
     session,
-    cronKey: cronKey as string
+    cronKey: cronKey as string,
+    apolloClient,
   });
 };
 
@@ -118,7 +122,6 @@ export const createTRPCRouter = t.router;
  * are logged in.
  */
 export const publicProcedure = t.procedure;
-
 
 const membershipOnly = t.middleware(({ ctx, next }) => {
   if (!featureFlags.ENABLE_MEMBERSHIPS) {

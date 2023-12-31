@@ -1,0 +1,24 @@
+query GetChronicles {
+  chronicles {
+    nodes {
+      id
+      date
+      chronicle {
+        title
+        text
+      }
+      slug
+    }
+  }
+}
+
+query GetChronicle($slug: ID!) {
+  chronicle(id: $slug, idType: SLUG) {
+    date
+    chronicle {
+      title
+      text
+    }
+    slug
+  }
+}

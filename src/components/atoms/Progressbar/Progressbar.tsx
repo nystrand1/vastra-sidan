@@ -17,7 +17,7 @@ export const Progressbar = ({ label, maxValue, currentValue } : ProgressbarProps
           {currentValue} / {maxValue}
         </div>
         <div
-          className="bg-blue-700 text-2xl h-10 font-medium text-blue-100 text-center p-1 leading-none rounded-md absolute"
+          className="bg-[#1e599f] text-2xl h-10 font-medium text-blue-100 text-center p-1 leading-none rounded-md absolute"
           style={{width: `${progress}%`}}>
         </div>
       </div>
