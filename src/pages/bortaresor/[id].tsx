@@ -35,6 +35,17 @@ export const BusPage = () => {
             {
               title: 'Bussinfo',
               content: game.description
+            },
+            {
+              title: 'Priser',
+              content: (
+                <div className="space-y-1">
+                  <p className="text-sm">Pris vuxen medlem: {game.memberPrice} kr</p>
+                  <p className="text-sm">Pris vuxen icke medlem: {game.defaultPrice} kr</p>
+                  <p className="text-sm">Pris ungdom medlem: {game.youthMemberPrice} kr</p>
+                  <p className="text-sm">Pris ungdom icke medlem: {game.youthPrice} kr</p>
+                </div>
+              )
             }
           ]}
           className="w-full space-y-6" 
