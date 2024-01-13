@@ -7,7 +7,7 @@ import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 
 export default function NewsPage() {
-  const { data: news } = api.wordpress.getNews.useQuery();
+  const { data: news } = api.wordpress.getNews.useQuery(undefined, { staleTime: Infinity });
   if (!news) {
     return <p className="text-center text-xl">Finns inga nyheter för tillfället!</p>
   }

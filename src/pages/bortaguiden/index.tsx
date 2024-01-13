@@ -6,7 +6,7 @@ import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 
 export default function AwayGuidePage() {
-  const { data: awayGuides } = api.wordpress.getAwayGuides.useQuery();
+  const { data: awayGuides } = api.wordpress.getAwayGuides.useQuery(undefined, { staleTime: Infinity});
   if (!awayGuides?.bandy || !awayGuides?.fotball) {
     return <p className="text-center text-xl">Finns inga bortaguider för tillfället!</p>
   }
@@ -32,7 +32,7 @@ export default function AwayGuidePage() {
                   className: 'md:w-full pl-0 py-2',
                   content: <div className="flex flex-col space-y-2">
                     {x.guides.map((guide) => (
-                    <Link className="ml-4 hover:text-gray-200" href={`/bortaguiden/${guide.slug}`} key={guide.title}>
+                    <Link prefetch={false} className="ml-4 hover:text-gray-200" href={`/bortaguiden/${guide.slug}`} key={guide.title}>
                       {guide.title}
                     </Link>
                   ))}
@@ -52,7 +52,7 @@ export default function AwayGuidePage() {
                   className: 'md:w-full pl-0 py-2',
                   content: <div className="flex flex-col space-y-2">
                     {x.guides.map((guide) => (
-                    <Link className="ml-4 hover:text-gray-200" href={`/bortaguiden/${guide.slug}`} key={guide.title}>
+                    <Link prefetch={false} className="ml-4 hover:text-gray-200" href={`/bortaguiden/${guide.slug}`} key={guide.title}>
                       {guide.title}
                     </Link>
                   ))}

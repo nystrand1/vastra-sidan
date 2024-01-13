@@ -8,7 +8,7 @@ import { createSSRHelper } from "~/utils/createSSRHelper";
 
 export default function ChroniclePage() {
   const { id } = useRouter().query;
-  const { data } = api.wordpress.getChronicleBySlug.useQuery({ slug: id as string }, { enabled: !!id });
+  const { data } = api.wordpress.getChronicleBySlug.useQuery({ slug: id as string }, { enabled: !!id, staleTime: Infinity });
   if (!data) {
     return null;
   }

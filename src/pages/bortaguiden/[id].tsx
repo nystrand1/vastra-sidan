@@ -79,7 +79,7 @@ const AwayGuideTable = (awayGuide: AwayGuide) => {
 
 export default function AwayGamePage() {
   const { id } = useRouter().query;
-  const { data } = api.wordpress.getAwayGuideBySlug.useQuery({ slug: id as string }, { enabled: !!id });
+  const { data } = api.wordpress.getAwayGuideBySlug.useQuery({ slug: id as string }, { enabled: !!id, staleTime: Infinity });
   if (!data) {
     return null;
   }
