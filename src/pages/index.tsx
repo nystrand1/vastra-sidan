@@ -72,7 +72,7 @@ export default function Home() {
 export async function getStaticProps() {
   const ssrHelper = await createSSRHelper();
 
-  await ssrHelper.public.getAwayGames.prefetch();
+  await ssrHelper.public.getStartPage.prefetch();
 
   return {
     props: {
