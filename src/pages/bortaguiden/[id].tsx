@@ -33,12 +33,12 @@ const AwayGuideTable = (awayGuide: AwayGuide) => {
         <p dangerouslySetInnerHTML={{ __html: awayGuide.meriter }}></p>
       )
     },
-    {
+    ...(!!awayGuide.hemsida ? [{
       label: 'Hemsida:',
       value: (
         <Link className="underline" href={awayGuide.hemsida}>{awayGuide.hemsida}</Link>
       )
-    },
+    }] : []),
     {
       label: 'Avstånd:',
       value: awayGuide.avstand,
