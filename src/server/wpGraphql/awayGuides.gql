@@ -37,6 +37,7 @@ query GetAwayGuideBySlug($slug: ID!) {
       avstand
       hemsida
       matcher
+      meriter
       lag
       bildad
       logo {
