@@ -28,7 +28,8 @@
     "**/*.ts",
     "**/*.tsx",
     "**/*.cjs",
-    "**/*.mjs"
+    "**/*.mjs",
+    "apollo.config.js"
   ],
   "exclude": ["node_modules"]
 }
