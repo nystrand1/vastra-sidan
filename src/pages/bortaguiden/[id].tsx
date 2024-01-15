@@ -30,7 +30,7 @@ const AwayGuideTable = (awayGuide: AwayGuide) => {
     {
       label: 'Meriter:',
       value: (
-        <p dangerouslySetInnerHTML={{ __html: awayGuide.meriter }}></p>
+        <p dangerouslySetInnerHTML={{ __html: awayGuide.meriter }} />
       )
     },
     ...(!!awayGuide.hemsida ? [{
@@ -45,7 +45,9 @@ const AwayGuideTable = (awayGuide: AwayGuide) => {
     },
     {
       label: 'Matcher:',
-      value: awayGuide.matcher,
+      value: (
+        <p dangerouslySetInnerHTML={{ __html: awayGuide.matcher }} />
+      ),
     },
     {
       label: 'Division:',
