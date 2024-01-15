@@ -6,7 +6,7 @@ import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 
 export default function ChroniclesPage() {
-  const { data: chronicles } = api.wordpress.getChronicles.useQuery();
+  const { data: chronicles } = api.wordpress.getChronicles.useQuery(undefined, { staleTime: Infinity });
   if (!chronicles) {
     return <p className="text-center text-xl">Finns inga kronikor för tillfället!</p>
   }
@@ -43,6 +43,6 @@ export const getStaticProps = async () => {
     props: {
       trpcState: ssrHelper.dehydrate(),
     },
-    revalidate: 60,
+    revalidate: 3600 * 24,
   }
 };

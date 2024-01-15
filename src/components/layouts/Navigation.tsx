@@ -79,7 +79,10 @@ export const Navigation = () => {
               <ButtonLink className="!mb-0 hidden md:block mr-3" href="/skapakonto">
                 <p>Skapa konto</p>
               </ButtonLink>
-              <Button className="!mb-0 mr-3" onClick={() => signIn()}>
+              <Button className="!mb-0 mr-3" onClick={async (e) => {
+                e.preventDefault();
+                await signIn();
+              }}>
                 <p>Logga In</p>
               </Button>
             </>
