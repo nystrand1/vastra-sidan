@@ -1,0 +1,33 @@
+query GetSeasonChronciles($after: String) {
+  seasonChronicles(first: 100, after: $after) {
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    nodes {
+      id
+      slug
+      seasonChronicleContent {
+        title: titel
+        sport
+      }
+    }
+  }
+}
+
+query GetSeasonChronicleBySlug($slug: ID!) {
+  seasonChronicle(id: $slug, idType: SLUG) {
+    id
+    slug
+    date
+    seasonChronicleContent {
+      title: titel
+      text
+      sport
+      author: forfattare
+      image: bild {
+        sourceUrl
+      }
+    }
+  }
+}

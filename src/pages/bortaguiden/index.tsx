@@ -6,7 +6,7 @@ import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 
 export default function AwayGuidePage() {
-  const { data: awayGuides } = api.wordpress.getAwayGuides.useQuery(undefined, { staleTime: Infinity});
+  const { data: awayGuides } = api.wordpress.getAwayGuides.useQuery(undefined, { staleTime: Infinity });
   if (!awayGuides?.bandy || !awayGuides?.fotball) {
     return <p className="text-center text-xl">Finns inga bortaguider för tillfället!</p>
   }
@@ -22,47 +22,46 @@ export default function AwayGuidePage() {
       <div>
         <h1 className="text-center mb-4 text-5xl">Bortaguiden</h1>
         <div className="flex flex-col md:flex-row gap-4 md:items-stretch flex-wrap justify-center">
-          <Card title="Bandy" className="w-full md:w-96" titleClassName="!text-3xl">
-            {awayGuides.bandy?.map((x) => (
-              <Accordion
-                key={`bandy-${x.division}`}
-                items={[
-                {
-                  title: x.division,
-                  className: 'md:w-full pl-0 py-2',
-                  content: <div className="flex flex-col space-y-2">
-                    {x.guides.map((guide) => (
-                    <Link prefetch={false} className="ml-4 hover:text-gray-200" href={`/bortaguiden/${guide.slug}`} key={guide.title}>
-                      {guide.title}
-                    </Link>
-                  ))}
-                  </div>
-                }
-              ]}
-              />
-            ))}
-          </Card>
           <Card title="Fotboll" className="w-full md:w-96" titleClassName="!text-3xl">
             {awayGuides.fotball?.map((x) => (
               <Accordion
                 key={`fotball-${x.division}`}
                 items={[
-                {
-                  title: x.division,
-                  className: 'md:w-full pl-0 py-2',
-                  content: <div className="flex flex-col space-y-2">
-                    {x.guides.map((guide) => (
-                    <Link prefetch={false} className="ml-4 hover:text-gray-200" href={`/bortaguiden/${guide.slug}`} key={guide.title}>
-                      {guide.title}
-                    </Link>
-                  ))}
-                  </div>
-                }
-              ]}
+                  {
+                    title: x.division,
+                    className: 'md:w-full pl-0 py-2',
+                    content: <div className="flex flex-col space-y-2">
+                      {x.guides.map((guide) => (
+                        <Link prefetch={false} className="ml-4 hover:text-gray-200" href={`/bortaguiden/${guide.slug}`} key={guide.title}>
+                          {guide.title}
+                        </Link>
+                      ))}
+                    </div>
+                  }
+                ]}
               />
             ))}
           </Card>
-        
+          <Card title="Bandy" className="w-full md:w-96" titleClassName="!text-3xl">
+            {awayGuides.bandy?.map((x) => (
+              <Accordion
+                key={`bandy-${x.division}`}
+                items={[
+                  {
+                    title: x.division,
+                    className: 'md:w-full pl-0 py-2',
+                    content: <div className="flex flex-col space-y-2">
+                      {x.guides.map((guide) => (
+                        <Link prefetch={false} className="ml-4 hover:text-gray-200" href={`/bortaguiden/${guide.slug}`} key={guide.title}>
+                          {guide.title}
+                        </Link>
+                      ))}
+                    </div>
+                  }
+                ]}
+              />
+            ))}
+          </Card>
         </div>
       </div>
     </>

@@ -22,7 +22,7 @@ export default function NewsPage() {
   return (
     <>
       <Head>
-        <title>{title}</title>
+        <title>{title} | Västra Sidan</title>
         <meta name="title" key="title" content={title} />
         <meta name="description" key="description" content={seoDescription} />
       </Head>
