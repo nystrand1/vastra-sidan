@@ -17,6 +17,10 @@ export default function Home() {
 
   const { upcomingEvent, memberCount } = startPage;
 
+  const cols = upcomingEvent && upcomingEvent?.id ? 2 : 1;
+
+  const className = upcomingEvent && upcomingEvent?.id ? "" : "md:max-w-[66%] md:m-auto";
+
   return (
     <>
       <Head>
@@ -26,10 +30,10 @@ export default function Home() {
           <h1 className="text-[2.3rem] md:text-[4rem] lg:text-[5rem] font-extrabold text-white">
             Västra Sidan
           </h1>
-          <div className={`grid md:grid-cols-2 gap-4 md:gap-8 text-black w-full md:w-8/12`}>
+          <div className={`grid md:grid-cols-${cols} gap-4 md:gap-8 text-black w-full md:w-8/12`}>
             <Card 
               title="Antal medlemmar"
-              className="w-full first-letter:space-y-0 md:h-52"
+              className={`w-full first-letter:space-y-0 md:h-52 ${className}`}
               contentClassName="flex flex-col justify-between h-full"
             >
               <p className="text-4xl">{memberCount}</p>
