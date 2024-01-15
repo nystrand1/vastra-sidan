@@ -6,36 +6,41 @@ import { Wysiwyg } from "~/components/atoms/Wysiwyg/Wysiwyg";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 
-export default function ChroniclePage() {
+export default function SeasonChroniclePage() {
   const { id } = useRouter().query;
-  const { data } = api.wordpress.getChronicleBySlug.useQuery({ slug: id as string }, { enabled: !!id, staleTime: Infinity });
+  const { data } = api.wordpress.getSeasonChronicleBySlug.useQuery({ slug: id as string }, { enabled: !!id, staleTime: Infinity });
   if (!data) {
     return null;
   }
-  const { date, chronicle, slug } = data;
+  const { date, title, slug, text, author } = data;
 
-  const textWithoutHtml = chronicle.text.replace(/<[^>]*>?/gm, '');
+  const textWithoutHtml = text.replace(/<[^>]*>?/gm, '');
 
   const seoDescription = textWithoutHtml.length > 160 ? textWithoutHtml.substring(0, 160) : textWithoutHtml;
 
   return (
     <>
       <Head>
-        <title>{chronicle.title} | Västra Sidan</title>
-        <meta name="title" key="title" content={chronicle.title} />
+        <title>{title} | Västra Sidan</title>
+        <meta name="title" key="title" content={title} />
         <meta name="description" key="description" content={seoDescription} />
       </Head>
       <div>
-        <Card 
-          key={slug} 
-          title={chronicle.title}
+        <Card
+          key={slug}
+          title={title}
           titleClassName="text-center !text-3xl"
-          className="w-full md:w-7/12 m-auto" 
+          className="w-full md:w-7/12 m-auto"
           contentClassName="justify-start"
           titleAsH1
         >
-          <p className="text-gray-400">{date}</p>
-          <Wysiwyg content={chronicle.text} />
+          <div>
+            {!!author && (
+              <p className="text-gray-400">{author}</p>
+            )}
+            <p className="text-gray-400">{date}</p>
+          </div>
+          <Wysiwyg content={text} />
         </Card>
       </div>
     </>
@@ -44,21 +49,21 @@ export default function ChroniclePage() {
 
 export const getStaticPaths = async () => {
   const ssrHelper = await createSSRHelper();
-  const chronicles = await ssrHelper.wordpress.getChronicles.fetch();
-  const paths = chronicles?.map(({ slug }) => ({ params: { id: slug } }));
+  const chronicles = await ssrHelper.wordpress.getSeasonChronicles.fetch();
+  const paths = chronicles.slugs?.map((slug) => ({ params: { id: slug } }));
   return {
     paths,
     fallback: "blocking"
   };
 };
 
-export const getStaticProps = async (props: GetStaticPropsContext ) => {
+export const getStaticProps = async (props: GetStaticPropsContext) => {
   const slug = props.params?.id as string;
   if (!slug) {
     return { notFound: true };
   }
   const ssrHelper = await createSSRHelper();
-  const chronicle = await ssrHelper.wordpress.getChronicleBySlug.fetch({ slug });
+  const chronicle = await ssrHelper.wordpress.getSeasonChronicleBySlug.fetch({ slug });
   if (!chronicle) {
     return { notFound: true };
   }

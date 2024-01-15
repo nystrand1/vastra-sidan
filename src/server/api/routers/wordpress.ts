@@ -1,5 +1,5 @@
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { GetAwayGuideBySlugDocument, GetAwayGuidesDocument, GetChronicleDocument, GetChroniclesDocument, GetNewsBySlugDocument, GetNewsDocument } from "~/types/wordpresstypes/graphql";
+import { GetAwayGuideBySlugDocument, GetAwayGuidesDocument, GetChronicleDocument, GetChroniclesDocument, GetNewsBySlugDocument, GetNewsDocument, GetSeasonChroncilesDocument, GetSeasonChronicleBySlugDocument } from "~/types/wordpresstypes/graphql";
 import { format, parseISO } from 'date-fns'
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -151,5 +151,61 @@ export const wordpressRouter = createTRPCRouter({
         image: newsPost.newsContent.newsImg,
         author: newsPost.newsContent.author,
       }
+    }),
+    getSeasonChronicles: publicProcedure
+    .query(async ({ ctx }) => {
+      const { data } = await ctx.apolloClient.query({
+        query: GetSeasonChroncilesDocument,
+      });
+
+      let seasonChronicles = data.seasonChronicles.nodes;
+      let { hasNextPage, endCursor } = data.seasonChronicles.pageInfo;
+      while (hasNextPage) {
+        const nextPage = await ctx.apolloClient.query({
+          query: GetSeasonChroncilesDocument,
+          variables: { after: endCursor }
+        });
+        seasonChronicles = [...seasonChronicles, ...nextPage.data.seasonChronicles.nodes];
+        hasNextPage = nextPage.data.seasonChronicles.pageInfo.hasNextPage;
+        endCursor = nextPage.data.seasonChronicles.pageInfo.endCursor;
+      }
+
+      const bandySeasonChronicles = seasonChronicles
+        .filter((chronicle) => chronicle.seasonChronicleContent.sport === "Bandy")
+        .sort((a, b) => b.seasonChronicleContent.title.localeCompare(a.seasonChronicleContent.title));
+      const fotballSeasonChronicles = seasonChronicles
+        .filter((chronicle) => chronicle.seasonChronicleContent.sport === "Fotboll")
+        .sort((a, b) => b.seasonChronicleContent.title.localeCompare(a.seasonChronicleContent.title));
+      return {
+        fotball: fotballSeasonChronicles,
+        bandy: bandySeasonChronicles,
+        slugs: seasonChronicles.map((chronicle) => chronicle.slug)
+      }
+    }),
+    getSeasonChronicleBySlug: publicProcedure
+    .input(z.object({ slug: z.string()}))
+    .query(async ({ ctx, input }) => {
+      const { data } = await ctx.apolloClient.query({
+        query: GetSeasonChronicleBySlugDocument,
+        variables: { slug: input.slug }
+      });
+
+      if (!data) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Season Chronicle not found",
+        });
+      }
+      const { seasonChronicle } = data;
+      return {
+        id: seasonChronicle.id,
+        date: parseDateString(seasonChronicle.date),
+        slug: seasonChronicle.slug,
+        title: seasonChronicle.seasonChronicleContent.title,
+        text: seasonChronicle.seasonChronicleContent.text,
+        image: seasonChronicle.seasonChronicleContent.image,
+        sport: seasonChronicle.seasonChronicleContent.sport,
+        author: seasonChronicle.seasonChronicleContent.author,
+      };
     }),
 });

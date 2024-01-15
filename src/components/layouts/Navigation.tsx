@@ -67,6 +67,7 @@ export const Navigation = () => {
           <Link className="hover:text-gray-200" href="/bortaresor">Bortaresor</Link>
           <Link className="hover:text-gray-200" href="/kronikor">Krönikor</Link>
           <Link className="hover:text-gray-200" href="/bortaguiden">Bortaguiden</Link>
+          <Link className="hover:text-gray-200" href="/sasongforsasong">Säsong för säsong</Link>
         </div>
         <div className="flex items-center md:order-2">
           {!sessionData?.user.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
@@ -122,7 +123,7 @@ export const Navigation = () => {
               <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/bortaguiden">Bortaguiden</Link>
             </li>
             <li className="divide-y divide-gray-100">
-              <Link href="/" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Bussresor</Link>
+              <Link href="/sasongforsasong" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Säsong för säsong</Link>
             </li>
             {!sessionData?.user && (
               <li className="divide-y divide-gray-100">
