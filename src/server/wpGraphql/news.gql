@@ -1,5 +1,5 @@
-query GetNews {
-  newsPosts {
+query GetNews($limit: Int = 100) {
+  newsPosts(first: $limit) {
     nodes {
       id
       date

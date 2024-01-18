@@ -4,6 +4,7 @@ import Card from "~/atoms/CardLink/CardLink";
 import { Progressbar } from "~/atoms/Progressbar/Progressbar";
 import { Button } from "~/components/atoms/Button/Button";
 import { ButtonLink } from "~/components/atoms/ButtonLink/ButtonLink";
+import { Wysiwyg } from "~/components/atoms/Wysiwyg/Wysiwyg";
 import { api } from "~/utils/api";
 import { PATHS } from "~/utils/constants";
 import { createSSRHelper } from "~/utils/createSSRHelper";
@@ -15,11 +16,9 @@ export default function Home() {
     return null;
   }
 
-  const { upcomingEvent, memberCount } = startPage;
+  const { upcomingEvent, memberCount, latestNewsPost } = startPage;
 
-  const cols = upcomingEvent && upcomingEvent?.id ? 2 : 1;
-
-  const className = upcomingEvent && upcomingEvent?.id ? "" : "md:max-w-[66%] md:m-auto";
+  const cols = upcomingEvent ? 3 : 2;
 
   return (
     <>
@@ -30,10 +29,21 @@ export default function Home() {
           <h1 className="text-[2.3rem] md:text-[4rem] lg:text-[5rem] font-extrabold text-white">
             Västra Sidan
           </h1>
-          <div className={`grid md:grid-cols-${cols} gap-4 md:gap-8 text-black w-full md:w-8/12`}>
+          <div className={`grid md:grid-cols-${cols} gap-4 md:gap-8 text-black w-full md:w-10/12`}>
+            {latestNewsPost && (
+              <Card 
+                title="Senaste nytt"
+                className="h-fit"
+              >
+                <p className="text-2xl font-semibold">{latestNewsPost.title}</p>
+                <p className="text-gray-400">{latestNewsPost.date}</p>
+                <Wysiwyg content={latestNewsPost.excerpt} />
+                <ButtonLink href={`/nyheter/${latestNewsPost.slug}`}>Läs mer</ButtonLink>
+              </Card>
+            )}
             <Card 
               title="Antal medlemmar"
-              className={`w-full first-letter:space-y-0 md:h-52 ${className}`}
+              className={`w-full first-letter:space-y-0 md:h-52`}
               contentClassName="flex flex-col justify-between h-full"
             >
               <p className="text-4xl">{memberCount}</p>
