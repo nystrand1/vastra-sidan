@@ -6,12 +6,12 @@ import { TRPCError } from "@trpc/server";
 import { bandyDivisions, fotballDivisions } from "~/server/utils/awayGuideSorter";
 import sv from 'date-fns/locale/sv'
 
-const parseDateString = (dateString: string, dateFormat = "d MMMM yyyy HH:mm") => {
+export const parseDateString = (dateString: string, dateFormat = "d MMMM yyyy HH:mm") => {
   const date = parseISO(dateString);
   return format(date, dateFormat, { locale: sv });
 }
 
-const stripHtmlTags = (html: string) => {
+export const stripHtmlTags = (html: string) => {
   return html.replace(/(<([^>]+)>)/gi, "");
 };
 

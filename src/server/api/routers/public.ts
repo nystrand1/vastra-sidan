@@ -8,6 +8,8 @@ import { subHours } from "date-fns";
 import { z } from "zod";
 import { createTRPCRouter, membershipProcedure, publicProcedure } from "~/server/api/trpc";
 import { getCardSkipperMemberCount } from "~/server/utils/cardSkipper";
+import { GetNewsDocument } from "~/types/wordpresstypes/graphql";
+import { parseDateString, stripHtmlTags } from "./wordpress";
 
 const busesWithPaidPassengers = {
   buses: {
@@ -101,13 +103,37 @@ export const publicRouter = createTRPCRouter({
         }
       }
     });
+    const { data } = await ctx.apolloClient.query({
+      query: GetNewsDocument,
+      variables: {
+        limit: 1
+      },
+    });
+
+    const [latestNewsPost] = data.newsPosts.nodes;
+
+    let newsPost = null;
+
+    if (latestNewsPost) {
+      newsPost = {
+        id: latestNewsPost.id,
+        slug: latestNewsPost.slug,
+        title: latestNewsPost.newsContent.title,
+        excerpt: stripHtmlTags(latestNewsPost.newsContent.text).split(".").splice(0, 1).join(" ") + ".",
+        date: parseDateString(latestNewsPost.date),
+        image: latestNewsPost.newsContent.newsImg,
+      }
+    }
+
     if (!upcomingEvent) {
       return {
-        memberCount
+        memberCount,
+        latestNewsPost: newsPost
       };
     }
     return {
       memberCount,
+      latestNewsPost: newsPost,
       upcomingEvent: {
         ...upcomingEvent,
         maxSeats: upcomingEvent?.buses.reduce((acc, bus) => acc + bus.seats, 0),
