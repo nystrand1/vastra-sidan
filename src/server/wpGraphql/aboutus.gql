@@ -1,0 +1,51 @@
+query GetAboutUs {
+  aboutUsPage {
+    orgChart {
+      chart: stadgar {
+        text
+        title: titel 
+      }
+    }
+    board {
+      contactinfo
+      boardmembers {
+        details {
+          name
+          position
+          email
+        }
+      } 
+    }
+    wallOfFame {
+      awardInfo
+      kjelledine {
+        winner
+        year
+      }
+      tioRyssar {
+        winner
+        year
+      }
+    }
+    protocols {
+      protocols {
+        file: protocol {
+          mediaItemUrl
+          title
+          date
+        }
+      }
+    }
+  }
+  documentPage {
+    documents {
+      document: dokument {
+        file: document {
+          mediaItemUrl
+          title
+          date
+        }
+      }
+    }
+  }
+}

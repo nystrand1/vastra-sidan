@@ -1,5 +1,5 @@
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { GetAwayGuideBySlugDocument, GetAwayGuidesDocument, GetChronicleDocument, GetChroniclesDocument, GetNewsBySlugDocument, GetNewsDocument, GetSeasonChroncilesDocument, GetSeasonChronicleBySlugDocument } from "~/types/wordpresstypes/graphql";
+import { GetAboutUsDocument, GetAwayGuideBySlugDocument, GetAwayGuidesDocument, GetChronicleDocument, GetChroniclesDocument, GetNewsBySlugDocument, GetNewsDocument, GetSeasonChroncilesDocument, GetSeasonChronicleBySlugDocument } from "~/types/wordpresstypes/graphql";
 import { format, parseISO } from 'date-fns'
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -208,4 +208,18 @@ export const wordpressRouter = createTRPCRouter({
         author: seasonChronicle.seasonChronicleContent.author,
       };
     }),
+    getAboutUsPage: publicProcedure
+      .query(async ({ ctx }) => {
+        const { data } = await ctx.apolloClient.query({
+          query: GetAboutUsDocument,
+        });
+        
+        const { documentPage, aboutUsPage } = data;
+
+        return {
+          documents: documentPage.documents.document.sort((a, b) => b.file.date.localeCompare(a.file.date)),
+          ...aboutUsPage,
+          protocols: aboutUsPage.protocols.protocols.sort((a, b) => b.file.date.localeCompare(a.file.date)),
+        }
+      }),
 });

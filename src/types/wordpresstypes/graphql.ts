@@ -16,6 +16,110 @@ export type Scalars = {
   Float: { input: number; output: number; }
 };
 
+/** Om oss options. */
+export type AboutUsPage = {
+  __typename?: 'AboutUsPage';
+  /** Added to the GraphQL Schema because the ACF Field Group &quot;Styrelsen&quot; was set to Show in GraphQL. */
+  board: Maybe<AboutUsPage_Board>;
+  /** Added to the GraphQL Schema because the ACF Field Group &quot;Stagdar&quot; was set to Show in GraphQL. */
+  orgChart: Maybe<AboutUsPage_Orgchart>;
+  pageSlug: Maybe<Scalars['String']['output']>;
+  pageTitle: Maybe<Scalars['String']['output']>;
+  /** Added to the GraphQL Schema because the ACF Field Group &quot;Protokoll&quot; was set to Show in GraphQL. */
+  protocols: Maybe<AboutUsPage_Protocols>;
+  /** Added to the GraphQL Schema because the ACF Field Group &quot;Wall of fame&quot; was set to Show in GraphQL. */
+  wallOfFame: Maybe<AboutUsPage_Walloffame>;
+};
+
+/** Field Group */
+export type AboutUsPage_Board = AcfFieldGroup & {
+  __typename?: 'AboutUsPage_Board';
+  boardmembers: Maybe<Array<Maybe<AboutUsPage_Board_Boardmembers>>>;
+  contactinfo: Maybe<Scalars['String']['output']>;
+  /** The name of the ACF Field Group */
+  fieldGroupName: Maybe<Scalars['String']['output']>;
+};
+
+/** Field Group */
+export type AboutUsPage_Board_Boardmembers = AcfFieldGroup & {
+  __typename?: 'AboutUsPage_Board_boardmembers';
+  details: Maybe<AboutUsPage_Board_Boardmembers_Details>;
+  /** The name of the ACF Field Group */
+  fieldGroupName: Maybe<Scalars['String']['output']>;
+  image: Maybe<MediaItem>;
+};
+
+/** Field Group */
+export type AboutUsPage_Board_Boardmembers_Details = AcfFieldGroup & {
+  __typename?: 'AboutUsPage_Board_boardmembers_Details';
+  email: Maybe<Scalars['String']['output']>;
+  /** The name of the ACF Field Group */
+  fieldGroupName: Maybe<Scalars['String']['output']>;
+  name: Maybe<Scalars['String']['output']>;
+  position: Maybe<Scalars['String']['output']>;
+};
+
+/** Field Group */
+export type AboutUsPage_Orgchart = AcfFieldGroup & {
+  __typename?: 'AboutUsPage_Orgchart';
+  /** The name of the ACF Field Group */
+  fieldGroupName: Maybe<Scalars['String']['output']>;
+  stadgar: Maybe<Array<Maybe<AboutUsPage_Orgchart_Stadgar>>>;
+};
+
+/** Field Group */
+export type AboutUsPage_Orgchart_Stadgar = AcfFieldGroup & {
+  __typename?: 'AboutUsPage_Orgchart_stadgar';
+  /** The name of the ACF Field Group */
+  fieldGroupName: Maybe<Scalars['String']['output']>;
+  text: Maybe<Scalars['String']['output']>;
+  titel: Maybe<Scalars['String']['output']>;
+};
+
+/** Field Group */
+export type AboutUsPage_Protocols = AcfFieldGroup & {
+  __typename?: 'AboutUsPage_Protocols';
+  /** The name of the ACF Field Group */
+  fieldGroupName: Maybe<Scalars['String']['output']>;
+  protocols: Maybe<Array<Maybe<AboutUsPage_Protocols_Protocols>>>;
+};
+
+/** Field Group */
+export type AboutUsPage_Protocols_Protocols = AcfFieldGroup & {
+  __typename?: 'AboutUsPage_Protocols_protocols';
+  /** The name of the ACF Field Group */
+  fieldGroupName: Maybe<Scalars['String']['output']>;
+  protocol: Maybe<MediaItem>;
+};
+
+/** Field Group */
+export type AboutUsPage_Walloffame = AcfFieldGroup & {
+  __typename?: 'AboutUsPage_Walloffame';
+  awardInfo: Maybe<Scalars['String']['output']>;
+  /** The name of the ACF Field Group */
+  fieldGroupName: Maybe<Scalars['String']['output']>;
+  kjelledine: Maybe<Array<Maybe<AboutUsPage_Walloffame_Kjelledine>>>;
+  tioRyssar: Maybe<Array<Maybe<AboutUsPage_Walloffame_TioRyssar>>>;
+};
+
+/** Field Group */
+export type AboutUsPage_Walloffame_Kjelledine = AcfFieldGroup & {
+  __typename?: 'AboutUsPage_Walloffame_kjelledine';
+  /** The name of the ACF Field Group */
+  fieldGroupName: Maybe<Scalars['String']['output']>;
+  winner: Maybe<Scalars['String']['output']>;
+  year: Maybe<Scalars['Float']['output']>;
+};
+
+/** Field Group */
+export type AboutUsPage_Walloffame_TioRyssar = AcfFieldGroup & {
+  __typename?: 'AboutUsPage_Walloffame_tioRyssar';
+  /** The name of the ACF Field Group */
+  fieldGroupName: Maybe<Scalars['String']['output']>;
+  winner: Maybe<Scalars['String']['output']>;
+  year: Maybe<Scalars['Float']['output']>;
+};
+
 /** A Field Group registered by ACF */
 export type AcfFieldGroup = {
   /** The name of the ACF Field Group */
@@ -2434,6 +2538,31 @@ export type DiscussionSettings = {
   defaultCommentStatus: Maybe<Scalars['String']['output']>;
   /** Tillåt notiser om nya länkar från andra bloggar (pingback och trackback) för nya artiklar. */
   defaultPingStatus: Maybe<Scalars['String']['output']>;
+};
+
+/** Dokumentbank options. */
+export type DocumentPage = {
+  __typename?: 'DocumentPage';
+  /** Added to the GraphQL Schema because the ACF Field Group &quot;Dokument&quot; was set to Show in GraphQL. */
+  documents: Maybe<DocumentPage_Documents>;
+  pageSlug: Maybe<Scalars['String']['output']>;
+  pageTitle: Maybe<Scalars['String']['output']>;
+};
+
+/** Field Group */
+export type DocumentPage_Documents = AcfFieldGroup & {
+  __typename?: 'DocumentPage_Documents';
+  dokument: Maybe<Array<Maybe<DocumentPage_Documents_Dokument>>>;
+  /** The name of the ACF Field Group */
+  fieldGroupName: Maybe<Scalars['String']['output']>;
+};
+
+/** Field Group */
+export type DocumentPage_Documents_Dokument = AcfFieldGroup & {
+  __typename?: 'DocumentPage_Documents_dokument';
+  document: Maybe<MediaItem>;
+  /** The name of the ACF Field Group */
+  fieldGroupName: Maybe<Scalars['String']['output']>;
 };
 
 /** Relational context between connected nodes */
@@ -6444,6 +6573,8 @@ export type RootMutationUpdateUserArgs = {
 /** The root entry point into the Graph */
 export type RootQuery = {
   __typename?: 'RootQuery';
+  /** Om oss options. */
+  aboutUsPage: Maybe<AboutUsPage>;
   /** Entry point to get all settings for the site */
   allSettings: Maybe<Settings>;
   /** An object of the Awayguide Type.  */
@@ -6482,6 +6613,8 @@ export type RootQuery = {
   contentTypes: Maybe<RootQueryToContentTypeConnection>;
   /** Fields of the &#039;DiscussionSettings&#039; settings group */
   discussionSettings: Maybe<DiscussionSettings>;
+  /** Dokumentbank options. */
+  documentPage: Maybe<DocumentPage>;
   /** Fields of the &#039;GeneralSettings&#039; settings group */
   generalSettings: Maybe<GeneralSettings>;
   /** An object of the mediaItem Type.  */
@@ -10856,6 +10989,11 @@ export type WritingSettings = {
   useSmilies: Maybe<Scalars['Boolean']['output']>;
 };
 
+export type GetAboutUsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetAboutUsQuery = { __typename?: 'RootQuery', aboutUsPage: { __typename?: 'AboutUsPage', orgChart: { __typename?: 'AboutUsPage_Orgchart', chart: Array<{ __typename?: 'AboutUsPage_Orgchart_stadgar', text: string, title: string }> }, board: { __typename?: 'AboutUsPage_Board', contactinfo: string, boardmembers: Array<{ __typename?: 'AboutUsPage_Board_boardmembers', details: { __typename?: 'AboutUsPage_Board_boardmembers_Details', name: string, position: string, email: string } }> }, wallOfFame: { __typename?: 'AboutUsPage_Walloffame', awardInfo: string, kjelledine: Array<{ __typename?: 'AboutUsPage_Walloffame_kjelledine', winner: string, year: number }>, tioRyssar: Array<{ __typename?: 'AboutUsPage_Walloffame_tioRyssar', winner: string, year: number }> }, protocols: { __typename?: 'AboutUsPage_Protocols', protocols: Array<{ __typename?: 'AboutUsPage_Protocols_protocols', file: { __typename?: 'MediaItem', mediaItemUrl: string, title: string, date: string } }> } }, documentPage: { __typename?: 'DocumentPage', documents: { __typename?: 'DocumentPage_Documents', document: Array<{ __typename?: 'DocumentPage_Documents_dokument', file: { __typename?: 'MediaItem', mediaItemUrl: string, title: string, date: string } }> } } };
+
 export type GetAwayGuidesSlugsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -10916,6 +11054,7 @@ export type GetSeasonChronicleBySlugQueryVariables = Exact<{
 export type GetSeasonChronicleBySlugQuery = { __typename?: 'RootQuery', seasonChronicle: { __typename?: 'SeasonChronicle', id: string, slug: string, date: string, seasonChronicleContent: { __typename?: 'SeasonChronicle_Seasonchroniclecontent', text: string, sport: string, title: string, author: string, image: { __typename?: 'MediaItem', sourceUrl: string } } } };
 
 
+export const GetAboutUsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetAboutUs"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"aboutUsPage"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"orgChart"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","alias":{"kind":"Name","value":"chart"},"name":{"kind":"Name","value":"stadgar"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"text"}},{"kind":"Field","alias":{"kind":"Name","value":"title"},"name":{"kind":"Name","value":"titel"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"board"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"contactinfo"}},{"kind":"Field","name":{"kind":"Name","value":"boardmembers"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"details"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"position"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"wallOfFame"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"awardInfo"}},{"kind":"Field","name":{"kind":"Name","value":"kjelledine"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"winner"}},{"kind":"Field","name":{"kind":"Name","value":"year"}}]}},{"kind":"Field","name":{"kind":"Name","value":"tioRyssar"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"winner"}},{"kind":"Field","name":{"kind":"Name","value":"year"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"protocols"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"protocols"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","alias":{"kind":"Name","value":"file"},"name":{"kind":"Name","value":"protocol"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"mediaItemUrl"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"date"}}]}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"documentPage"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"documents"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","alias":{"kind":"Name","value":"document"},"name":{"kind":"Name","value":"dokument"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","alias":{"kind":"Name","value":"file"},"name":{"kind":"Name","value":"document"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"mediaItemUrl"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"date"}}]}}]}}]}}]}}]}}]} as unknown as DocumentNode<GetAboutUsQuery, GetAboutUsQueryVariables>;
 export const GetAwayGuidesSlugsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetAwayGuidesSlugs"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"awayguides"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"nodes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"slug"}}]}}]}}]}}]} as unknown as DocumentNode<GetAwayGuidesSlugsQuery, GetAwayGuidesSlugsQueryVariables>;
 export const GetAwayGuidesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetAwayGuides"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"after"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"awayguides"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"100"}},{"kind":"Argument","name":{"kind":"Name","value":"after"},"value":{"kind":"Variable","name":{"kind":"Name","value":"after"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"nodes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"awayGuide"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"sport"}},{"kind":"Field","name":{"kind":"Name","value":"division"}}]}},{"kind":"Field","name":{"kind":"Name","value":"slug"}}]}}]}}]}}]} as unknown as DocumentNode<GetAwayGuidesQuery, GetAwayGuidesQueryVariables>;
 export const GetAwayGuideBySlugDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetAwayGuideBySlug"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"slug"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"awayguide"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"slug"}}},{"kind":"Argument","name":{"kind":"Name","value":"idType"},"value":{"kind":"EnumValue","value":"SLUG"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"date"}},{"kind":"Field","name":{"kind":"Name","value":"awayGuide"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"sport"}},{"kind":"Field","name":{"kind":"Name","value":"division"}},{"kind":"Field","name":{"kind":"Name","value":"farger"}},{"kind":"Field","name":{"kind":"Name","value":"avstand"}},{"kind":"Field","name":{"kind":"Name","value":"hemsida"}},{"kind":"Field","name":{"kind":"Name","value":"matcher"}},{"kind":"Field","name":{"kind":"Name","value":"meriter"}},{"kind":"Field","name":{"kind":"Name","value":"lag"}},{"kind":"Field","name":{"kind":"Name","value":"bildad"}},{"kind":"Field","name":{"kind":"Name","value":"logo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"sourceUrl"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"awayGuideContent"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"text"}}]}},{"kind":"Field","name":{"kind":"Name","value":"slug"}}]}}]}}]} as unknown as DocumentNode<GetAwayGuideBySlugQuery, GetAwayGuideBySlugQueryVariables>;

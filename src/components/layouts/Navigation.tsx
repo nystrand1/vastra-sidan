@@ -60,14 +60,18 @@ export const Navigation = () => {
           <div className="h-8 w-8 mr-3 relative">
             <Image src="/favicon/android-icon-192x192.png" alt="Västra Sidan Logo" fill />
           </div>
-          <span className="self-center text-2xl font-semibold whitespace-nowrap text-white">Västra Sidan</span>
+          <span className="self-center text-xl font-semibold whitespace-nowrap text-white">Västra Sidan</span>
         </Link>
         <div className="hidden md:flex flex-1 ml-10 flex-row space-x-4">
-          <Link className="hover:text-gray-200" href="/nyheter">Nyheter</Link>
+          <Link className="hover:text-gray-200" href="https://apply.cardskipper.se/pxvo" target="_blank">Bli medlem</Link>
           <Link className="hover:text-gray-200" href="/bortaresor">Bortaresor</Link>
-          <Link className="hover:text-gray-200" href="/kronikor">Krönikor</Link>
+          <Link className="hover:text-gray-200" href="/nyheter">Nyheter</Link>
           <Link className="hover:text-gray-200" href="/bortaguiden">Bortaguiden</Link>
+          <Link className="hover:text-gray-200" href="/kronikor">Krönikor</Link>
           <Link className="hover:text-gray-200" href="/sasongforsasong">Säsong för säsong</Link>
+          <Link className="hover:text-gray-200" href="https://api.vastrasidan.se" target="_blank">Forum</Link>
+          <Link className="hover:text-gray-200" href="https://iksirius.github.io/index.html" target="_blank">Sånger</Link>
+          <Link className="hover:text-gray-200" href="/omoss">Om oss</Link>
         </div>
         <div className="flex items-center md:order-2">
           {!sessionData?.user.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
@@ -111,10 +115,13 @@ export const Navigation = () => {
         <div className={`items-center justify-between w-full md:hidden md:w-auto md:order-1 ${open ? '' : 'hidden'}`} id="navbar-user">
           <ul onClick={() => setOpen(false)} className="divide-y flex flex-col font-medium mt-4 border rounded-lg bg-gray-800 border-gray-700">
             <li className="divide-y divide-gray-100">
-              <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/nyheter">Nyheter</Link>
+              <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="https://apply.cardskipper.se/pxvo" target="_blank">Bli Medlem</Link>
             </li>
             <li className="divide-y divide-gray-100">
               <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/bortaresor">Bortaresor</Link>
+            </li>
+            <li className="divide-y divide-gray-100">
+              <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/nyheter">Nyheter</Link>
             </li>
             <li className="divide-y divide-gray-100">
               <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/kronikor">Krönikor</Link>
@@ -125,9 +132,15 @@ export const Navigation = () => {
             <li className="divide-y divide-gray-100">
               <Link href="/sasongforsasong" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Säsong för säsong</Link>
             </li>
+            <li className="divide-y divide-gray-100">
+              <Link href="https://api.vastrasidan.se" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Forum</Link>
+            </li>
+            <li className="divide-y divide-gray-100">
+              <Link href="https://iksirius.github.io/index.html" target="_blank" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Sånger</Link>
+            </li>
             {!sessionData?.user && (
               <li className="divide-y divide-gray-100">
-                <Link href="/skapakonto" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Skapa konto</Link>
+                <Link href="https://api.vastrasidan.se" target="_blank" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Forum</Link>
               </li>
             )}
             {sessionData?.user.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
