@@ -1,7 +1,7 @@
 import Head from "next/head";
-import { ButtonLink } from "~/components/atoms/ButtonLink/ButtonLink";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { api } from "~/utils/api";
+import { createSSRHelper } from "~/utils/createSSRHelper";
 
 
 export const AboutUsPage = () => {
@@ -9,20 +9,21 @@ export const AboutUsPage = () => {
 
   if (!data) return null;
 
-  const { documents, board, wallOfFame, orgChart } = data;
-  console.log(documents);
+  const { documents, board, protocols } = data;
+
   return (
     <>
       <Head>
         <title>Om oss | Västra Sidan</title>
       </Head>
       <div>
-        <h1 className="text-center mb-4 text-5xl">Bortaguiden</h1>
-        <div className="grid grid-cols-3 gap-4 md:items-stretch flex-wrap justify-center">
+        <h1 className="text-center mb-4 text-5xl">Om oss</h1>
+        <div className="grid md:grid-cols-2 gap-4 md:items-stretch flex-wrap justify-center w-10/12 m-auto">
           <Card
             title="Styrelsen"
+            titleClassName="text-center !text-2xl"
           >
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-2 gap-4">
               {board.boardmembers.map((member) => (
                 <div key={member.details.name}>
                   <p className="font-semibold">{member.details.position}</p>
@@ -37,18 +38,27 @@ export const AboutUsPage = () => {
           </Card>
           <Card
             title="Dokument & Protokoll"
-            >
-            <p className="font-semibold">Dokument</p>
-            <div className="grid grid-cols-1 gap-2 !mt-0">
-              {documents.map((doc) => (
-                <div key={doc.file.title}>
-                  <a className="text-sm underline" href={doc.file.mediaItemUrl} target="_blank" download>{doc.file.title}</a>
+            titleClassName="text-center !text-2xl"
+          >
+            <div className="grid grid-cols-2">
+              <div>
+                <p className="font-semibold">Dokument</p>
+                <div className="grid gap-2 !mt-0">
+                  {documents.map((doc) => (
+                    <a key={doc.file.title} className="text-sm underline" href={doc.file.mediaItemUrl} target="_blank" download>{doc.file.title}</a>
+                  ))}
                 </div>
-              ))}
               </div>
-            <p className="font-semibold">Protokoll</p>
-            
-            </Card>
+              <div>
+                <p className="font-semibold">Protokoll</p>
+                <div className="grid gap-2 !mt-0">
+                  {protocols.map((protocol) => (
+                    <a key={protocol.file.title} className="text-sm underline" href={protocol.file.mediaItemUrl} target="_blank" download>{protocol.file.title}</a>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Card>
         </div>
       </div>
     </>
@@ -56,3 +66,16 @@ export const AboutUsPage = () => {
 }
 
 export default AboutUsPage;
+
+export async function getStaticProps() {
+  const ssrHelper = await createSSRHelper();
+
+  await ssrHelper.wordpress.getAboutUsPage.prefetch();
+
+  return {
+    props: {
+      trpcState: ssrHelper.dehydrate(),
+    },
+    revalidate: 3600 * 24,
+  }
+}

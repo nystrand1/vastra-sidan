@@ -73,7 +73,6 @@ export default function Home() {
                   {upcomingEvent.bookedSeats >= upcomingEvent.maxSeats && (
                     <Button disabled>Fullbokat</Button>
                   )}
-
                 </Card>
               )}
             </div>

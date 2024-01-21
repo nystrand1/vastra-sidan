@@ -219,6 +219,7 @@ export const wordpressRouter = createTRPCRouter({
         return {
           documents: documentPage.documents.document.sort((a, b) => b.file.date.localeCompare(a.file.date)),
           ...aboutUsPage,
+          protocols: aboutUsPage.protocols.protocols.sort((a, b) => b.file.date.localeCompare(a.file.date)),
         }
       }),
 });

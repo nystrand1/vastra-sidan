@@ -70,6 +70,7 @@ export const Navigation = () => {
           <Link className="hover:text-gray-200" href="/kronikor">Krönikor</Link>
           <Link className="hover:text-gray-200" href="/sasongforsasong">Säsong för säsong</Link>
           <Link className="hover:text-gray-200" href="https://api.vastrasidan.se" target="_blank">Forum</Link>
+          <Link className="hover:text-gray-200" href="https://iksirius.github.io/index.html" target="_blank">Sånger</Link>
           <Link className="hover:text-gray-200" href="/omoss">Om oss</Link>
         </div>
         <div className="flex items-center md:order-2">
@@ -132,7 +133,10 @@ export const Navigation = () => {
               <Link href="/sasongforsasong" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Säsong för säsong</Link>
             </li>
             <li className="divide-y divide-gray-100">
-              <Link href="/sasongforsasong" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Säsong för säsong</Link>
+              <Link href="https://api.vastrasidan.se" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Forum</Link>
+            </li>
+            <li className="divide-y divide-gray-100">
+              <Link href="https://iksirius.github.io/index.html" target="_blank" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Sånger</Link>
             </li>
             {!sessionData?.user && (
               <li className="divide-y divide-gray-100">

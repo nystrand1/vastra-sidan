@@ -2750,7 +2750,7 @@ export type GeneralSettings = {
   description: Maybe<Scalars['String']['output']>;
   /** Denna adress används för administrativa ändamål, såsom notifikation om ny användare. */
   email: Maybe<Scalars['String']['output']>;
-  /** Språkkod (locale) för WordPress. */
+  /** Kod för språkversion (locale) i WordPress. */
   language: Maybe<Scalars['String']['output']>;
   /** Numret på dagen i veckan som veckan ska börja på. */
   startOfWeek: Maybe<Scalars['Int']['output']>;
@@ -3785,8 +3785,14 @@ export type MenuItemToMenuItemLinkableConnectionEdge = Edge & MenuItemLinkableCo
 
 /** Registered menu locations */
 export enum MenuLocationEnum {
+  /** Put the menu in the footer-menu location */
+  FooterMenu = 'FOOTER_MENU',
+  /** Put the menu in the footer-menu-tablet location */
+  FooterMenuTablet = 'FOOTER_MENU_TABLET',
   /** Put the menu in the handheld location */
   Handheld = 'HANDHELD',
+  /** Put the menu in the header-menu location */
+  HeaderMenu = 'HEADER_MENU',
   /** Put the menu in the primary location */
   Primary = 'PRIMARY',
   /** Put the menu in the secondary location */
@@ -6118,8 +6124,14 @@ export type Previewable = {
 /** The reading setting type */
 export type ReadingSettings = {
   __typename?: 'ReadingSettings';
+  /** ID för sidan som ska visa de senaste inläggen */
+  pageForPosts: Maybe<Scalars['Int']['output']>;
+  /** ID för den sida som ska visas på startsidan */
+  pageOnFront: Maybe<Scalars['Int']['output']>;
   /** Bloggsidor visar högst. */
   postsPerPage: Maybe<Scalars['Int']['output']>;
+  /** Vad som visas på startsidan */
+  showOnFront: Maybe<Scalars['String']['output']>;
 };
 
 /** Input for the registerUser mutation. */
@@ -8875,7 +8887,13 @@ export type Settings = {
   /** Settings of the the string Settings Group */
   generalSettingsUrl: Maybe<Scalars['String']['output']>;
   /** Settings of the the integer Settings Group */
+  readingSettingsPageForPosts: Maybe<Scalars['Int']['output']>;
+  /** Settings of the the integer Settings Group */
+  readingSettingsPageOnFront: Maybe<Scalars['Int']['output']>;
+  /** Settings of the the integer Settings Group */
   readingSettingsPostsPerPage: Maybe<Scalars['Int']['output']>;
+  /** Settings of the the string Settings Group */
+  readingSettingsShowOnFront: Maybe<Scalars['String']['output']>;
   /** Settings of the the integer Settings Group */
   writingSettingsDefaultCategory: Maybe<Scalars['Int']['output']>;
   /** Settings of the the string Settings Group */
@@ -9375,15 +9393,15 @@ export type TaxonomyToTermNodeConnectionPageInfo = PageInfo & TermNodeConnection
 };
 
 /** The template assigned to the node */
-export type Template_FullBredd = ContentTemplate & {
-  __typename?: 'Template_FullBredd';
+export type Template_FullWidth = ContentTemplate & {
+  __typename?: 'Template_FullWidth';
   /** The name of the template */
   templateName: Maybe<Scalars['String']['output']>;
 };
 
 /** The template assigned to the node */
-export type Template_Startsida = ContentTemplate & {
-  __typename?: 'Template_Startsida';
+export type Template_Homepage = ContentTemplate & {
+  __typename?: 'Template_Homepage';
   /** The name of the template */
   templateName: Maybe<Scalars['String']['output']>;
 };
@@ -9997,7 +10015,7 @@ export type UpdateSettingsInput = {
   generalSettingsDescription: InputMaybe<Scalars['String']['input']>;
   /** Denna adress används för administrativa ändamål, såsom notifikation om ny användare. */
   generalSettingsEmail: InputMaybe<Scalars['String']['input']>;
-  /** Språkkod (locale) för WordPress. */
+  /** Kod för språkversion (locale) i WordPress. */
   generalSettingsLanguage: InputMaybe<Scalars['String']['input']>;
   /** Numret på dagen i veckan som veckan ska börja på. */
   generalSettingsStartOfWeek: InputMaybe<Scalars['Int']['input']>;
@@ -10009,8 +10027,14 @@ export type UpdateSettingsInput = {
   generalSettingsTitle: InputMaybe<Scalars['String']['input']>;
   /** Webbplats-URL. */
   generalSettingsUrl: InputMaybe<Scalars['String']['input']>;
+  /** ID för sidan som ska visa de senaste inläggen */
+  readingSettingsPageForPosts: InputMaybe<Scalars['Int']['input']>;
+  /** ID för den sida som ska visas på startsidan */
+  readingSettingsPageOnFront: InputMaybe<Scalars['Int']['input']>;
   /** Bloggsidor visar högst. */
   readingSettingsPostsPerPage: InputMaybe<Scalars['Int']['input']>;
+  /** Vad som visas på startsidan */
+  readingSettingsShowOnFront: InputMaybe<Scalars['String']['input']>;
   /** Standardkategori för inlägg. */
   writingSettingsDefaultCategory: InputMaybe<Scalars['Int']['input']>;
   /** Standardformat för inlägg. */
