@@ -51,7 +51,7 @@ export const AboutUsPage = () => {
                 <p className="font-semibold">Dokument</p>
                 <div className="grid gap-2 !mt-0">
                   {documents.map((doc) => (
-                    <a key={doc.file.title} className="text-sm underline" href={doc.file.mediaItemUrl} target="_blank" download>{doc.file.title}</a>
+                    <a key={doc.file.title} className="text-sm underline overflow-hidden text-ellipsis" href={doc.file.mediaItemUrl} target="_blank" download>{doc.file.title}</a>
                   ))}
                 </div>
               </div>
@@ -59,7 +59,7 @@ export const AboutUsPage = () => {
                 <p className="font-semibold">Protokoll</p>
                 <div className="grid gap-2 !mt-0">
                   {protocols.map((protocol) => (
-                    <a key={protocol.file.title} className="text-sm underline" href={protocol.file.mediaItemUrl} target="_blank" download>{protocol.file.title}</a>
+                    <a key={protocol.file.title} className="text-sm underline overflow-hidden text-ellipsis" href={protocol.file.mediaItemUrl} target="_blank" download>{protocol.file.title}</a>
                   ))}
                 </div>
               </div>

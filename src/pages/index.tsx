@@ -61,10 +61,6 @@ export default function Home() {
                   <div className="space-y-1">
                     <p className="text-lg font-semibold">{upcomingEvent.name}</p>
                     <p className="text-md font-semibold">Bussen avgår {format(upcomingEvent.date, "HH:mm")}</p>
-                    <p className="text-sm">Pris vuxen medlem: {upcomingEvent.memberPrice} kr</p>
-                    <p className="text-sm">Pris vuxen icke medlem: {upcomingEvent.defaultPrice} kr</p>
-                    <p className="text-sm">Pris ungdom medlem: {upcomingEvent.youthMemberPrice} kr</p>
-                    <p className="text-sm">Pris ungdom icke medlem: {upcomingEvent.youthPrice} kr</p>
                   </div>
                   <Progressbar
                     label="Antal anmälda"
