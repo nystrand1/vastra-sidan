@@ -11,10 +11,14 @@ export const AboutUsPage = () => {
 
   const { documents, board, protocols } = data;
 
+  const seoDescription = "Västra Sidan är en supporterförening till IK Sirius. Vi är en ideell förening som arbetar för att skapa en bättre upplevelse för IK Sirius supportrar."
+
   return (
     <>
       <Head>
         <title>Om oss | Västra Sidan</title>
+        <meta name="title" key="title" content="Om oss | Västra Sidan" />
+        <meta name="description" key="description" content={seoDescription} />
       </Head>
       <div>
         <h1 className="text-center mb-4 text-5xl">Om oss</h1>

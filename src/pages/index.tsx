@@ -20,10 +20,14 @@ export default function Home() {
 
   const desktopCols = upcomingEvent ? 'md:grid-cols-3' : 'md:grid-cols-2';
 
+  const seoDescription = "Välkommen till Västra Sidan. Vi är en supporterförening till IK Sirius som arbetar för att skapa en bättre upplevelse för blåsvarta supportrar."
+
   return (
     <>
       <Head>
         <title>Västra Sidan | Startsida</title>
+        <meta name="title" key="title" content="Västra Sidan | Startsida" />
+        <meta name="description" key="description" content={seoDescription} />
       </Head>
         <div className="flex flex-col items-center justify-center gap-12">
           <h1 className="text-[2.3rem] md:text-[4rem] lg:text-[5rem] font-extrabold text-white">
