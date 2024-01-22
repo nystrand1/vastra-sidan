@@ -18,10 +18,11 @@ export const AboutUsPage = () => {
       </Head>
       <div>
         <h1 className="text-center mb-4 text-5xl">Om oss</h1>
-        <div className="grid md:grid-cols-2 gap-4 md:items-stretch flex-wrap justify-center w-10/12 m-auto">
+        <div className="grid md:grid-cols-2 gap-4 md:items-stretch flex-wrap justify-center w-full md:w-10/12 m-auto">
           <Card
             title="Styrelsen"
             titleClassName="text-center !text-2xl"
+            className="order-2 md:order-1"
           >
             <div className="grid md:grid-cols-2 gap-4">
               {board.boardmembers.map((member) => (
@@ -39,6 +40,7 @@ export const AboutUsPage = () => {
           <Card
             title="Dokument & Protokoll"
             titleClassName="text-center !text-2xl"
+            className="order-1 md:order-2"
           >
             <div className="grid grid-cols-2">
               <div>
