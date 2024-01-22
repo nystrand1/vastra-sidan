@@ -138,9 +138,12 @@ export const Navigation = () => {
             <li className="divide-y divide-gray-100">
               <Link href="https://iksirius.github.io/index.html" target="_blank" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Sånger</Link>
             </li>
+            <li className="divide-y divide-gray-100">
+              <Link href="/omoss" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Om oss</Link>
+            </li>
             {!sessionData?.user && (
               <li className="divide-y divide-gray-100">
-                <Link href="https://api.vastrasidan.se" target="_blank" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Forum</Link>
+                <Link href="/skapakonto" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Skapa konto</Link>
               </li>
             )}
             {sessionData?.user.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
