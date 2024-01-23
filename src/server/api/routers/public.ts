@@ -129,7 +129,7 @@ export const publicRouter = createTRPCRouter({
     });
 
     // Trigger new fetch of ticket sales
-    void fetch(`${env.NEXTAUTH_URL}/api/trpc/cron.syncTicketSales?cron-key=${env.CRON_KEY}`, { method: 'POST' });
+    void fetch(`${env.WEBSITE_URL}/api/trpc/cron.syncTicketSales?cron-key=${env.CRON_KEY}`, { method: 'POST' });
 
     const [latestNewsPost] = data.newsPosts.nodes;
 
