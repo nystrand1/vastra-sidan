@@ -36,6 +36,13 @@ export const env = createEnv({
     CARDSKIPPER_USERNAME: z.string().min(1),
     CARDSKIPPER_PASSWORD: z.string().min(1),
     CARDSKIPPER_ORG_NUMBER: z.string().min(1),
+    WEBSITE_URL: z.preprocess(
+      // This makes Vercel deployments not fail if you don't set NEXTAUTH_URL
+      // Since NextAuth.js automatically uses the VERCEL_URL if present.
+      (str) => process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : str,
+      // VERCEL_URL doesn't include `https` so it cant be validated as a URL
+      process.env.VERCEL ? z.string().min(1) : z.string().url()
+    )
   },
 
   /**
@@ -75,6 +82,7 @@ export const env = createEnv({
     CARDSKIPPER_PASSWORD: process.env.CARDSKIPPER_PASSWORD,
     CARDSKIPPER_ORG_NUMBER: process.env.CARDSKIPPER_ORG_NUMBER,
     NEXT_PUBLIC_ENABLE_MEMBERSHIPS: process.env.NEXT_PUBLIC_ENABLE_MEMBERSHIPS,
+    WEBSITE_URL: process.env.WEBSITE_URL,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.
