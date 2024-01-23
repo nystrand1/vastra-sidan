@@ -2,7 +2,7 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider        = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -43,19 +43,19 @@ model Session {
 }
 
 model Membership {
-  id                   String                 @id @default(cuid())
-  name                 String
-  wordpressId          String 
-  imageUrl             String
-  type                 MembershipType
-  price                Int
-  startDate            DateTime
-  endDate              DateTime
-  users                User[]
-  swishPayments        SwishPayment[]
-  swishRefunds         SwishRefund[]
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
+  id            String         @id @default(cuid())
+  name          String
+  wordpressId   String
+  imageUrl      String
+  type          MembershipType
+  price         Int
+  startDate     DateTime
+  endDate       DateTime
+  users         User[]
+  swishPayments SwishPayment[]
+  swishRefunds  SwishRefund[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   @@index([wordpressId])
 }
@@ -67,21 +67,21 @@ enum MembershipType {
 }
 
 model User {
-  id                    String       @id @default(cuid())
-  firstName             String       @default("Västra")
-  lastName              String       @default("Sidan")
-  email                 String?      @unique
-  emailVerified         DateTime?
-  image                 String?
-  password              String?
-  phone                 String?
-  role                  Role         @default(USER)
-  accounts              Account[]
-  sessions              Session[]
-  memberShips           Membership[]
-  eventParticipations   Participant[]
-  swishPayments         SwishPayment[]
-  swishRefunds          SwishRefund[]
+  id                  String         @id @default(cuid())
+  firstName           String         @default("Västra")
+  lastName            String         @default("Sidan")
+  email               String?        @unique
+  emailVerified       DateTime?
+  image               String?
+  password            String?
+  phone               String?
+  role                Role           @default(USER)
+  accounts            Account[]
+  sessions            Session[]
+  memberShips         Membership[]
+  eventParticipations Participant[]
+  swishPayments       SwishPayment[]
+  swishRefunds        SwishRefund[]
 }
 
 enum Role {
@@ -170,9 +170,9 @@ model SwishPayment {
   participants      Participant[]
   refunds           SwishRefund[]
   memberShipId      String?
-  memberShip        Membership? @relation(fields: [memberShipId], references: [id])
+  memberShip        Membership?        @relation(fields: [memberShipId], references: [id])
   userId            String?
-  user              User? @relation(fields: [userId], references: [id])
+  user              User?              @relation(fields: [userId], references: [id])
 
   @@index([paymentId])
   @@index([memberShipId])
@@ -203,11 +203,11 @@ model SwishRefund {
   errorMessage     String?
   dateRefunded     DateTime?
   participantId    String?
-  participant      Participant?       @relation(fields: [participantId], references: [id])
+  participant      Participant?      @relation(fields: [participantId], references: [id])
   memberShipId     String?
   memberShip       Membership?       @relation(fields: [memberShipId], references: [id])
   userId           String?
-  user             User? @relation(fields: [userId], references: [id])
+  user             User?             @relation(fields: [userId], references: [id])
   originalPayment  SwishPayment      @relation(fields: [paymentId], references: [id])
 
   @@index([refundId])
@@ -223,4 +223,27 @@ enum SwishRefundStatus {
   VALIDATED
   PAID
   ERROR
+}
+
+model TicketSalesRecord {
+  id            String       @id @default(cuid())
+  createdAt     DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  ticketsSold   Int
+  fotballGame   FotballGame? @relation(fields: [fotballGameId], references: [id])
+  fotballGameId String?
+
+  @@index([fotballGameId])
+}
+
+model FotballGame {
+  id          String       @id @default(cuid())
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  date        DateTime
+  homeTeam    String
+  awayTeam    String
+  ticketLink  String
+  location    String
+  ticketSalesRecords TicketSalesRecord[]
 }
