@@ -32,7 +32,7 @@ export const PATHS = {
 
 export const makeRequest = async <T>(
   url: string,
-  method: string,
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   body?: BodyInit
 ): Promise<T> => {
   const headers = new Headers();

@@ -10,6 +10,7 @@ import { createTRPCRouter, membershipProcedure, publicProcedure } from "~/server
 import { getCardSkipperMemberCount } from "~/server/utils/cardSkipper";
 import { GetNewsDocument } from "~/types/wordpresstypes/graphql";
 import { parseDateString, stripHtmlTags } from "./wordpress";
+import { env } from "~/env.mjs";
 
 const busesWithPaidPassengers = {
   buses: {
@@ -103,12 +104,32 @@ export const publicRouter = createTRPCRouter({
         }
       }
     });
+
     const { data } = await ctx.apolloClient.query({
       query: GetNewsDocument,
       variables: {
         limit: 1
       },
     });
+
+    const upcomingGame = await ctx.prisma.fotballGame.findFirst({
+      where: {
+        date: {
+          gte: subHours(new Date(), 8)
+        }
+      },
+      include: {
+        ticketSalesRecords: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 1,
+        }
+      }
+    });
+
+    // Trigger new fetch of ticket sales
+    void fetch(`${env.NEXTAUTH_URL}/api/trpc/cron.syncTicketSales?cron-key=${env.CRON_KEY}`, { method: 'POST' });
 
     const [latestNewsPost] = data.newsPosts.nodes;
 
@@ -125,16 +146,19 @@ export const publicRouter = createTRPCRouter({
       }
     }
 
-    if (!upcomingEvent) {
-      return {
-        memberCount,
-        latestNewsPost: newsPost
-      };
-    }
     return {
       memberCount,
       latestNewsPost: newsPost,
-      upcomingEvent: {
+      upcomingGame: !!upcomingGame && upcomingGame.ticketSalesRecords[0] && {
+        homeTeam: upcomingGame.homeTeam,
+        awayTeam: upcomingGame.awayTeam,
+        date: upcomingGame.date,
+        location: upcomingGame.location,
+        ticketLink: upcomingGame.ticketLink,
+        ticketsSold: upcomingGame?.ticketSalesRecords[0].ticketsSold,
+        updatedAt: upcomingGame.ticketSalesRecords[0].createdAt,
+      },
+      upcomingEvent: !!upcomingEvent && {
         ...upcomingEvent,
         maxSeats: upcomingEvent?.buses.reduce((acc, bus) => acc + bus.seats, 0),
         bookedSeats: upcomingEvent?.buses.reduce(
