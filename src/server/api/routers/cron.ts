@@ -92,7 +92,7 @@ export const cronRouter = createTRPCRouter({
   syncTicketSales: cronProcedure.mutation(async ({ ctx }) => {
     console.info("Syncing ticket sales");
     const res = await makeRequest<MatchInfoResponse>(
-      'https://www.siriusfotboll.se/ajax/matchinfo/?security=34275a468a',
+      'https://www.siriusfotboll.se/ajax/matchinfo/?security=2b4b91126a',
       'GET'
     );
 
