@@ -91,8 +91,17 @@ export const cronRouter = createTRPCRouter({
   }),
   syncTicketSales: cronProcedure.mutation(async ({ ctx }) => {
     console.info("Syncing ticket sales");
+    const site = await fetch('https://www.siriusfotboll.se');
+    const siteHtml = await site.text();
+    const securityToken = siteHtml.match(/data-nonce="(.*)"/)?.[1];
+
+    if (!securityToken) {
+      console.error('Could not find security token');
+      return;
+    }
+
     const res = await makeRequest<MatchInfoResponse>(
-      'https://www.siriusfotboll.se/ajax/matchinfo/?security=2b4b91126a',
+      `https://www.siriusfotboll.se/ajax/matchinfo/?security=${securityToken}`,
       'GET'
     );
 
