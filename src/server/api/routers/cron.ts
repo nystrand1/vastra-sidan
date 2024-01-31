@@ -1,3 +1,4 @@
+import { fromUnixTime, subHours } from "date-fns";
 import { createTRPCRouter, cronProcedure } from "~/server/api/trpc";
 import {
   PATHS,
@@ -91,8 +92,17 @@ export const cronRouter = createTRPCRouter({
   }),
   syncTicketSales: cronProcedure.mutation(async ({ ctx }) => {
     console.info("Syncing ticket sales");
+    const site = await fetch('https://www.siriusfotboll.se');
+    const siteHtml = await site.text();
+    const securityToken = siteHtml.match(/data-nonce="(.*)"/)?.[1];
+
+    if (!securityToken) {
+      console.error('Could not find security token');
+      return;
+    }
+
     const res = await makeRequest<MatchInfoResponse>(
-      'https://www.siriusfotboll.se/ajax/matchinfo/?security=2b4b91126a',
+      `https://www.siriusfotboll.se/ajax/matchinfo/?security=${securityToken}`,
       'GET'
     );
 
@@ -103,10 +113,12 @@ export const cronRouter = createTRPCRouter({
     }
 
     const dateInMilliseconds = new Date(next.start * 1000);
-
+    // Sirius API is in UTC+1, meaning that we need to subtract one hour
+    const timezonedDate = subHours(dateInMilliseconds, 1);
+    console.log(timezonedDate);
     const existingGame = await ctx.prisma.fotballGame.findFirst({
       where: {
-        date: new Date(dateInMilliseconds),
+        date: timezonedDate,
       }
     });
 
@@ -114,7 +126,7 @@ export const cronRouter = createTRPCRouter({
       // Create game if it doesn't exist
       const game = await ctx.prisma.fotballGame.create({
         data: {
-          date: new Date(dateInMilliseconds),
+          date: timezonedDate,
           homeTeam: nextHome.home.name,
           awayTeam: nextHome.away.name,
           ticketLink: nextHome.tickets.link,

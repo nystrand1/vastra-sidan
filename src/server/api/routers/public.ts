@@ -95,6 +95,9 @@ export const publicRouter = createTRPCRouter({
     };
   }),
   getStartPage: publicProcedure.query(async ({ ctx }) => {
+    // Trigger new fetch of ticket sales
+    await fetch(`${env.WEBSITE_URL}/api/trpc/cron.syncTicketSales?cron-key=${env.CRON_KEY}`, { method: 'POST' });
+
     const memberCount = await getCardSkipperMemberCount();
     const upcomingEvent = await ctx.prisma.vastraEvent.findFirst({
       include: busesWithPaidPassengers,
@@ -127,9 +130,6 @@ export const publicRouter = createTRPCRouter({
         }
       }
     });
-
-    // Trigger new fetch of ticket sales
-    void fetch(`${env.WEBSITE_URL}/api/trpc/cron.syncTicketSales?cron-key=${env.CRON_KEY}`, { method: 'POST' });
 
     const [latestNewsPost] = data.newsPosts.nodes;
 
