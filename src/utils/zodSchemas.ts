@@ -65,6 +65,7 @@ export const signupSchema = z
     email: z.string().email({ message: "Felaktig email" }),
     firstName: z.string().min(1),
     lastName: z.string().min(1),
+    phone: z.string().min(1),
     password: z
       .string()
       .min(8, { message: "Lösenordet måste vara minst 8 tecken" })
@@ -113,3 +114,18 @@ export const memberSignupSchema = z
     }
     return true;
   });
+
+export const profileSchema = z.object({
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  email: z.string().email({ message: "Felaktig email" }),
+  phone: z.string().min(1),
+})
+
+export const updatePasswordSchema = z.object({
+  oldPassword: z.string().min(8).max(64),
+  newPassword: z.string().min(8).max(64),
+  confirmPassword: z.string().min(8).max(64)
+}).refine((x) => x.newPassword === x.confirmPassword, {
+  message: "Lösenorden matchar inte"
+});
