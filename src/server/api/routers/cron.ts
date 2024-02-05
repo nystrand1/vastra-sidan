@@ -115,7 +115,6 @@ export const cronRouter = createTRPCRouter({
     const dateInMilliseconds = new Date(next.start * 1000);
     // Sirius API is in UTC+1, meaning that we need to subtract one hour
     const timezonedDate = subHours(dateInMilliseconds, 1);
-    console.log(timezonedDate);
     const existingGame = await ctx.prisma.fotballGame.findFirst({
       where: {
         date: timezonedDate,
