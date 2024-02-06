@@ -151,8 +151,8 @@ export const cronRouter = createTRPCRouter({
         createdAt: 'desc',
       }
     });
-    // Don't update if the sales number is the same
-    if (latestTicketSale?.ticketsSold === nextHome.tickets.availible) {
+    // Don't update if the sales number is the same or lower
+    if (latestTicketSale && latestTicketSale?.ticketsSold >= nextHome.tickets.availible) {
       return "ok";
     }
     await ctx.prisma.ticketSalesRecord.create({
