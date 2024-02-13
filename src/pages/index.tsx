@@ -52,7 +52,7 @@ export default function Home() {
             contentClassName="flex flex-col justify-between h-full"
           >
             <p className="text-4xl">{member.count}</p>
-            <p className="text-sm text-gray-500">Medlemsmål 2024: 1000</p>
+            <p className="text-sm text-gray-500">Mål 2024, 1000 medlemmar</p>
             <p className="text-sm text-gray-500">Senast uppdaterad: {format(member.updatedAt, "yyyy-MM-dd HH:mm", { locale: sv })}</p>
             <ButtonLink href="https://apply.cardskipper.se/pxvo" target="_blank" className="w-full">Bli medlem</ButtonLink>
           </Card>
