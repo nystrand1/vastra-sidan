@@ -54,6 +54,8 @@ export const env = createEnv({
     // NEXT_PUBLIC_CLIENTVAR: z.string().min(1),
     NEXT_PUBLIC_WORDPRESS_URL: z.string(),
     NEXT_PUBLIC_ENABLE_MEMBERSHIPS: z.literal("true").or(z.literal("false")).default("false"),
+    NEXT_PUBLIC_ENABLE_LOGIN: z.literal("true").or(z.literal("false")).default("false"),
+    NEXT_PUBLIC_ENABLE_AWAYGAMES: z.literal("true").or(z.literal("false")).default("false"),
   },
 
   /**
@@ -82,6 +84,8 @@ export const env = createEnv({
     CARDSKIPPER_PASSWORD: process.env.CARDSKIPPER_PASSWORD,
     CARDSKIPPER_ORG_NUMBER: process.env.CARDSKIPPER_ORG_NUMBER,
     NEXT_PUBLIC_ENABLE_MEMBERSHIPS: process.env.NEXT_PUBLIC_ENABLE_MEMBERSHIPS,
+    NEXT_PUBLIC_ENABLE_LOGIN: process.env.NEXT_PUBLIC_ENABLE_LOGIN,
+    NEXT_PUBLIC_ENABLE_AWAYGAMES: process.env.NEXT_PUBLIC_ENABLE_AWAYGAMES,
     WEBSITE_URL: process.env.WEBSITE_URL,
   },
   /**

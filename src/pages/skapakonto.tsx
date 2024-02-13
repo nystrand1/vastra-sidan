@@ -1,24 +1,32 @@
 import { signIn } from "next-auth/react";
+import Error from "next/error";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { Button } from "~/components/atoms/Button/Button";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { InputField } from "~/components/atoms/InputField/InputField";
 import { api } from "~/utils/api";
+import { featureFlags } from "~/utils/featureFlags";
 import { signupSchema } from "~/utils/zodSchemas";
 
 export const SignupPage = () => {
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const { mutateAsync: createUser } = api.user.createNewUser.useMutation();
 
+  if (!featureFlags.ENABLE_LOGIN) {
+    return <Error statusCode={404} />
+  }
+
   const handleSignup = async () => {
     const signUpPayload = {
       firstName,
       lastName,
+      phone,
       email,
       password,
       confirmPassword
@@ -72,6 +80,15 @@ export const SignupPage = () => {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+          />
+           <InputField
+            type="tel"
+            label="Mobilnummer"
+            placeholder="Nummer..."
+            name="phone_login" 
+            required
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
           />
           <InputField 
             label="Lösenord" 

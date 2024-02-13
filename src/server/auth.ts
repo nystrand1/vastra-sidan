@@ -26,6 +26,8 @@ declare module "next-auth" {
       firstName: string;
       lastName: string;
       isMember: boolean;
+      phone: string;
+      email: string;
     } & DefaultSession["user"];
   }
 
@@ -34,6 +36,7 @@ declare module "next-auth" {
     firstName: string;
     lastName: string;
     isMember: boolean;
+    phone?: string;
   }
 }
 
@@ -49,6 +52,7 @@ declare module "next-auth/jwt" {
     jti?: string;
     firstName?: string;
     lastName?: string;
+    phone?: string;
   }
 }
 
@@ -74,6 +78,7 @@ export const authOptions: NextAuthOptions = {
         session.user.lastName = token.lastName ?? "";
         session.user.name = `${session.user.firstName} ${session.user.lastName}`;
         session.user.isMember = !!token.isMember;
+        session.user.phone = token.phone ?? "";
       }
       return session;
     },
@@ -83,6 +88,7 @@ export const authOptions: NextAuthOptions = {
         token.firstName = user.firstName;
         token.lastName = user.lastName;
         token.isMember = user.isMember;
+        token.phone = user.phone;
       }
       if (trigger === "update" && "isMember" in session) {
         const { isMember } = session as { isMember: boolean };
@@ -126,8 +132,14 @@ export const authOptions: NextAuthOptions = {
 
         if (user.password !== sha256(credentials.password)) return null;
         return {
-          ...user,
-          isMember: !!user.memberShips.length
+          id: user.id,
+          name: `${user.firstName} ${user.lastName}`,
+          email: user.email,
+          role: user.role,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          isMember: !!user.memberShips.length,
+          ...(user.phone && { phone: user.phone })
         };
       }
     })

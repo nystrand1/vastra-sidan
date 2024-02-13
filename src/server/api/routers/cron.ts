@@ -115,7 +115,6 @@ export const cronRouter = createTRPCRouter({
     const dateInMilliseconds = new Date(next.start * 1000);
     // Sirius API is in UTC+1, meaning that we need to subtract one hour
     const timezonedDate = subHours(dateInMilliseconds, 1);
-    console.log(timezonedDate);
     const existingGame = await ctx.prisma.fotballGame.findFirst({
       where: {
         date: timezonedDate,
@@ -152,8 +151,8 @@ export const cronRouter = createTRPCRouter({
         createdAt: 'desc',
       }
     });
-    // Don't update if the sales number is the same
-    if (latestTicketSale?.ticketsSold === nextHome.tickets.availible) {
+    // Don't update if the sales number is the same or lower
+    if (latestTicketSale && latestTicketSale?.ticketsSold >= nextHome.tickets.availible) {
       return "ok";
     }
     await ctx.prisma.ticketSalesRecord.create({
