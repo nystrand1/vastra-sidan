@@ -17,7 +17,7 @@ export default function Home() {
     return null;
   }
 
-  const { upcomingEvent, memberCount, latestNewsPost, upcomingGame } = startPage;
+  const { upcomingEvent, member, latestNewsPost, upcomingGame } = startPage;
 
   const desktopCols = upcomingEvent ? 'md:grid-cols-3' : 'md:grid-cols-2';
 
@@ -48,10 +48,12 @@ export default function Home() {
           )}
           <Card
             title="Antal medlemmar"
-            className={`w-full first-letter:space-y-0 md:h-52`}
+            className={`w-full first-letter:space-y-0`}
             contentClassName="flex flex-col justify-between h-full"
           >
-            <p className="text-4xl">{memberCount}</p>
+            <p className="text-4xl">{member.count}</p>
+            <p className="text-sm text-gray-500">Medlemsmål 2024: 1000</p>
+            <p className="text-sm text-gray-500">Senast uppdaterad: {format(member.updatedAt, "yyyy-MM-dd HH:mm", { locale: sv })}</p>
             <ButtonLink href="https://apply.cardskipper.se/pxvo" target="_blank" className="w-full">Bli medlem</ButtonLink>
           </Card>
           {upcomingGame && (

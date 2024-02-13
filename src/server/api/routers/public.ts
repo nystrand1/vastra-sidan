@@ -144,7 +144,10 @@ export const publicRouter = createTRPCRouter({
     }
 
     return {
-      memberCount,
+      member: {
+        count: memberCount,
+        updatedAt: new Date(),
+      },
       latestNewsPost: newsPost,
       upcomingGame: !!upcomingGame && upcomingGame.ticketSalesRecords[0] && {
         homeTeam: upcomingGame.homeTeam,
