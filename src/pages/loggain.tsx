@@ -1,10 +1,12 @@
 import { signIn } from "next-auth/react";
+import Error from "next/error";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Button } from "~/components/atoms/Button/Button";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { InputField } from "~/components/atoms/InputField/InputField";
+import { featureFlags } from "~/utils/featureFlags";
 import { loginSchema } from "~/utils/zodSchemas";
 
 
@@ -15,12 +17,17 @@ export const LoginPage = () => {
   const [password, setPassword] = useState("");
   const router = useRouter();
 
+  
   useEffect(() => {
     const loginError = router.query['error'];
     if (loginError === 'CredentialsSignin') {
       toast.error("Felaktig inloggning, försök igen!")
     }
   }, [router.query]);
+  
+  if (!featureFlags.ENABLE_LOGIN) {
+    return <Error statusCode={404} />
+  }
 
   const handleLogin = async () => {
     const loginPayload = loginSchema.safeParse({ email, password });

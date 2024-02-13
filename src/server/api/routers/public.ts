@@ -10,7 +10,7 @@ import { createTRPCRouter, membershipProcedure, publicProcedure } from "~/server
 import { getCardSkipperMemberCount } from "~/server/utils/cardSkipper";
 import { GetNewsDocument } from "~/types/wordpresstypes/graphql";
 import { parseDateString, stripHtmlTags } from "./wordpress";
-import { env } from "~/env.mjs";
+import { featureFlags } from "~/utils/featureFlags";
 
 const busesWithPaidPassengers = {
   buses: {
@@ -95,18 +95,15 @@ export const publicRouter = createTRPCRouter({
     };
   }),
   getStartPage: publicProcedure.query(async ({ ctx }) => {
-    // Trigger new fetch of ticket sales
-    await fetch(`${env.WEBSITE_URL}/api/trpc/cron.syncTicketSales?cron-key=${env.CRON_KEY}`, { method: 'POST' });
-
     const memberCount = await getCardSkipperMemberCount();
-    const upcomingEvent = await ctx.prisma.vastraEvent.findFirst({
+    const upcomingEvent = featureFlags.ENABLE_AWAYGAMES ? await ctx.prisma.vastraEvent.findFirst({
       include: busesWithPaidPassengers,
       where: {
         date: {
           gte: subHours(new Date(), 8)
         }
       }
-    });
+    }) : null;
 
     const { data } = await ctx.apolloClient.query({
       query: GetNewsDocument,

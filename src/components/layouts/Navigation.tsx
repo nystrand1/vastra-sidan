@@ -5,6 +5,7 @@ import { useState } from "react";
 import { featureFlags } from "~/utils/featureFlags";
 import { Button } from "../atoms/Button/Button";
 import { ButtonLink } from "../atoms/ButtonLink/ButtonLink";
+import { env } from "~/env.mjs";
 
 interface UserMenuProps {
   className?: string
@@ -67,7 +68,9 @@ export const Navigation = () => {
         </Link>
         <div className="hidden md:flex flex-1 ml-10 flex-row space-x-4">
           <Link className="hover:text-gray-200" href="https://apply.cardskipper.se/pxvo" target="_blank">Bli medlem</Link>
-          <Link className="hover:text-gray-200" href="/bortaresor">Bortaresor</Link>
+          {featureFlags.ENABLE_AWAYGAMES && (
+            <Link className="hover:text-gray-200" href="/bortaresor">Bortaresor</Link>
+          )}
           <Link className="hover:text-gray-200" href="/nyheter">Nyheter</Link>
           <Link className="hover:text-gray-200" href="/bortaguiden">Bortaguiden</Link>
           <Link className="hover:text-gray-200" href="/kronikor">Krönikor</Link>
@@ -82,7 +85,7 @@ export const Navigation = () => {
               <p>Bli medlem</p>
             </ButtonLink>
           )}
-          {!sessionData?.user && (
+          {!sessionData?.user && featureFlags.ENABLE_LOGIN && (
             <>
               <ButtonLink className="!mb-0 hidden md:block mr-3" href="/skapakonto">
                 <p>Skapa konto</p>
@@ -120,9 +123,11 @@ export const Navigation = () => {
             <li className="divide-y divide-gray-100">
               <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="https://apply.cardskipper.se/pxvo" target="_blank">Bli Medlem</Link>
             </li>
-            <li className="divide-y divide-gray-100">
-              <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/bortaresor">Bortaresor</Link>
-            </li>
+            {featureFlags.ENABLE_AWAYGAMES && (
+              <li className="divide-y divide-gray-100">
+                <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/bortaresor">Bortaresor</Link>
+              </li>
+            )}
             <li className="divide-y divide-gray-100">
               <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/nyheter">Nyheter</Link>
             </li>
@@ -144,7 +149,7 @@ export const Navigation = () => {
             <li className="divide-y divide-gray-100">
               <Link href="/omoss" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Om oss</Link>
             </li>
-            {!sessionData?.user && (
+            {!sessionData?.user && featureFlags.ENABLE_LOGIN && (
               <li className="divide-y divide-gray-100">
                 <Link href="/skapakonto" className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" aria-current="page">Skapa konto</Link>
               </li>

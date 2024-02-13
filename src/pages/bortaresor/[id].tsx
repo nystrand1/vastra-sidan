@@ -7,6 +7,7 @@ import { awayGameRules } from "~/components/atoms/Accordion/accordionContent";
 import { AwayGameForm } from "~/components/common/AwayGameForm/AwayGameForm";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
+import { featureFlags } from "~/utils/featureFlags";
 
 
 export const BusPage = () => {
@@ -67,6 +68,11 @@ export const getStaticPaths = () => {
 
 export const getStaticProps = async (props: GetStaticPropsContext) => {
   const id = props.params?.id as string;
+  if (!featureFlags.ENABLE_AWAYGAMES) {
+    return {
+      notFound: true
+    }
+  }
   if (!id) {
     return { notFound: true };
   }

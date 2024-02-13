@@ -6,9 +6,11 @@ import { Button } from "~/components/atoms/Button/Button";
 import { api } from "~/utils/api";
 import { PATHS } from "~/utils/constants";
 import { createSSRHelper } from "~/utils/createSSRHelper";
+import { featureFlags } from "~/utils/featureFlags";
 
 export default function AwaygamesPage() {
   const { data: awayGames, isLoading: isLoadingAwayGames } = api.public.getAwayGames.useQuery();
+
 
   const seoDescription = "Bussresor med Västra Sidan. Som medlem åker du billigare. Häng med och stötta Sirius på bortaplan!";
 
@@ -72,6 +74,12 @@ export default function AwaygamesPage() {
 
 
 export async function getStaticProps() {
+  if (!featureFlags.ENABLE_AWAYGAMES) {
+    return {
+      notFound: true
+    }
+  }
+
   const ssrHelper = await createSSRHelper();
 
   await ssrHelper.public.getAwayGames.prefetch();
