@@ -2,7 +2,6 @@
 import { type HTMLReactParserOptions } from 'html-react-parser';
 import parse from "html-react-parser"
 import Image from 'next/image';
-import { env } from '~/env.mjs';
 interface WysiwygProps {
   content: string
 }
@@ -10,7 +9,7 @@ interface WysiwygProps {
 // Utilize html-react-parser to parse the content and replace img tags with Next Image components.
 const options: HTMLReactParserOptions = {
   replace: (domNode) => {
-    const shouldReplace = process.env.VERCEL_ENV === 'production' || env.USE_DEV_MODE === 'true'
+    const shouldReplace = process.env.VERCEL_ENV === 'production' || !process.env.VERCEL_URL
     // Look for an img tag and replace it with Image.
     if (shouldReplace && 'name' in domNode && 'attribs' in domNode && domNode.name === "img") {
       const { src, alt, width, height } = domNode.attribs
