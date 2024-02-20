@@ -1,5 +1,3 @@
-import { env } from "./src/env.mjs";
-
 /**
  * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially useful
  * for Docker builds.
@@ -36,7 +34,7 @@ const config = {
     return [
       {
         source: '/_project/_media/_gfx/:path*',
-        destination: `${env.NEXT_PUBLIC_WORDPRESS_URL}/wp-content/uploads/gamla_bilder/:path*`,
+        destination: `${process.env.NEXT_PUBLIC_WORDPRESS_URL}/wp-content/uploads/gamla_bilder/:path*`,
         basePath: false,
       },
     ]
