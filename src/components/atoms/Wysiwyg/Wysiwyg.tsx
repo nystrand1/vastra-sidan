@@ -20,6 +20,7 @@ const options: HTMLReactParserOptions = {
           height={Number(height) || 400}
           alt={alt || ''}
           objectFit="cover"
+          className='w-full h-full aspect-auto rounded-md'
         />
       )
     }
