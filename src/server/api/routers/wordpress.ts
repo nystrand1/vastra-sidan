@@ -4,7 +4,7 @@ import { format, parseISO } from 'date-fns'
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { bandyDivisions, fotballDivisions } from "~/server/utils/awayGuideSorter";
-import sv from 'date-fns/locale/sv'
+import { sv } from 'date-fns/locale/sv'
 
 export const parseDateString = (dateString: string, dateFormat = "d MMMM yyyy HH:mm") => {
   const date = parseISO(dateString);

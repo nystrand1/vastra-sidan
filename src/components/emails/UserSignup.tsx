@@ -26,8 +26,6 @@ export const UserSignup = ({
             <Hr />
             <Container className="flex items-center justify-center">
               <Button
-                pX={20}
-                pY={12}
                 href={verifyUrl}
                 className="bg-blue-500 hover:bg-blue-700 font-bold py-2 px-4 rounded text-white"
               >

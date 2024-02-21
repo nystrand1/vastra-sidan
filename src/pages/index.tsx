@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import sv from "date-fns/locale/sv";
+import { sv } from "date-fns/locale/sv";
 import Head from "next/head";
 import Card from "~/atoms/CardLink/CardLink";
 import { Progressbar } from "~/atoms/Progressbar/Progressbar";

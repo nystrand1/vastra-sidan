@@ -8,9 +8,9 @@ import AdminLayout from "~/components/layouts/AdminLayout";
 import Layout from "~/components/layouts/Layout";
 import "~/styles/globals.css";
 import { api } from "~/utils/api";
-import sv from 'date-fns/locale/sv'
-import setDefaultOptions from "date-fns/setDefaultOptions";
-setDefaultOptions({ locale: sv })
+import { setDefaultOptions } from "date-fns";
+import { sv } from "date-fns/locale/sv";
+setDefaultOptions({ locale: sv });
  
 const MyApp: AppType<{ session: Session | null}> = ({
   Component,

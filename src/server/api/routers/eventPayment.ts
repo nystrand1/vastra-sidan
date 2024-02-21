@@ -85,7 +85,7 @@ const sendConfirmationEmail = async (
   const cancellationUrl = `${env.CANCELLATION_URL}?token=${
     participant?.cancellationToken || ""
   }`;
-  return await resend.sendEmail({
+  return await resend.emails.send({
     from: env.BOOKING_EMAIL,
     to: env.USE_DEV_MODE === "true" ? "filip.nystrand@gmail.com" : participant.email,
     subject: `Anmälan till ${participant?.event?.name}`,
