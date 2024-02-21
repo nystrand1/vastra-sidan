@@ -21,6 +21,7 @@ const config = {
     defaultLocale: "sv-SE",
   },
   images: {
+    minimumCacheTTL: 60 * 60 * 24 * 365, // 1 year
     remotePatterns: [
       {
         hostname: "*.vastrasidan.se",
