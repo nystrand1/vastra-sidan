@@ -189,7 +189,7 @@ export const memberPaymentRouter = createTRPCRouter({
           }
 
           // Send confirmation email
-          await resend.sendEmail({
+          await resend.emails.send({
             from: env.BOOKING_EMAIL,
             to: env.USE_DEV_MODE === "true" ? "filip.nystrand@gmail.com" : newPayment.user.email,
             subject: "Tack för att du blivit medlem i Västra Sidan",

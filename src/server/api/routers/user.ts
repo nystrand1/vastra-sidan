@@ -119,7 +119,7 @@ export const userRouter = createTRPCRouter({
         }
       });
 
-      await resend.sendEmail({
+      await resend.emails.send({
         from: env.BOOKING_EMAIL,
         to: env.USE_DEV_MODE === "true" ? "filip.nystrand@gmail.com" : email,
         subject: "Bekräfta email din email",
