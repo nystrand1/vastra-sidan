@@ -30,7 +30,7 @@ export const env = createEnv({
     BOOKING_EMAIL: z.string().email(),
     LOCAL_SWISH_CERTS: z.literal("true").or(z.literal("false")).default("true"),
     SWISH_CERT: process.env.VERCEL_URL ? z.string().min(1) : z.string().min(1).optional(),
-    SWISH_KEY: process.env.VERCEL_URL ? z.string().min(1) : z.string().min(1).optional(),
+    SWISH_KEY: (!!process.env.VERCEL_ENV && process.env.VERCEL_ENV !== 'production') ? z.string().min(1) : z.string().min(1).optional(),
     SWISH_CA: process.env.VERCEL_URL ? z.string().min(1) : z.string().min(1).optional(),
     USE_DEV_MODE: z.literal("true").or(z.literal("false")).default("false"),
     CARDSKIPPER_USERNAME: z.string().min(1),
