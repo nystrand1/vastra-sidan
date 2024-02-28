@@ -10,21 +10,11 @@ const certPath = path.resolve(
 const keyPath = path.resolve(
   "./swishCerts/Swish_Merchant_TestCertificate_1234679304.key"
 );
-const caPath = path.resolve("./swishCerts/Swish_TLS_RootCA.pem");
+const caPath = path.resolve("./ssl/Swish_TLS_RootCA.pem");
 
 const swishAgent = new https.Agent({
-  cert:
-    env.LOCAL_SWISH_CERTS === "true"
-      ? fs.readFileSync(certPath, { encoding: "utf8" })
-      : env.SWISH_CERT,
-  key:
-    env.LOCAL_SWISH_CERTS === "true"
-      ? fs.readFileSync(keyPath, { encoding: "utf8" })
-      : env.SWISH_KEY,
-  ca:
-    env.LOCAL_SWISH_CERTS === "true"
-      ? fs.readFileSync(caPath, { encoding: "utf8" })
-      : env.SWISH_CA
+  pfx: fs.readFileSync(process.cwd() + "/ssl/swish_1230595116.p12"),
+  passphrase: env.SWISH_PASSPHRASE,
 });
 
 export const swishClient = axios.create({
