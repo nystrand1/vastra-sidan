@@ -13,7 +13,7 @@ const keyPath = path.resolve(
 const caPath = path.resolve("./ssl/Swish_TLS_RootCA.pem");
 
 const swishAgent = new https.Agent({
-  pfx: fs.readFileSync(process.cwd() + "/ssl/Swish_key.p12", { encoding: "utf8" }),
+  pfx: fs.readFileSync(process.cwd() + "/ssl/Swish_key.p12"),
   passphrase: env.SWISH_PASSPHRASE,
 });
 
