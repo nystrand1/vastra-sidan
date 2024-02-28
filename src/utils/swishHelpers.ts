@@ -13,17 +13,8 @@ const keyPath = path.resolve(
 const caPath = path.resolve("./ssl/Swish_TLS_RootCA.pem");
 
 const swishAgent = new https.Agent({
-  cert:
-    env.LOCAL_SWISH_CERTS === "true"
-      ? fs.readFileSync(certPath, { encoding: "utf8" })
-      : env.SWISH_CERT,
-  key:
-    env.LOCAL_SWISH_CERTS === "true"
-      ? fs.readFileSync(keyPath, { encoding: "utf8" })
-      : env.SWISH_KEY,
-  ca: fs.readFileSync(process.cwd() + "/ssl/Swish_TLS_RootCA.pem", { encoding: "utf8" }),
+  pfx: fs.readFileSync(process.cwd() + "/ssl/Swish_key.p12", { encoding: "utf8" }),
   passphrase: env.SWISH_PASSPHRASE,
-  rejectUnauthorized: false
 });
 
 export const swishClient = axios.create({
