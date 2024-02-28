@@ -70,7 +70,7 @@ export const createPaymentIntentPayload = ({
 }: CreatePaymentIntentPayload) => ({
   payeePaymentReference: createPaymentReference(),
   callbackUrl: `${env.API_URL}/payment/${callbackEndPoint}`,
-  payeeAlias: "1230595116",
+  payeeAlias: env.SWISH_NUMBER,
   currency: "SEK",
   message,
   amount,
