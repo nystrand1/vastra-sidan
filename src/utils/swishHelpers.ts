@@ -21,7 +21,7 @@ const swishAgent = new https.Agent({
     env.LOCAL_SWISH_CERTS === "true"
       ? fs.readFileSync(keyPath, { encoding: "utf8" })
       : env.SWISH_KEY,
-  ca: fs.readFileSync(caPath, { encoding: "utf8" }),
+  ca: fs.readFileSync('./ssl/Swish_TLS_RootCA.pem', { encoding: "utf8" }),
   passphrase: env.SWISH_PASSPHRASE
 });
 
