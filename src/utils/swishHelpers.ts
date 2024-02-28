@@ -21,8 +21,9 @@ const swishAgent = new https.Agent({
     env.LOCAL_SWISH_CERTS === "true"
       ? fs.readFileSync(keyPath, { encoding: "utf8" })
       : env.SWISH_KEY,
-  ca: fs.readFileSync(process.cwd() + "/ssl/Swish_TLS_RootCA.pem", { encoding: "utf8" }),
-  passphrase: env.SWISH_PASSPHRASE
+  ca: fs.readFileSync(process.cwd() + "/utils/ssl/Swish_TLS_RootCA.pem", { encoding: "utf8" }),
+  passphrase: env.SWISH_PASSPHRASE,
+  rejectUnauthorized: false
 });
 
 export const swishClient = axios.create({
