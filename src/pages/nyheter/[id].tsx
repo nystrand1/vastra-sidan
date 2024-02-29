@@ -54,6 +54,11 @@ export default function NewsPage() {
 }
 
 export const getStaticPaths = async () => {
+  // TEMP disable SSR
+  return {
+    paths: [],
+    fallback: "blocking"
+  }
   const ssrHelper = await createSSRHelper();
   const news = await ssrHelper.wordpress.getNews.fetch();
   const paths = news?.map(({ slug }) => ({ params: { id: slug } }));

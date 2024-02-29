@@ -48,6 +48,11 @@ export default function SeasonChroniclePage() {
 }
 
 export const getStaticPaths = async () => {
+  // TEMP disable SSR
+  return {
+    paths: [],
+    fallback: "blocking"
+  }
   const ssrHelper = await createSSRHelper();
   const chronicles = await ssrHelper.wordpress.getSeasonChronicles.fetch();
   const paths = chronicles.slugs?.map((slug) => ({ params: { id: slug } }));
