@@ -1,4 +1,5 @@
 import Head from "next/head";
+import Link from "next/link";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
@@ -22,6 +23,14 @@ export const AboutUsPage = () => {
       </Head>
       <div>
         <h1 className="text-center mb-4 text-5xl">Om oss</h1>
+        <div className="flex justify-center space-x-5 py-6 text-lg underline underline-offset-4">
+          <Link className="hover:text-gray-200" href="/omoss/stadgar">
+            Stadgar
+          </Link>
+          <Link className="hover:text-gray-200" href="/bortaresor/regler">
+            Regler för bortaresor
+          </Link>
+        </div>
         <div className="grid md:grid-cols-2 gap-4 md:items-stretch flex-wrap justify-center w-full md:w-10/12 m-auto">
           <Card
             title="Styrelsen"
