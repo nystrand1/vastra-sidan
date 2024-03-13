@@ -121,11 +121,7 @@ export default function AwayGamePage() {
 }
 
 export const getStaticPaths = async () => {
-  // TEMP disable SSR
-  return {
-    paths: [],
-    fallback: "blocking"
-  }
+
   const ssrHelper = await createSSRHelper();
   const awayGames = await ssrHelper.wordpress.getAwayGuides.fetch();
   const paths = awayGames.slugs?.map((slug) => ({ params: { id: slug } }));
