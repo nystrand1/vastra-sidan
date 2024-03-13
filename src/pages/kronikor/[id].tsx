@@ -43,11 +43,7 @@ export default function ChroniclePage() {
 }
 
 export const getStaticPaths = async () => {
-  // TEMP disable SSR
-  return {
-    paths: [],
-    fallback: "blocking"
-  }
+
   const ssrHelper = await createSSRHelper();
   const chronicles = await ssrHelper.wordpress.getChronicles.fetch();
   const paths = chronicles?.map(({ slug }) => ({ params: { id: slug } }));
