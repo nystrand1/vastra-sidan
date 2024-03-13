@@ -116,10 +116,10 @@ export const memberSignupSchema = z
   });
 
 export const profileSchema = z.object({
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
+  firstName: z.string().min(1, { message: "Förnamn måste vara minst 1 tecken" }),
+  lastName: z.string().min(1, { message: "Efternamn måste vara minst 1 tecken" }),
   email: z.string().email({ message: "Felaktig email" }),
-  phone: z.string().min(1),
+  phone: z.string().min(1, { message: "Felaktigt nummer" }),
 })
 
 export const updatePasswordSchema = z.object({

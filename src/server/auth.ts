@@ -90,9 +90,12 @@ export const authOptions: NextAuthOptions = {
         token.isMember = user.isMember;
         token.phone = user.phone;
       }
-      if (trigger === "update" && "isMember" in session) {
-        const { isMember } = session as { isMember: boolean };
-        token.isMember = isMember;
+      if (trigger === "update") {
+        const { user: sessionUser } = session as { user: typeof user };
+        token = {
+          ...token,
+          ...sessionUser,
+        } as typeof token
       }
       return token;
     }
@@ -129,7 +132,6 @@ export const authOptions: NextAuthOptions = {
           }
         });
         if (!user) return null;
-
         if (user.password !== sha256(credentials.password)) return null;
         return {
           id: user.id,

@@ -13,7 +13,7 @@ import {
 import { sha256 } from "~/server/auth";
 import { isSamePhoneNumber } from "~/server/utils/helpers";
 import { friendlyMembershipNames } from "~/server/utils/membership";
-import { signupSchema } from "~/utils/zodSchemas";
+import { profileSchema, signupSchema } from "~/utils/zodSchemas";
 
 const membershipFormatter = (membership: Membership) => ({
   id: membership.id,
@@ -221,6 +221,40 @@ export const userRouter = createTRPCRouter({
         },
         data: {
           emailVerified: new Date()
+        }
+      });
+      return {
+        status: 200
+      };
+    }),
+  updateProfile: userProcedure
+    .input(profileSchema)
+    .mutation(async ({ ctx, input }) => {
+      console.log('test', ctx.session.user);
+      if (!ctx.session.user.email) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Bad user"
+        });
+      }
+      const user = await ctx.prisma.user.findFirst({
+        where: {
+          email: ctx.session.user.email
+        }
+      })
+      console.log('user', ctx.session.user.email);
+      if (!user) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Bad user"
+        });
+      }
+      await ctx.prisma.user.update({
+        where: {
+          email: ctx.session.user.email
+        },
+        data: {
+          ...input
         }
       });
       return {
