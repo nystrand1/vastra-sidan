@@ -11,16 +11,14 @@ export const AwayGameRules = () => {
         <li>
           <h5 className="text-xl">Anmälan</h5>
           <p>
-            Anmälan till resa kan endast göras via formuläret på vastrasidan.se/bortaresor
-            Betalning skall ske omgående om det inte tydligt framgår att du ska vänta med betalning pga.
-            osäkerhet om resan blir av.
+            Anmälan till resa görs via Cardskipper eller mejl till info@vastrasidan.se, om inget annat uppges. 
+            Betalning skall ske omgående om det inte tydligt framgår att du ska vänta med betalning pga. osäkerhet om resan blir av.
           </p>
         </li>
         <li>
           <h5 className="text-xl">Avbokning</h5>
           <p>
-            Avbokning ska ske via kontakt med styrelsen (tex via mejl på <a href="mailto:info@vastrasidan.se">info@vastrasidan.se</a>, eller våra
-            sociala medier) innan avresa annars debiteras resenären fullt pris.
+            Avbokning ska ske via kontakt med styrelsen via mejl på <a href="mailto:info@vastrasidan.se">info@vastrasidan.se</a> innan avresa.
           </p>
         </li>
       </ul>
@@ -41,9 +39,7 @@ export const AwayGameRules = () => {
         <li>
           <h5 className="text-xl">Bussbiljett</h5>
           <p>
-            Swishbetalningen är din bussbiljett, och skall visas upp vid ombordstigning på bussen. För att
-            underlätta för bussvärden skall du betala din resa innan du går ombord på bussen. Resenären
-            är även skyldig till att kunna uppvisa medlemskap i Västra Sidan för att få betala medlemspris.
+            Biljett för resan i Cardskipper eller din Swishbetalning är din bussbiljett, och skall visas upp vid ombordstigning på bussen
           </p>
         </li>
         <li>
