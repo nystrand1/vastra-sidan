@@ -31,6 +31,10 @@ export const AboutUsPage = () => {
             Regler för bortaresor
           </Link>
         </div>
+        <div className="flex justify-center space-x-5 pb-6 text-lg">
+          <p className="md:hidden">Swishnummer: <Link target="_blank" className="hover:text-gray-200 underline underline-offset-4" href="https://app.swish.nu/1/p/sw/?sw=1232314342">123 231 43 42</Link></p>
+          <p className="hidden md:block">Swishnummer: <span className="underline underline-offset-4">123 231 43 42</span></p>
+        </div>
         <div className="grid md:grid-cols-2 gap-4 md:items-stretch flex-wrap justify-center w-full md:w-10/12 m-auto">
           <Card
             title="Styrelsen"
