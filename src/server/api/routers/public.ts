@@ -152,7 +152,7 @@ export const publicRouter = createTRPCRouter({
       upcomingGame: !!upcomingGame && upcomingGame.ticketSalesRecords[0] && {
         homeTeam: upcomingGame.homeTeam,
         awayTeam: upcomingGame.awayTeam,
-        date: upcomingGame.date,
+        date: subHours(upcomingGame.date, 1), // TODO: Sirius API does timezone conversion weirdly
         location: upcomingGame.location,
         ticketLink: upcomingGame.ticketLink,
         ticketsSold: upcomingGame?.ticketSalesRecords[0].ticketsSold,
