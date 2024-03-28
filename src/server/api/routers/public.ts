@@ -4,7 +4,7 @@ import {
   SwishRefundStatus
 } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
-import { subHours } from "date-fns";
+import { format, subHours } from "date-fns";
 import { z } from "zod";
 import { createTRPCRouter, membershipProcedure, publicProcedure } from "~/server/api/trpc";
 import { getCardSkipperMemberCount } from "~/server/utils/cardSkipper";
@@ -167,5 +167,48 @@ export const publicRouter = createTRPCRouter({
         )
       }
     };
+  }),
+  getHomeGames: publicProcedure.query(async ({ ctx }) => {
+    const res = await ctx.prisma.fotballGame.findMany({
+      select: {
+        date: true,
+        id: true,
+        awayTeam: true,
+        homeTeam: true,
+      },
+      orderBy: {
+        date: 'desc'
+      }      
+    });
+
+    return res.map((game) => ({
+      ...game,
+      date: format(subHours(game.date, 1), 'yyyy-MM-dd HH:mm')
+    }));
+  }),
+  getTicketStatistics: publicProcedure
+  .input(z.object({ gameId: z.string() }))
+  .query(async ({ input, ctx }) => {
+    const res = await ctx.prisma.ticketSalesRecord.findMany({
+      where: {
+        fotballGameId: input.gameId
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+      select: {
+        ticketsSold: true,
+        createdAt: true,
+      }
+    });
+
+    if (!res) {
+      throw new TRPCError({ code: "NOT_FOUND" });
+    }
+
+    return res.map((record) => ({
+      'Sålda biljetter': record.ticketsSold,
+      createdAt: format(record.createdAt, 'yyyy-MM-dd HH:mm'),
+    }));
   }),
 });
