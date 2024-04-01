@@ -1,4 +1,4 @@
-import { fromUnixTime, subHours } from "date-fns";
+import { subHours } from "date-fns";
 import { createTRPCRouter, cronProcedure } from "~/server/api/trpc";
 import {
   PATHS,
@@ -143,18 +143,18 @@ export const cronRouter = createTRPCRouter({
       return "ok";
     }
 
-    const latestTicketSale = await ctx.prisma.ticketSalesRecord.findFirst({
-      where: {
-        fotballGameId: existingGame.id,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      }
-    });
-    // Don't update if the sales number is the same or lower
-    if (latestTicketSale && latestTicketSale?.ticketsSold >= nextHome.tickets.availible) {
-      return "ok";
-    }
+    // const latestTicketSale = await ctx.prisma.ticketSalesRecord.findFirst({
+    //   where: {
+    //     fotballGameId: existingGame.id,
+    //   },
+    //   orderBy: {
+    //     createdAt: 'desc',
+    //   }
+    // });
+    // // Don't update if the sales number is the same or lower
+    // if (latestTicketSale && latestTicketSale?.ticketsSold >= nextHome.tickets.availible) {
+    //   return "ok";
+    // }
     await ctx.prisma.ticketSalesRecord.create({
       data: {
         ticketsSold: nextHome.tickets.availible,
