@@ -1,10 +1,12 @@
 import { format } from "date-fns";
+import { GetStaticPropsContext } from "next";
 import Head from "next/head";
 import { useEffect, useState } from "react";
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { api } from "~/utils/api";
+import { createSSRHelper } from "~/utils/createSSRHelper";
 
 
 
@@ -41,7 +43,7 @@ export const StatisticsPage = () => {
             label="Välj match"
             name="game"
             className="w-full md:w-96"
-            options={homeGames.map((x) => ({ label: `${x.homeTeam} - ${x.awayTeam} ${x.date}`, value: x.id }))}
+            options={homeGames.map((x) => ({ label: `${x.homeTeam} - ${x.awayTeam} ${format(x.date, 'yyyy-MM-dd HH:mm')}`, value: x.id }))}
             onChange={(e) => setSelectedGame(e.target.value)}
             />
           {ticketSales && (
@@ -49,11 +51,12 @@ export const StatisticsPage = () => {
               <LineChart
                 data={ticketSales} 
               >
-                <XAxis dataKey="createdAt" tickFormatter={(value) => format(value as Date, 'dd MMM')} />
+                <XAxis dataKey="createdAt" tickFormatter={(value) => format(value, 'dd MMM')} />
                 <YAxis />
                 <Tooltip 
                   wrapperClassName="!bg-slate-800 rounded-lg" 
                   labelClassName="bg-slate-800 text-white"
+                  labelFormatter={(value) => format(value, 'yyyy-MM-dd HH:mm')}                  
                   />
                 <Line dot={{ display: 'none' }} type="monotone" dataKey="Sålda biljetter" stroke="#3b82f6" />
               </LineChart>
@@ -66,3 +69,18 @@ export const StatisticsPage = () => {
 };
 
 export default StatisticsPage;
+
+export const getStaticProps = async () => {
+  const ssg = await createSSRHelper();
+
+  const homeGames = await ssg.public.getHomeGames.fetch();
+
+  const promises = homeGames.map((game) => ssg.public.getTicketStatistics.prefetch({ gameId: game.id }));
+  await Promise.all(promises);
+  return {
+    props: {
+      trpcState: ssg.dehydrate(),
+    },
+    revalidate: 300,    
+  }
+};

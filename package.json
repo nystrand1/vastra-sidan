@@ -29,6 +29,7 @@
     "@trpc/server": "^10.45.1",
     "axios": "^1.6.7",
     "date-fns": "^3.3.1",
+    "date-fns-tz": "^2.0.1",
     "domhandler": "^5.0.3",
     "fast-xml-parser": "^4.3.2",
     "fuse.js": "^7.0.0",
