@@ -1,6 +1,5 @@
 import { Role, SwishPaymentStatus, SwishRefundStatus, type Membership, type Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
-import { format } from "date-fns";
 import { Resend } from "resend";
 import { z } from "zod";
 import UserSignup from "~/components/emails/UserSignup";
@@ -13,6 +12,7 @@ import {
 import { sha256 } from "~/server/auth";
 import { isSamePhoneNumber } from "~/server/utils/helpers";
 import { friendlyMembershipNames } from "~/server/utils/membership";
+import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { profileSchema, signupSchema } from "~/utils/zodSchemas";
 
 const membershipFormatter = (membership: Membership) => ({
@@ -83,7 +83,7 @@ const eventFormatter = (awayGame: UserData['eventParticipations'][number]) => ({
   payedAt: awayGame?.swishPayments[0]?.createdAt,
   payAmount: awayGame?.swishPayments[0]?.amount,
   cancellationToken: awayGame.cancellationToken,
-  cancellationDate: awayGame.cancellationDate ? format(awayGame.cancellationDate, "yyyy-MM-dd HH:mm") : null,
+  cancellationDate: awayGame.cancellationDate ? formatSwedishTime(awayGame.cancellationDate, "yyyy-MM-dd HH:mm") : null,
   isPayer: isSamePhoneNumber(awayGame.phone, awayGame.swishPayments[0]?.payerAlias || ''),
 })
 

@@ -1,8 +1,8 @@
 import { Button } from '@react-email/button';
 import { Container, Head, Hr, Img, Section, Tailwind, Text } from "@react-email/components";
 import { Html } from '@react-email/html';
-import { format } from "date-fns";
 import { type ParticipantWithBusAndEvent } from "~/server/api/routers/eventPayment";
+import { formatSwedishTime } from '~/utils/formatSwedishTime';
 
 interface EventSignUpProps {
   participant: ParticipantWithBusAndEvent;
@@ -68,8 +68,8 @@ export const EventSignUp = ({
     event
   } = participant;
 
-  const formattedDate = format(event.date, 'yyyy-MM-dd');
-  const departureTime = format(event.date, 'HH:mm');
+  const formattedDate = formatSwedishTime(event.date, 'yyyy-MM-dd');
+  const departureTime = formatSwedishTime(event.date, 'HH:mm');
 
   const {
     name: eventName,

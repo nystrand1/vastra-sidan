@@ -1,4 +1,3 @@
-import { format } from "date-fns";
 import { sv } from "date-fns/locale/sv";
 import Head from "next/head";
 import Card from "~/atoms/CardLink/CardLink";
@@ -9,6 +8,7 @@ import { Wysiwyg } from "~/components/atoms/Wysiwyg/Wysiwyg";
 import { api } from "~/utils/api";
 import { PATHS } from "~/utils/constants";
 import { createSSRHelper } from "~/utils/createSSRHelper";
+import { formatSwedishTime } from "~/utils/formatSwedishTime";
 
 export default function Home() {
   const { data: startPage } = api.public.getStartPage.useQuery();
@@ -51,7 +51,7 @@ export default function Home() {
           >
             <p className="text-4xl">{member.count}</p>
             <p className="text-sm text-gray-500">Mål 2024, 1000 medlemmar</p>
-            <p className="text-sm text-gray-500">Senast uppdaterad: {format(member.updatedAt, "yyyy-MM-dd HH:mm", { locale: sv })}</p>
+            <p className="text-sm text-gray-500">Senast uppdaterad: {formatSwedishTime(member.updatedAt, "yyyy-MM-dd HH:mm", { locale: sv })}</p>
             <ButtonLink href="https://apply.cardskipper.se/pxvo" target="_blank" className="w-full">Bli medlem</ButtonLink>
           </Card>
           {upcomingGame && (
@@ -60,9 +60,9 @@ export default function Home() {
               className={`w-full first-letter:space-y-0 col-start-1`}
               contentClassName="flex flex-col justify-between h-full"
             >
-              <p className="text-md">{format(upcomingGame.date, "dd MMMM yyyy HH:mm", { locale: sv })}, {upcomingGame.location}</p>
+              <p className="text-md">{formatSwedishTime(upcomingGame.date, "dd MMMM yyyy HH:mm", { locale: sv, timeZone: 'Europe' })}, {upcomingGame.location}</p>
               <p className="text-4xl">{upcomingGame.ticketsSold} biljetter sålda</p>
-              <p className="text-sm text-gray-500">Senast uppdaterad: {format(upcomingGame.updatedAt, "yyyy-MM-dd HH:mm", { locale: sv })}</p>
+              <p className="text-sm text-gray-500">Senast uppdaterad: {formatSwedishTime(upcomingGame.updatedAt, "yyyy-MM-dd HH:mm", { locale: sv })}</p>
               <ButtonLink href={upcomingGame.ticketLink}>Köp biljett</ButtonLink>
             </Card>
           )}
@@ -73,7 +73,7 @@ export default function Home() {
             >
               <div className="space-y-1">
                 <p className="text-lg font-semibold">{upcomingEvent.name}</p>
-                <p className="text-md font-semibold">Bussen avgår {format(upcomingEvent.date, "HH:mm")}</p>
+                <p className="text-md font-semibold">Bussen avgår {formatSwedishTime(upcomingEvent.date, "HH:mm")}</p>
               </div>
               <Progressbar
                 label="Antal anmälda"

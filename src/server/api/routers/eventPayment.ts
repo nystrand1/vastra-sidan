@@ -5,7 +5,7 @@ import {
   type VastraEvent
 } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
-import { format, isWithinInterval, subDays } from "date-fns";
+import { isWithinInterval, subDays } from "date-fns";
 import { Resend } from "resend";
 import { z } from "zod";
 import { EventSignUp } from "~/components/emails/EventSignUp";
@@ -14,6 +14,7 @@ import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { isEventCancelable } from "~/server/utils/event";
 import { isSamePhoneNumber } from "~/server/utils/helpers";
 import { checkPaymentStatus, checkRefundStatus } from "~/server/utils/payment";
+import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { createPaymentIntentPayload } from "~/utils/payment";
 import {
   createPaymentRequest,
@@ -106,7 +107,7 @@ const participantFormatter = (participant: ParticipantWithParticipants['swishPay
     cancellationToken: participant.cancellationToken,
     eventName: participant.event.name,
     payAmount: participant.payAmount,
-    departureTime: format(participant.event.date, "HH:mm"),
+    departureTime: formatSwedishTime(participant.event.date, "HH:mm"),
     note: participant.note,
     cancellationDisabled: !isCancelable,
     hasCancelled,
@@ -492,7 +493,7 @@ export const eventPaymentRouter = createTRPCRouter({
       return {
         participants,
         eventName: payer.event.name,
-        departureTime: format(payer.event.date, "HH:mm"),
+        departureTime: formatSwedishTime(payer.event.date, "HH:mm"),
       }
     })
 });
