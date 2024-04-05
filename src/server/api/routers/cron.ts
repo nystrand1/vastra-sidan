@@ -1,4 +1,3 @@
-import { subHours } from "date-fns";
 import { createTRPCRouter, cronProcedure } from "~/server/api/trpc";
 import {
   PATHS,
@@ -113,11 +112,9 @@ export const cronRouter = createTRPCRouter({
     }
 
     const dateInMilliseconds = new Date(nextHome.start * 1000);
-    // Sirius API is in UTC+1, meaning that we need to subtract one hour
-    const timezonedDate = subHours(dateInMilliseconds, 1);
     const existingGame = await ctx.prisma.fotballGame.findFirst({
       where: {
-        date: timezonedDate,
+        date: dateInMilliseconds,
       }
     });
 
@@ -125,7 +122,7 @@ export const cronRouter = createTRPCRouter({
       // Create game if it doesn't exist
       const game = await ctx.prisma.fotballGame.create({
         data: {
-          date: timezonedDate,
+          date: dateInMilliseconds,
           homeTeam: nextHome.home.name,
           awayTeam: nextHome.away.name,
           ticketLink: nextHome.tickets.link,

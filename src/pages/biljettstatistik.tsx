@@ -15,7 +15,7 @@ export const StatisticsPage = () => {
     { gameId: selectedGame as string },
     { enabled: !!selectedGame }
   );
-
+  
   useEffect(() => {
     if (homeGames && homeGames[0]) {
       setSelectedGame(homeGames[0].id);
@@ -41,7 +41,7 @@ export const StatisticsPage = () => {
             label="Välj match"
             name="game"
             className="w-full md:w-96"
-            options={homeGames.map((x) => ({ label: `${x.homeTeam} - ${x.awayTeam} ${x.date}`, value: x.id }))}
+            options={homeGames.map((x) => ({ label: `${x.homeTeam} - ${x.awayTeam} ${format(x.date, 'yyyy-MM-dd HH:mm')}`, value: x.id }))}
             onChange={(e) => setSelectedGame(e.target.value)}
             />
           {ticketSales && (
@@ -49,11 +49,12 @@ export const StatisticsPage = () => {
               <LineChart
                 data={ticketSales} 
               >
-                <XAxis dataKey="createdAt" tickFormatter={(value) => format(value as Date, 'dd MMM')} />
+                <XAxis dataKey="createdAt" tickFormatter={(value) => format(value, 'dd MMM')} />
                 <YAxis />
                 <Tooltip 
                   wrapperClassName="!bg-slate-800 rounded-lg" 
                   labelClassName="bg-slate-800 text-white"
+                  labelFormatter={(value) => format(value, 'yyyy-MM-dd HH:mm')}                  
                   />
                 <Line dot={{ display: 'none' }} type="monotone" dataKey="Sålda biljetter" stroke="#3b82f6" />
               </LineChart>

@@ -4,13 +4,14 @@ import {
   SwishRefundStatus
 } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
-import { format, subHours } from "date-fns";
+import { subHours } from "date-fns";
 import { z } from "zod";
 import { createTRPCRouter, membershipProcedure, publicProcedure } from "~/server/api/trpc";
 import { getCardSkipperMemberCount } from "~/server/utils/cardSkipper";
 import { GetNewsDocument } from "~/types/wordpresstypes/graphql";
 import { parseDateString, stripHtmlTags } from "./wordpress";
 import { featureFlags } from "~/utils/featureFlags";
+import { toUTCDate } from "~/server/utils/helpers";
 
 const busesWithPaidPassengers = {
   buses: {
@@ -152,7 +153,7 @@ export const publicRouter = createTRPCRouter({
       upcomingGame: !!upcomingGame && upcomingGame.ticketSalesRecords[0] && {
         homeTeam: upcomingGame.homeTeam,
         awayTeam: upcomingGame.awayTeam,
-        date: subHours(upcomingGame.date, 1), // TODO: Sirius API does timezone conversion weirdly
+        date: toUTCDate(upcomingGame.date),
         location: upcomingGame.location,
         ticketLink: upcomingGame.ticketLink,
         ticketsSold: upcomingGame?.ticketSalesRecords[0].ticketsSold,
@@ -183,7 +184,7 @@ export const publicRouter = createTRPCRouter({
 
     return res.map((game) => ({
       ...game,
-      date: format(subHours(game.date, 1), 'yyyy-MM-dd HH:mm')
+      date: toUTCDate(game.date),
     }));
   }),
   getTicketStatistics: publicProcedure
@@ -208,7 +209,7 @@ export const publicRouter = createTRPCRouter({
 
     return res.map((record) => ({
       'Sålda biljetter': record.ticketsSold,
-      createdAt: format(record.createdAt, 'yyyy-MM-dd HH:mm'),
+      createdAt: toUTCDate(record.createdAt),
     }));
   }),
 });
