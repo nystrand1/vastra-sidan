@@ -1,10 +1,12 @@
 import { format } from "date-fns";
+import { GetStaticPropsContext } from "next";
 import Head from "next/head";
 import { useEffect, useState } from "react";
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { api } from "~/utils/api";
+import { createSSRHelper } from "~/utils/createSSRHelper";
 
 
 
@@ -15,7 +17,7 @@ export const StatisticsPage = () => {
     { gameId: selectedGame as string },
     { enabled: !!selectedGame }
   );
-  
+
   useEffect(() => {
     if (homeGames && homeGames[0]) {
       setSelectedGame(homeGames[0].id);
@@ -67,3 +69,18 @@ export const StatisticsPage = () => {
 };
 
 export default StatisticsPage;
+
+export const getStaticProps = async () => {
+  const ssg = await createSSRHelper();
+
+  const homeGames = await ssg.public.getHomeGames.fetch();
+
+  const promises = homeGames.map((game) => ssg.public.getTicketStatistics.prefetch({ gameId: game.id }));
+  await Promise.all(promises);
+  return {
+    props: {
+      trpcState: ssg.dehydrate(),
+    },
+    revalidate: 300,    
+  }
+};

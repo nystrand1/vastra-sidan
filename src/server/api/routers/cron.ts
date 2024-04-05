@@ -1,3 +1,5 @@
+import { subMilliseconds } from "date-fns";
+import getTimezoneOffset from "date-fns-tz/getTimezoneOffset";
 import { createTRPCRouter, cronProcedure } from "~/server/api/trpc";
 import {
   PATHS,
@@ -111,10 +113,16 @@ export const cronRouter = createTRPCRouter({
       return;
     }
 
+    // Sirius API gives us a timezoned date instead of UTC, so we need to subtract
+    // the difference before storing the date in DB
     const dateInMilliseconds = new Date(nextHome.start * 1000);
+    const diffInMilliseconds = getTimezoneOffset('Europe/Stockholm', dateInMilliseconds);
+    
+    const utcDate = subMilliseconds(dateInMilliseconds, diffInMilliseconds);
+
     const existingGame = await ctx.prisma.fotballGame.findFirst({
       where: {
-        date: dateInMilliseconds,
+        date: utcDate,
       }
     });
 
@@ -122,7 +130,7 @@ export const cronRouter = createTRPCRouter({
       // Create game if it doesn't exist
       const game = await ctx.prisma.fotballGame.create({
         data: {
-          date: dateInMilliseconds,
+          date: utcDate,
           homeTeam: nextHome.home.name,
           awayTeam: nextHome.away.name,
           ticketLink: nextHome.tickets.link,
