@@ -1,5 +1,5 @@
 import { subMilliseconds } from "date-fns";
-import getTimezoneOffset from "date-fns-tz/getTimezoneOffset";
+import { getTimezoneOffset } from "date-fns-tz";
 import { createTRPCRouter, cronProcedure } from "~/server/api/trpc";
 import {
   PATHS,

@@ -1,9 +1,9 @@
-import { format } from "date-fns";
 import { useSession } from "next-auth/react";
+import { ButtonLink } from "~/components/atoms/ButtonLink/ButtonLink";
 import Card from "~/components/atoms/CardLink/CardLink";
+import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { api } from "~/utils/api";
 import LoginPage from "./loggain";
-import { ButtonLink } from "~/components/atoms/ButtonLink/ButtonLink";
 
 export const AwayGamesProfilePage = () => {
   const session = useSession();
@@ -29,7 +29,7 @@ export const AwayGamesProfilePage = () => {
               <div className="flex flex-col pt-2" key={`${event.id}-${index}`}>
                 <p className="text-lg">{event.name}</p>
                 {event.payedAt && (
-                  <p>Betalat: {format(event.payedAt, 'yyyy-MM-dd HH:mm')}</p>
+                  <p>Betalat: {formatSwedishTime(event.payedAt, 'yyyy-MM-dd HH:mm')}</p>
                 )}
                 {event.payAmount && (
                   <p>Pris: {event.payAmount} kr</p>
@@ -66,7 +66,7 @@ export const AwayGamesProfilePage = () => {
                 <div className="flex flex-col pt-2" key={`${event.id}-${index}`}>
                   <p className="text-lg">{event.name}</p>
                   {event.payedAt && (
-                    <p>Betalat: {format(event.payedAt, 'yyyy-MM-dd HH:mm')}</p>
+                    <p>Betalat: {formatSwedishTime(event.payedAt, 'yyyy-MM-dd HH:mm')}</p>
                   )}
                   {event.payAmount && (
                     <p>Pris: {event.payAmount} kr</p>

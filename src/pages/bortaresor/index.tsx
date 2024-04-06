@@ -1,8 +1,9 @@
-import { format, isAfter } from "date-fns";
+import { isAfter } from "date-fns";
 import Head from "next/head";
 import Card from "~/atoms/CardLink/CardLink";
 import { Progressbar } from "~/atoms/Progressbar/Progressbar";
 import { Button } from "~/components/atoms/Button/Button";
+import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { api } from "~/utils/api";
 import { PATHS } from "~/utils/constants";
 import { createSSRHelper } from "~/utils/createSSRHelper";
@@ -41,7 +42,7 @@ export default function AwaygamesPage() {
                   link={`${PATHS.awayGames}${game.id}`}
                 >
                   <div className="space-y-1">
-                    <p className="text-md font-semibold">Bussen avgår {format(game.date, "HH:mm")}</p>
+                    <p className="text-md font-semibold">Bussen avgår {formatSwedishTime(game.date, "HH:mm")}</p>
                     <p className="text-sm">Pris vuxen medlem: {game.memberPrice} kr</p>
                     <p className="text-sm">Pris vuxen icke medlem: {game.defaultPrice} kr</p>
                     <p className="text-sm">Pris ungdom medlem: {game.youthMemberPrice} kr</p>
