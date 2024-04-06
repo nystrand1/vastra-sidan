@@ -90,13 +90,14 @@ export default function AwayGamePage() {
 
   const textWithoutHtml = text.replace(/<[^>]*>?/gm, '');
 
+  const seoTitle = `Bortaguiden ${title} | Västra Sidan`;
   const seoDescription = textWithoutHtml.length > 160 ? textWithoutHtml.substring(0, 160) : textWithoutHtml;
 
   return (
     <>
     <Head>
-      <title>{title}</title>
-      <meta name="title" key="title" content={title} />
+      <title>{seoTitle}</title>
+      <meta name="title" key="title" content={seoTitle} />
       <meta name="description" key="description" content={seoDescription} />
       {awayGuide.logo?.sourceUrl && (
         <meta property="image" key="image" content={awayGuide.logo.sourceUrl} />
