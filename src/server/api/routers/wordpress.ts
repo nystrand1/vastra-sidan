@@ -223,4 +223,18 @@ export const wordpressRouter = createTRPCRouter({
           protocols: aboutUsPage.protocols.protocols.sort((a, b) => b.file.date.localeCompare(a.file.date)),
         }
       }),
+    getWallOfFamePage: publicProcedure
+      .query(async ({ ctx }) => {
+        const { data } = await ctx.apolloClient.query({
+          query: GetAboutUsDocument,
+        });
+        
+        const { aboutUsPage } = data;
+
+        const { wallOfFame } = aboutUsPage
+
+        return {
+          ...wallOfFame,
+        }
+      }),
 });
