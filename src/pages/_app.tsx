@@ -10,7 +10,12 @@ import "~/styles/globals.css";
 import { api } from "~/utils/api";
 import { setDefaultOptions } from "date-fns";
 import { sv } from "date-fns/locale/sv";
+import {Elements} from '@stripe/react-stripe-js';
+import {loadStripe} from '@stripe/stripe-js';
+import { env } from "~/env.mjs";
 setDefaultOptions({ locale: sv });
+
+const stripePromise = loadStripe(env.NEXT_PUBLIC_STRIPE_API_KEY);
  
 const MyApp: AppType<{ session: Session | null}> = ({
   Component,
@@ -19,7 +24,7 @@ const MyApp: AppType<{ session: Session | null}> = ({
   const { route } = useRouter();
   const isAdminRoute = route.includes('/admin');
   return (
-    <>
+    <Elements stripe={stripePromise}>
     <Head>
       <link rel="icon" href="/favicon/favicon.ico" />
       <link rel="apple-touch-icon" sizes="57x57" href="/favicon/apple-icon-57x57.png" />
@@ -48,7 +53,7 @@ const MyApp: AppType<{ session: Session | null}> = ({
         )}
       </Layout>
     </SessionProvider>
-    </>
+    </Elements>
   );
 };
 

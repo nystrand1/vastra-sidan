@@ -15,6 +15,7 @@ import { isEventCancelable } from "~/server/utils/event";
 import { isSamePhoneNumber } from "~/server/utils/helpers";
 import { checkPaymentStatus, checkRefundStatus } from "~/server/utils/payment";
 import { createPaymentIntentPayload } from "~/utils/payment";
+import { createPaymentIntent } from "~/utils/stripeHelpers";
 import {
   createPaymentRequest,
   createRefundRequest
@@ -162,26 +163,28 @@ export const eventPaymentRouter = createTRPCRouter({
             })
           )
         );
-        const res = await createPaymentRequest(data);
-        const paymentRequestUrl = res.headers.location as string;
-        // ID is the last part of the URL
-        const paymentRequestId = paymentRequestUrl.split("/").pop() as string;
-        // Create payment request in our database
-        const paymentIntent = await ctx.prisma.swishPayment.create({
-          data: {
-            paymentRequestUrl,
-            paymentId: paymentRequestId,
-            payerAlias: payer.phone,
-            payeeAlias: data.payeeAlias,
-            amount: cost,
-            message: message,
-            status: SwishPaymentStatus.CREATED,
-            participants: {
-              connect: participants.map((p) => ({ id: p.id }))
-            }
-          }
-        });
-        return paymentIntent.paymentId;
+        const stripeRes = await createPaymentIntent({ amount: cost });
+
+        // const res = await createPaymentRequest(data);
+        // const paymentRequestUrl = res.headers.location as string;
+        // // ID is the last part of the URL
+        // const paymentRequestId = paymentRequestUrl.split("/").pop() as string;
+        // // Create payment request in our database
+        // const paymentIntent = await ctx.prisma.swishPayment.create({
+        //   data: {
+        //     paymentRequestUrl,
+        //     paymentId: paymentRequestId,
+        //     payerAlias: payer.phone,
+        //     payeeAlias: data.payeeAlias,
+        //     amount: cost,
+        //     message: message,
+        //     status: SwishPaymentStatus.CREATED,
+        //     participants: {
+        //       connect: participants.map((p) => ({ id: p.id }))
+        //     }
+        //   }
+        // });
+        return stripeRes.client_secret;
       } catch (err) {
         console.error("Error creating payment request");
         const error = err as { response: { data: any } };

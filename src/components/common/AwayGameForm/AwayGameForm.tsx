@@ -1,5 +1,7 @@
 import { type VastraEvent } from "@prisma/client";
+import { CardElement, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { type inferRouterOutputs } from "@trpc/server";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
@@ -12,9 +14,9 @@ import { api } from "../../../utils/api";
 import { Button } from "../../atoms/Button/Button";
 import { InputField } from "../../atoms/InputField/InputField";
 import { OutlinedButton } from "../../atoms/OutlinedButton/OutlinedButton";
-import { SwishModal } from "../SwishModal/SwishModal";
-import { useSession } from "next-auth/react";
-import { pollPaymentStatus } from "~/utils/payment";
+import { StripeModal } from "../StripeModal/StripeModal";
+import { loadStripe } from "@stripe/stripe-js";
+import { env } from "~/env.mjs";
 
 
 interface IPassenger {
@@ -171,10 +173,13 @@ const formToParticipant = (form: Record<string, IPassenger>) => {
   })
 }
 
+const stripePromise = loadStripe(env.NEXT_PUBLIC_STRIPE_API_KEY);
 
 export const AwayGameForm = () => {
   const { query } = useRouter();
   const { data: sessionData } = useSession();
+  const stripe = useStripe();
+  const elements = useElements();
   const { id } = query;
   const [passengers, setPassengers] = useState<PassengerWithIndex[]>([{ index: 0 }]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -194,7 +199,7 @@ export const AwayGameForm = () => {
   if (!id) return null
   if (Array.isArray(id)) return null;
   const { data: awayGame, isLoading } = api.public.getAwayGame.useQuery({ id: id });
-  const { mutateAsync: createPayment } = api.eventPayment.requestSwishPayment.useMutation();
+  const { mutateAsync: createPayment, data: clientSecret } = api.eventPayment.requestSwishPayment.useMutation();
   const { mutateAsync: checkPaymentStatus } = api.eventPayment.checkPaymentStatus.useMutation();
 
   if (isLoading) return null;
@@ -226,28 +231,39 @@ export const AwayGameForm = () => {
       setModalOpen(false);
       return;
     }
-
+    const cardElement = elements?.getElement('card')
     try {
-      const paymentId = await createPayment({
+      const client = await createPayment({
         participants,
         eventId: id,
       });
 
-      const payment = await pollPaymentStatus(paymentId, checkPaymentStatus);
-
-      if (payment.success) {
-        toast.success("Nu är du anmäld! Bekräftelse skickas till din mail.");
-        setPassengers([{ index: 0 }]);
-        formRef.current?.reset();
+      if (client && cardElement) {
+        await stripe?.confirmCardPayment(client, {
+          payment_method: {
+            card: cardElement,
+          }
+        });
       }
+
+      // if (payment.success) {
+      //   toast.success("Nu är du anmäld! Bekräftelse skickas till din mail.");
+      //   setPassengers([{ index: 0 }]);
+      //   formRef.current?.reset();
+      // }
     } catch (error) {
       toast.error("Något gick fel, försök igen!");
     }
-    setModalOpen(false);
+    // setModalOpen(false);
   }
   return (
     <>
-      <SwishModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
+      <StripeModal 
+        isOpen={modalOpen} 
+        onClose={() => setModalOpen(false)} 
+        clientSecret={clientSecret!} 
+        stripePromise={stripePromise}
+        />
       <form onSubmit={handleSubmit} ref={formRef} className="w-full md:w-96">
         <div className="w-full grid gap-8">
           {passengers.map((passenger) => {
