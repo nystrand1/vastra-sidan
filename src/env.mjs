@@ -38,14 +38,7 @@ export const env = createEnv({
     USE_DEV_MODE: z.literal("true").or(z.literal("false")).default("false"),
     CARDSKIPPER_USERNAME: z.string().min(1),
     CARDSKIPPER_PASSWORD: z.string().min(1),
-    CARDSKIPPER_ORG_NUMBER: z.string().min(1),
-    WEBSITE_URL: z.preprocess(
-      // This makes Vercel deployments not fail if you don't set NEXTAUTH_URL
-      // Since NextAuth.js automatically uses the VERCEL_URL if present.
-      (str) => process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : str,
-      // VERCEL_URL doesn't include `https` so it cant be validated as a URL
-      process.env.VERCEL ? z.string().min(1) : z.string().url()
-    )
+    CARDSKIPPER_ORG_NUMBER: z.string().min(1)
   },
 
   /**
@@ -60,6 +53,7 @@ export const env = createEnv({
     NEXT_PUBLIC_ENABLE_LOGIN: z.literal("true").or(z.literal("false")).default("false"),
     NEXT_PUBLIC_ENABLE_AWAYGAMES: z.literal("true").or(z.literal("false")).default("false"),
     NEXT_PUBLIC_STRIPE_API_KEY: z.string().min(1),
+    NEXT_PUBLIC_WEBSITE_URL: z.string().url(),
   },
 
   /**
@@ -94,7 +88,7 @@ export const env = createEnv({
     NEXT_PUBLIC_ENABLE_LOGIN: process.env.NEXT_PUBLIC_ENABLE_LOGIN,
     NEXT_PUBLIC_ENABLE_AWAYGAMES: process.env.NEXT_PUBLIC_ENABLE_AWAYGAMES,
     NEXT_PUBLIC_STRIPE_API_KEY: process.env.NEXT_PUBLIC_STRIPE_API_KEY,
-    WEBSITE_URL: process.env.WEBSITE_URL,
+    NEXT_PUBLIC_WEBSITE_URL: process.env.NEXT_PUBLIC_WEBSITE_URL,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.

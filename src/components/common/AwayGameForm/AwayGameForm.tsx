@@ -1,5 +1,6 @@
 import { type VastraEvent } from "@prisma/client";
-import { CardElement, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import { Elements, ElementsConsumer } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
 import { type inferRouterOutputs } from "@trpc/server";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
@@ -8,6 +9,7 @@ import { toast } from "react-hot-toast";
 import Checkbox from "~/components/atoms/Checkbox/Checkbox";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { TextArea } from "~/components/atoms/TextArea/TextArea";
+import { env } from "~/env.mjs";
 import { type AppRouter } from "~/server/api/root";
 import { participantSchema } from "~/utils/zodSchemas";
 import { api } from "../../../utils/api";
@@ -15,8 +17,6 @@ import { Button } from "../../atoms/Button/Button";
 import { InputField } from "../../atoms/InputField/InputField";
 import { OutlinedButton } from "../../atoms/OutlinedButton/OutlinedButton";
 import { StripeModal } from "../StripeModal/StripeModal";
-import { loadStripe } from "@stripe/stripe-js";
-import { env } from "~/env.mjs";
 
 
 interface IPassenger {
@@ -175,11 +175,10 @@ const formToParticipant = (form: Record<string, IPassenger>) => {
 
 const stripePromise = loadStripe(env.NEXT_PUBLIC_STRIPE_API_KEY);
 
+
 export const AwayGameForm = () => {
   const { query } = useRouter();
   const { data: sessionData } = useSession();
-  const stripe = useStripe();
-  const elements = useElements();
   const { id } = query;
   const [passengers, setPassengers] = useState<PassengerWithIndex[]>([{ index: 0 }]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -207,6 +206,7 @@ export const AwayGameForm = () => {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setModalOpen(true);
     const formData = new FormData(event.currentTarget);
     const values = Object.fromEntries(formData.entries());
     const formattedValues = Object.entries(values).reduce((acc, [key, value]) => {
@@ -231,20 +231,20 @@ export const AwayGameForm = () => {
       setModalOpen(false);
       return;
     }
-    const cardElement = elements?.getElement('card')
+
     try {
-      const client = await createPayment({
+      await createPayment({
         participants,
         eventId: id,
       });
 
-      if (client && cardElement) {
-        await stripe?.confirmCardPayment(client, {
-          payment_method: {
-            card: cardElement,
-          }
-        });
-      }
+      // if (client && cardElement) {
+      //   await stripe?.confirmCardPayment(client, {
+      //     payment_method: {
+      //       card: cardElement,
+      //     }
+      //   });
+      // }
 
       // if (payment.success) {
       //   toast.success("Nu är du anmäld! Bekräftelse skickas till din mail.");
@@ -258,12 +258,15 @@ export const AwayGameForm = () => {
   }
   return (
     <>
-      <StripeModal 
-        isOpen={modalOpen} 
-        onClose={() => setModalOpen(false)} 
-        clientSecret={clientSecret!} 
-        stripePromise={stripePromise}
-        />
+    {clientSecret && (
+      <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'night' } }}>
+          <StripeModal 
+            isOpen={modalOpen} 
+            onClose={() => setModalOpen(false)} 
+            clientSecret={clientSecret} 
+          />
+      </Elements>
+    )}
       <form onSubmit={handleSubmit} ref={formRef} className="w-full md:w-96">
         <div className="w-full grid gap-8">
           {passengers.map((passenger) => {
