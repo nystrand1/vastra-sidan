@@ -4,6 +4,7 @@ import { appRouter } from "../server/api/root";
 import superjson from "superjson";
 import { createServerSideHelpers } from "@trpc/react-query/server";
 import { apolloClient } from "~/server/utils/apolloClient";
+import { stripe } from "~/server/stripe";
 
 export const createSSRHelper = async () =>
   createServerSideHelpers({
@@ -11,6 +12,7 @@ export const createSSRHelper = async () =>
     ctx: {
       session: await getSession(),
       prisma: prisma,
+      stripe: stripe,
       cronKey: "",
       apolloClient,
     },

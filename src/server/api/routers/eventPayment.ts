@@ -1,6 +1,7 @@
 import {
   SwishPaymentStatus,
   SwishRefundStatus,
+  StripePaymentStatus,
   type Prisma,
   type VastraEvent
 } from "@prisma/client";
@@ -69,7 +70,12 @@ const getParticipantCost = (
     return event.defaultPrice;
   }
 };
-
+/**
+ * Calculates the total cost
+ * @param participants 
+ * @param event 
+ * @returns The total cost in cents (ören)
+ */
 const calculateCost = (
   participants: ParticipantInput[],
   event: VastraEvent
@@ -77,7 +83,7 @@ const calculateCost = (
   const totalCost = participants.reduce((acc, participant) => {
     return acc + getParticipantCost(participant, event);
   }, 0);
-  return totalCost;
+  return totalCost * 100;
 };
 
 const sendConfirmationEmail = async (
@@ -138,17 +144,6 @@ export const eventPaymentRouter = createTRPCRouter({
 
       const cost = calculateCost(input.participants, event);
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const payer = input.participants[0]!;
-      const message = `${event.name}. ${input.participants.length} resenärer`
-        .slice(0, 50)
-        .replaceAll("/", "-");
-      const data = createPaymentIntentPayload({
-        message,
-        payerAlias: payer.phone,
-        amount: cost,
-        callbackEndPoint: "swishEventCallback"
-      });
       try {
         // Create participants for event
         const participants = await ctx.prisma.$transaction(
@@ -163,27 +158,32 @@ export const eventPaymentRouter = createTRPCRouter({
             })
           )
         );
-        const stripeRes = await createPaymentIntent({ amount: cost });
 
-        // const res = await createPaymentRequest(data);
-        // const paymentRequestUrl = res.headers.location as string;
-        // // ID is the last part of the URL
-        // const paymentRequestId = paymentRequestUrl.split("/").pop() as string;
-        // // Create payment request in our database
-        // const paymentIntent = await ctx.prisma.swishPayment.create({
-        //   data: {
-        //     paymentRequestUrl,
-        //     paymentId: paymentRequestId,
-        //     payerAlias: payer.phone,
-        //     payeeAlias: data.payeeAlias,
-        //     amount: cost,
-        //     message: message,
-        //     status: SwishPaymentStatus.CREATED,
-        //     participants: {
-        //       connect: participants.map((p) => ({ id: p.id }))
-        //     }
-        //   }
-        // });
+        const payee = participants[0];
+
+        if (!payee) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "No payee found"
+          });
+        }
+
+        const description = `${event.name}. ${input.participants.length} resenärer`
+          .slice(0, 50)
+          .replaceAll("/", "-");
+        const stripeRes = await createPaymentIntent({ amount: cost, description, payee });
+        
+        // Create payment request in our database
+        await ctx.prisma.stripePayment.create({
+          data: {
+            stripePaymentId: stripeRes.id,
+            amount: cost,
+            status: StripePaymentStatus.CREATED,
+            participants: {
+              connect: participants.map((p) => ({ id: p.id }))
+            }
+          }
+        });
         return stripeRes.client_secret;
       } catch (err) {
         console.error("Error creating payment request");

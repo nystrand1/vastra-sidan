@@ -1,6 +1,6 @@
 import {
   MembershipType,
-  SwishPaymentStatus,
+  StripePaymentStatus,
   SwishRefundStatus
 } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
@@ -19,9 +19,9 @@ const busesWithPaidPassengers = {
         select: {
           passengers: {
             where: {
-              swishPayments: {
+              stripePayments: {
                 some: {
-                  status: SwishPaymentStatus.PAID
+                  status: StripePaymentStatus.SUCCEEDED
                 }
               },
               swishRefunds: {

@@ -46,19 +46,20 @@ model Session {
 }
 
 model Membership {
-  id            String         @id @default(cuid())
-  name          String
-  wordpressId   String
-  imageUrl      String
-  type          MembershipType
-  price         Int
-  startDate     DateTime
-  endDate       DateTime
-  users         User[]
-  swishPayments SwishPayment[]
-  swishRefunds  SwishRefund[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id              String         @id @default(cuid())
+  name            String
+  wordpressId     String
+  imageUrl        String
+  type            MembershipType
+  price           Int
+  startDate       DateTime
+  endDate         DateTime
+  users           User[]
+  swishPayments   SwishPayment[]
+  swishRefunds    SwishRefund[]
+  stripePayments  StripePayment[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   @@index([wordpressId])
 }
@@ -85,6 +86,7 @@ model User {
   eventParticipations Participant[]
   swishPayments       SwishPayment[]
   swishRefunds        SwishRefund[]
+  stripePayments      StripePayment[]
 }
 
 enum Role {
@@ -150,6 +152,7 @@ model Participant {
   swishRefunds      SwishRefund[]
   userEmail         String?
   user              User?          @relation(fields: [userEmail], references: [email])
+  stripePayments    StripePayment[]
 
   @@index([eventId])
   @@index([busId])
@@ -180,6 +183,34 @@ model SwishPayment {
   @@index([paymentId])
   @@index([memberShipId])
   @@index([userId])
+}
+
+model StripePayment {
+  id               String             @id @default(cuid())
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  stripePaymentId  String
+  amount           Float
+  participants     Participant[]
+  memberShipId     String?
+  memberShip       Membership?        @relation(fields: [memberShipId], references: [id])
+  userId           String?
+  user             User?              @relation(fields: [userId], references: [id])
+  status           StripePaymentStatus
+
+  @@index([stripePaymentId])
+  @@index([memberShipId])
+  @@index([userId])
+}
+
+enum StripePaymentStatus {
+  REQUIRES_PAYMENT_METHOD
+  REQUIRES_CONFIRMATION
+  REQUIRES_ACTION
+  PROCESSING
+  SUCCEEDED
+  CANCELED
+  CREATED
 }
 
 enum SwishPaymentStatus {

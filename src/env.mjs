@@ -30,6 +30,11 @@ export const env = createEnv({
     BOOKING_EMAIL: z.string().email(),
     LOCAL_SWISH_CERTS: z.literal("true").or(z.literal("false")).default("true"),
     STRIPE_API_KEY: z.string().min(1),
+    STRIPE_WEBHOOK_SECRET: (
+      process.env.NODE_ENV === "production"
+        ? z.string().min(1)
+        : z.string().min(1).optional()
+    ),
     SWISH_CERT: process.env.VERCEL_URL ? z.string().min(1) : z.string().min(1).optional(),
     SWISH_KEY: (!!process.env.VERCEL_ENV && process.env.VERCEL_ENV !== 'production') ? z.string().min(1) : z.string().min(1).optional(),
     SWISH_CA: process.env.VERCEL_URL ? z.string().min(1) : z.string().min(1).optional(),
@@ -75,6 +80,7 @@ export const env = createEnv({
     BOOKING_EMAIL: process.env.BOOKING_EMAIL,
     LOCAL_SWISH_CERTS: process.env.LOCAL_SWISH_CERTS,
     STRIPE_API_KEY: process.env.STRIPE_API_KEY,
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
     SWISH_CA: process.env.SWISH_CA,
     SWISH_CERT: process.env.SWISH_CERT,
     SWISH_KEY: process.env.SWISH_KEY,
