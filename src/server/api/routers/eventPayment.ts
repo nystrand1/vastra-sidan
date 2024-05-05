@@ -1,7 +1,7 @@
 import {
+  StripePaymentStatus,
   SwishPaymentStatus,
   SwishRefundStatus,
-  StripePaymentStatus,
   type Prisma,
   type VastraEvent
 } from "@prisma/client";
@@ -15,10 +15,8 @@ import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { isEventCancelable } from "~/server/utils/event";
 import { isSamePhoneNumber } from "~/server/utils/helpers";
 import { checkPaymentStatus, checkRefundStatus } from "~/server/utils/payment";
-import { createPaymentIntentPayload } from "~/utils/payment";
 import { createPaymentIntent } from "~/utils/stripeHelpers";
 import {
-  createPaymentRequest,
   createRefundRequest
 } from "~/utils/swishHelpers";
 import {
@@ -294,6 +292,7 @@ export const eventPaymentRouter = createTRPCRouter({
   checkPaymentStatus: publicProcedure
     .input(z.object({ paymentId: z.string() }))
     .mutation(async ({ input, ctx }) => {
+      // TODO: Maybe remove this if it's not used
       return checkPaymentStatus(input.paymentId, ctx.prisma);
     }),
   checkRefundStatus: publicProcedure

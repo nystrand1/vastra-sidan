@@ -198,8 +198,7 @@ export const AwayGameForm = () => {
   if (!id) return null
   if (Array.isArray(id)) return null;
   const { data: awayGame, isLoading } = api.public.getAwayGame.useQuery({ id: id });
-  const { mutateAsync: createPayment, data: clientSecret } = api.eventPayment.requestSwishPayment.useMutation();
-  const { mutateAsync: checkPaymentStatus } = api.eventPayment.checkPaymentStatus.useMutation();
+  const { mutateAsync: createPaymentIntent, data: clientSecret } = api.eventPayment.requestSwishPayment.useMutation();
 
   if (isLoading) return null;
   if (!awayGame) return null;
@@ -233,33 +232,18 @@ export const AwayGameForm = () => {
     }
 
     try {
-      await createPayment({
+      await createPaymentIntent({
         participants,
         eventId: id,
       });
-
-      // if (client && cardElement) {
-      //   await stripe?.confirmCardPayment(client, {
-      //     payment_method: {
-      //       card: cardElement,
-      //     }
-      //   });
-      // }
-
-      // if (payment.success) {
-      //   toast.success("Nu är du anmäld! Bekräftelse skickas till din mail.");
-      //   setPassengers([{ index: 0 }]);
-      //   formRef.current?.reset();
-      // }
     } catch (error) {
       toast.error("Något gick fel, försök igen!");
     }
-    // setModalOpen(false);
   }
   return (
     <>
     {clientSecret && (
-      <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'night' } }}>
+      <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'night' }, locale: 'sv' }}>
           <StripeModal 
             isOpen={modalOpen} 
             onClose={() => setModalOpen(false)} 

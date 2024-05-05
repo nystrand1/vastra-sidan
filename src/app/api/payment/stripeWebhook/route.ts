@@ -1,9 +1,9 @@
-import { StripePaymentStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { env } from "~/env.mjs";
-import { prisma } from "~/server/db";
 import { stripe } from "~/server/stripe";
+import { sendEventConfirmationEmail } from "~/server/utils/email";
+import { handleFailedPayment, handleSucessfulPayment } from "./utils";
 
 
 const endpointSecret = env.STRIPE_WEBHOOK_SECRET || "whsec_8691b2bf8e9dca6022c686d929fd5dc87acd4c888c46a9ea6902a157b19334b7";
@@ -12,36 +12,12 @@ const endpointSecret = env.STRIPE_WEBHOOK_SECRET || "whsec_8691b2bf8e9dca6022c68
 const handleStripeEvent = async (event: Stripe.Event) => {
   switch (event.type) {
     case 'payment_intent.succeeded':
-      const originalPayment = await prisma.stripePayment.findFirst({
-        where: {
-          stripePaymentId: event.data.object.id
-        },
-        include: {
-          participants: true
-        }
-      });
-      if (!originalPayment) {
-        throw new Error("Payment not found");
-      }
-      await prisma.stripePayment.create({
-        data: {
-          amount: event.data.object.amount,
-          stripePaymentId: event.data.object.id,
-          status: StripePaymentStatus.SUCCEEDED,
-          participants: {
-            connect: originalPayment.participants.map(p => ({ id: p.id }))
-          }
-        }
-      });
+      const { participants } = await handleSucessfulPayment(event);
+      const emailPromises = participants.map(sendEventConfirmationEmail);
+      await Promise.all(emailPromises);
       break;
     case 'payment_intent.payment_failed':
-      await prisma.stripePayment.create({
-        data: {
-          amount: event.data.object.amount,
-          stripePaymentId: event.data.object.id,
-          status: StripePaymentStatus.CANCELED,
-        }
-      });
+      await handleFailedPayment(event);
       break;
     case 'refund.created':
       console.log("Refund created", event.data.object);
