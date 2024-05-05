@@ -24,6 +24,13 @@ export const StripeModal = ({ isOpen, onClose, clientSecret } : StripeModalProps
       elements,
       confirmParams: {
         return_url: env.NEXT_PUBLIC_WEBSITE_URL,
+        payment_method_data: {
+          billing_details: {
+            address: {
+              country: 'SE',
+            }
+          }
+        }
       },
     });
 
@@ -44,7 +51,6 @@ export const StripeModal = ({ isOpen, onClose, clientSecret } : StripeModalProps
           billingDetails: {
               address: {
                   country: 'never',
-                  postalCode: 'never'
               }
           }
       }
