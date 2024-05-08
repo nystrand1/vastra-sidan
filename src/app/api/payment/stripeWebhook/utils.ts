@@ -58,15 +58,15 @@ export const handleRefund = async (refund: Stripe.ChargeRefundedEvent) => {
       status: StripePaymentStatus.SUCCEEDED
     }
   });
-  const refundIntent = await prisma.stripeRefund.findFirst({
-    where: {
-      originalPaymentId: paymentIntentId.toString(),
-      status: StripeRefundStatus.CREATED
-    }
-  });
   if (!payment) {
     throw new Error("Payment not found");
   }
+  const refundIntent = await prisma.stripeRefund.findFirst({
+    where: {
+      originalPaymentId: payment.id,
+      status: StripeRefundStatus.CREATED
+    }
+  });
 
   if (!refundIntent) {
     throw new Error("Refund not found");

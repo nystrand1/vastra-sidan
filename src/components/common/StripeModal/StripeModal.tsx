@@ -1,4 +1,5 @@
 import { PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import toast from "react-hot-toast";
 import { Button } from "~/components/atoms/Button/Button";
 import Modal from "~/components/atoms/Modal/Modal";
 import { env } from "~/env.mjs";
@@ -20,7 +21,7 @@ export const StripeModal = ({ isOpen, onClose, clientSecret } : StripeModalProps
     if (!stripe || !elements) {
       return;
     }
-    const result = await stripe.confirmPayment({
+    const result = await toast.promise(stripe.confirmPayment({
       elements,
       confirmParams: {
         return_url: env.NEXT_PUBLIC_WEBSITE_URL,
@@ -32,6 +33,10 @@ export const StripeModal = ({ isOpen, onClose, clientSecret } : StripeModalProps
           }
         }
       },
+    }), {
+      loading: 'Laddar...',
+      success: 'Klart!',
+      error: 'Något gick fel'
     });
 
     if (result.error) {

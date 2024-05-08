@@ -25,17 +25,15 @@ export const checkPaymentStatus = async (
 };
 
 export const checkRefundStatus = async (
-  refundId: string,
+  originalPaymentId: string,
   prisma: PrismaClient
 ) => {
   const refund = await prisma.stripeRefund.findFirst({
     where: {
-      stripeRefundId: refundId,
+      originalPaymentId: originalPaymentId,
       status: StripeRefundStatus.REFUNDED
     }
   });
-  console.log('refund', refund);
-  console.log('refundId', refundId);
   if (!refund) {
     return {
       status: "Not found"

@@ -155,7 +155,7 @@ model Participant {
   userEmail         String?
   user              User?           @relation(fields: [userEmail], references: [email])
   stripePayments    StripePayment[]
-  StripeRefund      StripeRefund[]
+  stripeRefunds     StripeRefund[]
 
   @@index([eventId])
   @@index([busId])

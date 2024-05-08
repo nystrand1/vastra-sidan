@@ -1,5 +1,6 @@
 import {
   StripePaymentStatus,
+  StripeRefundStatus,
   SwishPaymentStatus,
   SwishRefundStatus,
   type Prisma,
@@ -36,17 +37,17 @@ export type ParticipantWithParticipants = Prisma.ParticipantGetPayload<{
   select: {
     phone: true,
     event: true,
-    swishPayments: {
+    stripePayments: {
       select: {
         id: true,
         participants: {
           include: {
             event: true,
-            swishRefunds: true
+            stripeRefunds: true
           }
         },
-      },      
-    }
+      },
+    },
   }
 }>;
 
@@ -95,10 +96,10 @@ const sendConfirmationEmail = async (
 };
 
 
-const participantFormatter = (participant: ParticipantWithParticipants['swishPayments'][number]['participants'][number]) => {
+const participantFormatter = (participant: ParticipantWithParticipants['stripePayments'][number]['participants'][number]) => {
   const isCancelable = isEventCancelable(participant.event.date);
-  const hasCancelled = participant.swishRefunds.some(
-    (x) => x.status === SwishRefundStatus.PAID
+  const hasCancelled = participant.stripeRefunds.some(
+    (x) => x.status === StripeRefundStatus.REFUNDED
   );
 
   const res = {
@@ -265,7 +266,7 @@ export const eventPaymentRouter = createTRPCRouter({
           }
         });
 
-        return refundIntent.stripeRefundId;
+        return refundIntent.originalPaymentId;
       } catch (err) {
         console.error("Error creating refund request");
         const error = err as { response: { data: any } };
@@ -282,9 +283,9 @@ export const eventPaymentRouter = createTRPCRouter({
       return checkPaymentStatus(input.paymentId, ctx.prisma);
     }),
   checkRefundStatus: publicProcedure
-    .input(z.object({ refundId: z.string() }))
+    .input(z.object({ originalPaymentId: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      return checkRefundStatus(input.refundId, ctx.prisma);
+      return checkRefundStatus(input.originalPaymentId, ctx.prisma);
     }),
   swishPaymentCallback: publicProcedure
     .input(swishCallbackPaymentSchema)
@@ -435,7 +436,7 @@ export const eventPaymentRouter = createTRPCRouter({
               participants: {
                 include: {
                   event: true,
-                  swishRefunds: true
+                  stripeRefunds: true
                 }
               },
             },
