@@ -1,7 +1,7 @@
 import {
-  type PrismaClient,
+  StripeRefundStatus,
   SwishPaymentStatus,
-  SwishRefundStatus
+  type PrismaClient
 } from "@prisma/client";
 
 export const checkPaymentStatus = async (
@@ -28,12 +28,14 @@ export const checkRefundStatus = async (
   refundId: string,
   prisma: PrismaClient
 ) => {
-  const refund = await prisma.swishRefund.findFirst({
+  const refund = await prisma.stripeRefund.findFirst({
     where: {
-      refundId,
-      status: SwishRefundStatus.PAID
+      stripeRefundId: refundId,
+      status: StripeRefundStatus.REFUNDED
     }
   });
+  console.log('refund', refund);
+  console.log('refundId', refundId);
   if (!refund) {
     return {
       status: "Not found"

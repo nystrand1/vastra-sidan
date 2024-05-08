@@ -36,3 +36,17 @@ export const createPaymentIntent = async (data: CreatePaymentIntentInput) => {
   });
 };
 
+
+interface CreateRefundIntentInput {
+  paymentIntentId: string;
+  amount: number;
+ }
+
+export const createRefundIntent = async ({ paymentIntentId, amount }: CreateRefundIntentInput) => {
+  return stripe.refunds.create({
+    payment_intent: paymentIntentId,
+    amount,
+    reason: "requested_by_customer",
+  });
+}
+

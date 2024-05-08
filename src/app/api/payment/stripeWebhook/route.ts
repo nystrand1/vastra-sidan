@@ -3,7 +3,7 @@ import type Stripe from "stripe";
 import { env } from "~/env.mjs";
 import { stripe } from "~/server/stripe";
 import { sendEventConfirmationEmail } from "~/server/utils/email";
-import { handleFailedPayment, handleSucessfulPayment } from "./utils";
+import { handleFailedPayment, handleRefund, handleSuccessfulPayment } from "./utils";
 
 
 const endpointSecret = env.STRIPE_WEBHOOK_SECRET || "whsec_8691b2bf8e9dca6022c686d929fd5dc87acd4c888c46a9ea6902a157b19334b7";
@@ -12,15 +12,15 @@ const endpointSecret = env.STRIPE_WEBHOOK_SECRET || "whsec_8691b2bf8e9dca6022c68
 const handleStripeEvent = async (event: Stripe.Event) => {
   switch (event.type) {
     case 'payment_intent.succeeded':
-      const { participants } = await handleSucessfulPayment(event);
+      const { participants } = await handleSuccessfulPayment(event);
       const emailPromises = participants.map(sendEventConfirmationEmail);
       await Promise.all(emailPromises);
       break;
     case 'payment_intent.payment_failed':
       await handleFailedPayment(event);
       break;
-    case 'refund.created':
-      console.log("Refund created", event.data.object);
+    case 'charge.refunded':
+      await handleRefund(event);
       break;
     default:
       console.log('Unhandled event', event);
@@ -39,7 +39,6 @@ export async function POST(req: Request) {
     const rawEvent = await req.text();
     const event = stripe.webhooks.constructEvent(rawEvent, sig, endpointSecret);
     await handleStripeEvent(event);
-    console.log("Stripe webhook event", event);
   } catch (err) {
     console.log('error', err);
     const error = err as Error;

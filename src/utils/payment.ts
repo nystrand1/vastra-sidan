@@ -1,4 +1,4 @@
-import { SwishRefundStatus } from "@prisma/client";
+import { StripeRefundStatus, SwishRefundStatus } from "@prisma/client";
 import { delay } from "./helpers";
 import { env } from "~/env.mjs";
 import { v4 as uuidv4 } from 'uuid';
@@ -42,7 +42,7 @@ export const pollRefundStatus = async (
 
   const refund = await checkRefundStatus({ refundId });
 
-  if (refund.status === SwishRefundStatus.PAID) {
+  if (refund.status === StripeRefundStatus.REFUNDED) {
     return {
       success: true
     };

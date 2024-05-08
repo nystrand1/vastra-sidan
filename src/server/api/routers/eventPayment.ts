@@ -13,12 +13,8 @@ import { EventSignUp } from "~/components/emails/EventSignUp";
 import { env } from "~/env.mjs";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { isEventCancelable } from "~/server/utils/event";
-import { isSamePhoneNumber } from "~/server/utils/helpers";
 import { checkPaymentStatus, checkRefundStatus } from "~/server/utils/payment";
-import { createPaymentIntent } from "~/utils/stripeHelpers";
-import {
-  createRefundRequest
-} from "~/utils/swishHelpers";
+import { createPaymentIntent, createRefundIntent } from "~/utils/stripeHelpers";
 import {
   participantSchema,
   swishCallbackPaymentSchema,
@@ -201,8 +197,8 @@ export const eventPaymentRouter = createTRPCRouter({
           cancellationToken: input.token
         },
         include: {
-          swishPayments: true,
-          event: true
+          event: true,
+          stripePayments: true
         }
       });
 
@@ -228,13 +224,13 @@ export const eventPaymentRouter = createTRPCRouter({
         });
       }
 
-      const { swishPayments, payAmount, event } = participant;
+      const { payAmount, event, stripePayments } = participant;
 
-      const swishPayment = swishPayments?.find(
-        (p) => p.status === SwishPaymentStatus.PAID
+      const stripePayment = stripePayments?.find(
+        (p) => p.status === StripePaymentStatus.SUCCEEDED
       );
 
-      if (!swishPayment || !payAmount) {
+      if (!stripePayment || !payAmount) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Payment not found"
@@ -247,39 +243,29 @@ export const eventPaymentRouter = createTRPCRouter({
           message: `No related event to participant: ${participant.id}`
         });
       }
-      const [eventNameShort] = event.name.replaceAll("/", "-").split(" ");
-      const message = `Återbetalning: ${eventNameShort ?? ""}, ${
-        participant.name
-      }`;
-      const refundData = {
-        originalPaymentReference: swishPayment.paymentId,
-        callbackUrl: `${env.API_URL}/payment/swishEventCallback`,
-        payerAlias: "1234679304",
-        amount: payAmount,
-        currency: "SEK",
-        message
-      };
+      // const [eventNameShort] = event.name.replaceAll("/", "-").split(" ");
+      // const message = `Återbetalning: ${eventNameShort ?? ""}, ${
+      //   participant.name
+      // }`;
+
 
       try {
-        const res = await createRefundRequest(refundData);
-        const refundRequestUrl = res.headers.location as string;
-        // ID is the last part of the URL
-        const refundRequestId = refundRequestUrl.split("/").pop() as string;
-        const refundIntent = await ctx.prisma.swishRefund.create({
+        const stripeRefundIntent = await createRefundIntent({ 
+          paymentIntentId: stripePayment.stripePaymentId,
+          amount: payAmount,
+        });
+
+        const refundIntent = await ctx.prisma.stripeRefund.create({
           data: {
-            refundId: refundRequestId,
-            paymentId: swishPayment.id,
-            paymentReference: swishPayment.paymentReference,
-            payerAlias: refundData.payerAlias,
-            payeeAlias: swishPayment.payerAlias,
-            amount: refundData.amount,
-            message: refundData.message,
-            status: "CREATED",
-            participantId: participant.id
+            stripeRefundId: stripeRefundIntent.id,
+            amount: payAmount,
+            status: StripePaymentStatus.CREATED,
+            participantId: participant.id,
+            originalPaymentId: stripePayment.id
           }
         });
 
-        return refundIntent.refundId;
+        return refundIntent.stripeRefundId;
       } catch (err) {
         console.error("Error creating refund request");
         const error = err as { response: { data: any } };
@@ -443,10 +429,9 @@ export const eventPaymentRouter = createTRPCRouter({
         select: {
           phone: true,
           event: true,
-          swishPayments: {
+          stripePayments: {
             select: {
               id: true,
-              payerAlias: true,
               participants: {
                 include: {
                   event: true,
@@ -455,7 +440,7 @@ export const eventPaymentRouter = createTRPCRouter({
               },
             },
             where: {
-              status: SwishPaymentStatus.PAID,
+              status: StripePaymentStatus.SUCCEEDED,
               participants: {
                 some: {
                   cancellationToken: input.token,
@@ -473,7 +458,7 @@ export const eventPaymentRouter = createTRPCRouter({
         });
       }
 
-      const [payment] = payer.swishPayments;
+      const [payment] = payer.stripePayments;
 
       if (!payment) {
         throw new TRPCError({
@@ -483,13 +468,13 @@ export const eventPaymentRouter = createTRPCRouter({
       }
 
       const participants = payment.participants.map(participantFormatter); 
-      const isPayer = isSamePhoneNumber(payer.phone, payment.payerAlias);
-      if (!isPayer) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "You are not the payer"
-        });
-      }
+      // const isPayer = isSamePhoneNumber(payer.phone, payment.payerAlias);
+      // if (!isPayer) {
+      //   throw new TRPCError({
+      //     code: "BAD_REQUEST",
+      //     message: "You are not the payer"
+      //   });
+      // }
 
       return {
         participants,

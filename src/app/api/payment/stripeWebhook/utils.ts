@@ -1,8 +1,8 @@
-import { StripePaymentStatus } from "@prisma/client";
+import { StripePaymentStatus, StripeRefundStatus } from "@prisma/client";
 import type Stripe from "stripe";
 import { prisma } from "~/server/db";
 
-export const handleSucessfulPayment = async (paymentIntent: Stripe.PaymentIntentSucceededEvent) => {
+export const handleSuccessfulPayment = async (paymentIntent: Stripe.PaymentIntentSucceededEvent) => {
   const originalPayment = await prisma.stripePayment.findFirst({
     where: {
       stripePaymentId: paymentIntent.data.object.id
@@ -43,3 +43,59 @@ export const handleFailedPayment = async (paymentIntent: Stripe.PaymentIntentPay
     }
   });
 };
+
+
+export const handleRefund = async (refund: Stripe.ChargeRefundedEvent) => {
+  const refundId = refund.data.object.id;
+  const paymentIntentId = refund.data.object.payment_intent;
+  const status = refund.data.object.status;
+  if (!paymentIntentId) {
+    throw new Error("Payment intent not found");
+  }
+  const payment = await prisma.stripePayment.findFirst({
+    where: {
+      stripePaymentId: paymentIntentId.toString(),
+      status: StripePaymentStatus.SUCCEEDED
+    }
+  });
+  const refundIntent = await prisma.stripeRefund.findFirst({
+    where: {
+      originalPaymentId: paymentIntentId.toString(),
+      status: StripeRefundStatus.CREATED
+    }
+  });
+  if (!payment) {
+    throw new Error("Payment not found");
+  }
+
+  if (!refundIntent) {
+    throw new Error("Refund not found");
+  }
+
+  if (status === 'succeeded') {
+    await prisma.stripeRefund.create({
+      data: {
+        status: StripeRefundStatus.REFUNDED,
+        amount: refund.data.object.amount_refunded,
+        stripeRefundId: refundId,
+        originalPaymentId: payment.id,
+        participantId: refundIntent.participantId,
+      }
+    });
+  }
+
+  if (status === 'failed') {
+    await prisma.stripeRefund.create({
+      data: {
+        status: StripeRefundStatus.ERROR,
+        amount: refund.data.object.amount_refunded,
+        stripeRefundId: refundId,
+        errorMessage: refund.data.object.failure_message,
+        errorCode: refund.data.object.failure_code,
+        originalPaymentId: payment.id,
+        participantId: refundIntent.participantId,
+      }
+    });
+  }
+
+}
