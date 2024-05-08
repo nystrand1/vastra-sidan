@@ -1,8 +1,6 @@
 import {
   StripePaymentStatus,
   StripeRefundStatus,
-  SwishPaymentStatus,
-  SwishRefundStatus,
   type Prisma,
   type VastraEvent
 } from "@prisma/client";
@@ -14,12 +12,10 @@ import { EventSignUp } from "~/components/emails/EventSignUp";
 import { env } from "~/env.mjs";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { isEventCancelable } from "~/server/utils/event";
-import { checkPaymentStatus, checkRefundStatus } from "~/server/utils/payment";
+import { checkRefundStatus } from "~/server/utils/payment";
 import { createPaymentIntent, createRefundIntent } from "~/utils/stripeHelpers";
 import {
-  participantSchema,
-  swishCallbackPaymentSchema,
-  swishCallbackRefundSchema
+  participantSchema
 } from "~/utils/zodSchemas";
 
 const resend = new Resend(env.RESEND_API_KEY);
@@ -276,149 +272,10 @@ export const eventPaymentRouter = createTRPCRouter({
         });
       }
     }),
-  checkPaymentStatus: publicProcedure
-    .input(z.object({ paymentId: z.string() }))
-    .mutation(async ({ input, ctx }) => {
-      // TODO: Maybe remove this if it's not used
-      return checkPaymentStatus(input.paymentId, ctx.prisma);
-    }),
   checkRefundStatus: publicProcedure
     .input(z.object({ originalPaymentId: z.string() }))
     .mutation(async ({ input, ctx }) => {
       return checkRefundStatus(input.originalPaymentId, ctx.prisma);
-    }),
-  swishPaymentCallback: publicProcedure
-    .input(swishCallbackPaymentSchema)
-    .mutation(async ({ input, ctx }) => {
-      // TODO: Protect this endpoint with a secret
-      console.info("SWISH PAYMENT CALLBACK", input);
-      const originalPayment = await ctx.prisma.swishPayment.findFirst({
-        where: {
-          paymentId: input.id
-        },
-        include: {
-          participants: true
-        }
-      });
-
-      if (!originalPayment) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Payment not found"
-        });
-      }
-
-      const newPayment = await ctx.prisma.swishPayment.create({
-        include: {
-          participants: {
-            include: {
-              bus: true,
-              event: true
-            }
-          }
-        },
-        data: {
-          paymentId: input.id,
-          payerAlias: input.payerAlias,
-          payeeAlias: input.payeeAlias,
-          amount: input.amount,
-          message: input.message,
-          paymentReference: input.paymentReference,
-          paymentRequestUrl: originalPayment.paymentRequestUrl,
-          createdAt: new Date(input.dateCreated),
-          updatedAt: new Date(),
-          status: input.status,
-          errorCode: input.errorCode,
-          errorMessage: input.errorMessage,
-          participants: {
-            connect: originalPayment.participants.map((p) => ({ id: p.id }))
-          }
-        }
-      });
-
-      if (newPayment.status === SwishPaymentStatus.PAID) {
-        try {
-          console.log("participants", newPayment.participants);
-          console.log(
-            "Sending confirmation email to: ",
-            newPayment.participants.map((p) => p.email).join(", ")
-          );
-          await Promise.all(
-            newPayment.participants.map((p) => sendConfirmationEmail(p))
-          );
-        } catch (error) {
-          console.error("Error sending confirmation email");
-          console.error(error);
-          // Don't return error to Swish
-        }
-      }
-
-      console.log("SWISH CALLBACK");
-      console.log("input", input);
-      return {
-        status: 200
-      };
-    }),
-  swishRefundCallback: publicProcedure
-    .input(swishCallbackRefundSchema)
-    .mutation(async ({ input, ctx }) => {
-      console.log("SWISH REFUND CALLBACK", input);
-      try {
-        const refundIntent = await ctx.prisma.swishRefund.findFirst({
-          where: {
-            refundId: input.id
-          },
-          include: {
-            participant: true
-          }
-        });
-
-        if (!refundIntent) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Refund not found"
-          });
-        }
-
-        if (!refundIntent.participant) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Refund has no participant"
-          });
-        }
-
-        await ctx.prisma.swishRefund.create({
-          include: {
-            participant: true
-          },
-          data: {
-            refundId: input.id,
-            paymentId: refundIntent.paymentId,
-            payerAlias: input.payerAlias,
-            payeeAlias: input.payeeAlias || refundIntent.payeeAlias,
-            amount: input.amount,
-            message: input.message,
-            paymentReference: input.originalPaymentReference,
-            createdAt: new Date(input.dateCreated),
-            updatedAt: new Date(),
-            status: input.status,
-            participantId: refundIntent.participant.id
-          }
-        });
-
-        await ctx.prisma.participant.update({
-          where: {
-            id: refundIntent.participant.id
-          },
-          data: {
-            cancellationDate: new Date()
-          }
-        });
-      } catch (err) {
-        console.error(err);
-        throw err;
-      }
-      return "ok";
     }),
   getManagableBooking: publicProcedure
     .input(z.object({ token: z.string() }))

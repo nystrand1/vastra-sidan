@@ -55,12 +55,10 @@ model Membership {
   startDate      DateTime
   endDate        DateTime
   users          User[]
-  swishPayments  SwishPayment[]
-  swishRefunds   SwishRefund[]
   stripePayments StripePayment[]
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
-  StripeRefund   StripeRefund[]
+  stripeRefunds  StripeRefund[]
 
   @@index([wordpressId])
 }
@@ -85,10 +83,8 @@ model User {
   sessions            Session[]
   memberShips         Membership[]
   eventParticipations Participant[]
-  swishPayments       SwishPayment[]
-  swishRefunds        SwishRefund[]
   stripePayments      StripePayment[]
-  StripeRefund        StripeRefund[]
+  stripeRefunds       StripeRefund[]
 }
 
 enum Role {
@@ -146,12 +142,10 @@ model Participant {
   busId             String?
   cancellationToken String?         @default(uuid())
   cancellationDate  DateTime?
-  swishPayments     SwishPayment[]
   payAmount         Float?
   checkedIn         Boolean         @default(false)
   member            Boolean         @default(false)
   youth             Boolean         @default(false)
-  swishRefunds      SwishRefund[]
   userEmail         String?
   user              User?           @relation(fields: [userEmail], references: [email])
   stripePayments    StripePayment[]
@@ -160,32 +154,6 @@ model Participant {
   @@index([eventId])
   @@index([busId])
   @@index([userEmail])
-}
-
-model SwishPayment {
-  id                String             @id @default(cuid())
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  paymentId         String
-  paymentRequestUrl String
-  paymentReference  String?
-  payerAlias        String
-  payeeAlias        String
-  amount            Float
-  message           String?
-  status            SwishPaymentStatus
-  errorCode         String?
-  errorMessage      String?
-  participants      Participant[]
-  refunds           SwishRefund[]
-  memberShipId      String?
-  memberShip        Membership?        @relation(fields: [memberShipId], references: [id])
-  userId            String?
-  user              User?              @relation(fields: [userId], references: [id])
-
-  @@index([paymentId])
-  @@index([memberShipId])
-  @@index([userId])
 }
 
 model StripePayment {
@@ -200,7 +168,7 @@ model StripePayment {
   userId          String?
   user            User?               @relation(fields: [userId], references: [id])
   status          StripePaymentStatus
-  StripeRefund    StripeRefund[]
+  stripeRefunds   StripeRefund[]
 
   @@index([stripePaymentId])
   @@index([memberShipId])
@@ -245,53 +213,6 @@ model StripeRefund {
 enum StripeRefundStatus {
   CREATED
   REFUNDED
-  ERROR
-  PAID
-}
-
-enum SwishPaymentStatus {
-  CREATED
-  PAID
-  DECLINED
-  ERROR
-  CANCELLED
-}
-
-model SwishRefund {
-  id               String            @id @default(cuid())
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  refundId         String
-  paymentId        String
-  paymentReference String?
-  payerAlias       String
-  payeeAlias       String
-  amount           Float
-  message          String?
-  status           SwishRefundStatus
-  errorCode        String?
-  errorMessage     String?
-  dateRefunded     DateTime?
-  participantId    String?
-  participant      Participant?      @relation(fields: [participantId], references: [id])
-  memberShipId     String?
-  memberShip       Membership?       @relation(fields: [memberShipId], references: [id])
-  userId           String?
-  user             User?             @relation(fields: [userId], references: [id])
-  originalPayment  SwishPayment      @relation(fields: [paymentId], references: [id])
-
-  @@index([refundId])
-  @@index([participantId])
-  @@index([paymentId])
-  @@index([memberShipId])
-  @@index([userId])
-}
-
-enum SwishRefundStatus {
-  CREATED
-  DEBITED
-  VALIDATED
-  PAID
   ERROR
 }
 

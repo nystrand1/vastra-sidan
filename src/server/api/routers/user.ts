@@ -1,4 +1,4 @@
-import { Role, SwishPaymentStatus, SwishRefundStatus, type Membership, type Prisma } from "@prisma/client";
+import { Role, StripePaymentStatus, StripeRefundStatus, type Membership, type Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { format } from "date-fns";
 import { Resend } from "resend";
@@ -11,7 +11,6 @@ import {
   userProcedure
 } from "~/server/api/trpc";
 import { sha256 } from "~/server/auth";
-import { isSamePhoneNumber } from "~/server/utils/helpers";
 import { friendlyMembershipNames } from "~/server/utils/membership";
 import { profileSchema, signupSchema } from "~/utils/zodSchemas";
 
@@ -28,9 +27,9 @@ type UserData = Prisma.UserGetPayload<{
   include: {
     memberShips: {
       where: {
-        swishPayments: {
+        stripePayments: {
           some: {
-            status: "PAID"
+            status: "SUCCEEDED"
           }
         }
       }
@@ -46,29 +45,28 @@ type UserData = Prisma.UserGetPayload<{
             date: true
           }
         },
-        swishPayments: {
+        stripePayments: {
           where: {
-            status: "PAID"
+            status: "SUCCEEDED"
           },
           select: {
             createdAt: true,
             amount: true,
-            payerAlias: true,
           }
         },
-        swishRefunds: {
+        stripeRefunds: {
           select: {
             status: true,
           },
           where: {
-            status: "PAID",
+            status: "REFUNDED",
           },
         }
       },
       where: {
-        swishPayments: {
+        stripePayments: {
           some: {
-            status: "PAID"
+            status: "SUCCEEDED"
           }
         }
       },
@@ -80,11 +78,11 @@ const eventFormatter = (awayGame: UserData['eventParticipations'][number]) => ({
   id: awayGame.event.name,
   name: awayGame.event.name,
   date: awayGame.event.date,
-  payedAt: awayGame?.swishPayments[0]?.createdAt,
-  payAmount: awayGame?.swishPayments[0]?.amount,
+  payedAt: awayGame?.stripePayments[0]?.createdAt,
+  payAmount: awayGame?.stripePayments[0]?.amount,
   cancellationToken: awayGame.cancellationToken,
   cancellationDate: awayGame.cancellationDate ? format(awayGame.cancellationDate, "yyyy-MM-dd HH:mm") : null,
-  isPayer: isSamePhoneNumber(awayGame.phone, awayGame.swishPayments[0]?.payerAlias || ''),
+  isPayer: true, // TODO: Implement this maybe
 })
 
 const resend = new Resend(env.RESEND_API_KEY);
@@ -143,9 +141,9 @@ export const userRouter = createTRPCRouter({
       include: {
         memberShips: {
           where: {
-            swishPayments: {
+            stripePayments: {
               some: {
-                status: "PAID"
+                status: StripePaymentStatus.SUCCEEDED
               }
             }
           }
@@ -161,29 +159,28 @@ export const userRouter = createTRPCRouter({
                 date: true,
               }
             },
-            swishPayments: {
+            stripePayments: {
               select: {
                 createdAt: true,
                 amount: true,
-                payerAlias: true,
               },
               where: {
-                status: SwishPaymentStatus.PAID
+                status: StripePaymentStatus.SUCCEEDED
               },
             },
-            swishRefunds: {
+            stripeRefunds: {
               select: {
                 status: true,
               },
               where: {
-                status: SwishRefundStatus.PAID
+                status: StripeRefundStatus.REFUNDED
               },
             }
           },
           where: {
-            swishPayments: {
+            stripePayments: {
               some: {
-                status: "PAID"
+                status: StripePaymentStatus.SUCCEEDED
               }
             },
           },
