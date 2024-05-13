@@ -1,14 +1,15 @@
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { GetAboutUsDocument, GetAwayGuideBySlugDocument, GetAwayGuidesDocument, GetChronicleDocument, GetChroniclesDocument, GetNewsBySlugDocument, GetNewsDocument, GetSeasonChroncilesDocument, GetSeasonChronicleBySlugDocument } from "~/types/wordpresstypes/graphql";
-import { format, parseISO } from 'date-fns'
-import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { parseISO } from 'date-fns';
+import { sv } from 'date-fns/locale/sv';
+import { z } from "zod";
+import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { bandyDivisions, fotballDivisions } from "~/server/utils/awayGuideSorter";
-import { sv } from 'date-fns/locale/sv'
+import { formatSwedishTime } from "~/utils/formatSwedishTime";
+import { GetAboutUsDocument, GetAwayGuideBySlugDocument, GetAwayGuidesDocument, GetChronicleDocument, GetChroniclesDocument, GetNewsBySlugDocument, GetNewsDocument, GetSeasonChroncilesDocument, GetSeasonChronicleBySlugDocument } from "~/types/wordpresstypes/graphql";
 
 export const parseDateString = (dateString: string, dateFormat = "d MMMM yyyy HH:mm") => {
   const date = parseISO(dateString);
-  return format(date, dateFormat, { locale: sv });
+  return formatSwedishTime(date, dateFormat, { locale: sv });
 }
 
 export const stripHtmlTags = (html: string) => {
@@ -220,6 +221,20 @@ export const wordpressRouter = createTRPCRouter({
           documents: documentPage.documents.document.sort((a, b) => b.file.date.localeCompare(a.file.date)),
           ...aboutUsPage,
           protocols: aboutUsPage.protocols.protocols.sort((a, b) => b.file.date.localeCompare(a.file.date)),
+        }
+      }),
+    getWallOfFamePage: publicProcedure
+      .query(async ({ ctx }) => {
+        const { data } = await ctx.apolloClient.query({
+          query: GetAboutUsDocument,
+        });
+        
+        const { aboutUsPage } = data;
+
+        const { wallOfFame } = aboutUsPage
+
+        return {
+          ...wallOfFame,
         }
       }),
 });

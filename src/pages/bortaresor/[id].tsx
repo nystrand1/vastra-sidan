@@ -5,6 +5,7 @@ import { useRouter } from "next/router";
 import Accordion from "~/components/atoms/Accordion/Accordion";
 import { awayGameRules } from "~/components/atoms/Accordion/accordionContent";
 import { AwayGameForm } from "~/components/common/AwayGameForm/AwayGameForm";
+import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 
@@ -27,7 +28,7 @@ export const BusPage = () => {
           {game.name}
         </h1>
         <p className="text-3xl">
-          Bussen avgår {format(game.date, "HH:mm")}
+          Bussen avgår {formatSwedishTime(game.date, "HH:mm")}
         </p>
         <Accordion
           items={[

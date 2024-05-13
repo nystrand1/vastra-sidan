@@ -11,6 +11,7 @@ import { getCardSkipperMemberCount } from "~/server/utils/cardSkipper";
 import { GetNewsDocument } from "~/types/wordpresstypes/graphql";
 import { featureFlags } from "~/utils/featureFlags";
 import { parseDateString, stripHtmlTags } from "./wordpress";
+import { toUTCDate } from "~/server/utils/helpers";
 
 const busesWithPaidPassengers = {
   buses: {
@@ -152,7 +153,7 @@ export const publicRouter = createTRPCRouter({
       upcomingGame: !!upcomingGame && upcomingGame.ticketSalesRecords[0] && {
         homeTeam: upcomingGame.homeTeam,
         awayTeam: upcomingGame.awayTeam,
-        date: upcomingGame.date,
+        date: toUTCDate(upcomingGame.date),
         location: upcomingGame.location,
         ticketLink: upcomingGame.ticketLink,
         ticketsSold: upcomingGame?.ticketSalesRecords[0].ticketsSold,
@@ -167,5 +168,48 @@ export const publicRouter = createTRPCRouter({
         )
       }
     };
+  }),
+  getHomeGames: publicProcedure.query(async ({ ctx }) => {
+    const res = await ctx.prisma.fotballGame.findMany({
+      select: {
+        date: true,
+        id: true,
+        awayTeam: true,
+        homeTeam: true,
+      },
+      orderBy: {
+        date: 'desc'
+      }      
+    });
+
+    return res.map((game) => ({
+      ...game,
+      date: toUTCDate(game.date),
+    }));
+  }),
+  getTicketStatistics: publicProcedure
+  .input(z.object({ gameId: z.string() }))
+  .query(async ({ input, ctx }) => {
+    const res = await ctx.prisma.ticketSalesRecord.findMany({
+      where: {
+        fotballGameId: input.gameId
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+      select: {
+        ticketsSold: true,
+        createdAt: true,
+      }
+    });
+
+    if (!res) {
+      throw new TRPCError({ code: "NOT_FOUND" });
+    }
+
+    return res.map((record) => ({
+      'Sålda biljetter': record.ticketsSold,
+      createdAt: toUTCDate(record.createdAt),
+    }));
   }),
 });

@@ -5,7 +5,7 @@ import {
   type VastraEvent
 } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
-import { format, isWithinInterval, subDays } from "date-fns";
+import { isWithinInterval, subDays } from "date-fns";
 import { Resend } from "resend";
 import { z } from "zod";
 import { EventSignUp } from "~/components/emails/EventSignUp";
@@ -13,6 +13,7 @@ import { env } from "~/env.mjs";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { isEventCancelable } from "~/server/utils/event";
 import { checkRefundStatus } from "~/server/utils/payment";
+import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { createPaymentIntent, createRefundIntent } from "~/utils/stripeHelpers";
 import {
   participantSchema
@@ -40,6 +41,7 @@ export type ParticipantWithParticipants = Prisma.ParticipantGetPayload<{
           include: {
             event: true,
             stripeRefunds: true
+            cancellationDate: true
           }
         },
       },
@@ -104,7 +106,8 @@ const participantFormatter = (participant: ParticipantWithParticipants['stripePa
     cancellationToken: participant.cancellationToken,
     eventName: participant.event.name,
     payAmount: participant.payAmount,
-    departureTime: format(participant.event.date, "HH:mm"),
+    departureTime: formatSwedishTime(participant.event.date, "HH:mm"),
+    cancellationDate: participant.cancellationDate ? formatSwedishTime(participant.cancellationDate, "yyyy-MM-dd HH:mm") : null,
     note: participant.note,
     cancellationDisabled: !isCancelable,
     hasCancelled,
@@ -337,7 +340,7 @@ export const eventPaymentRouter = createTRPCRouter({
       return {
         participants,
         eventName: payer.event.name,
-        departureTime: format(payer.event.date, "HH:mm"),
+        departureTime: formatSwedishTime(payer.event.date, "HH:mm"),
       }
     })
 });

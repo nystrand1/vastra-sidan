@@ -1,8 +1,8 @@
 import { StripePaymentStatus, StripeRefundStatus, type Prisma } from "@prisma/client";
-import { format } from "date-fns";
 import { z } from "zod";
 import { adminProcedure, createTRPCRouter } from "~/server/api/trpc";
 import { isEventCancelable } from "~/server/utils/event";
+import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { friendlyMembershipNames } from "~/server/utils/membership";
 
 const busesWithPaidPassengers = {
@@ -94,7 +94,7 @@ const adminUserFormatter = (user: User) => ({
   name: `${user.firstName} ${user.lastName}`,
   id: user.id,
   activeMembershipType: user.memberShips[0] ? friendlyMembershipNames[user.memberShips[0].type] : "Inget medlemskap",
-  datePaid: user.memberShips[0]?.stripePayments[0] ? format(user.memberShips[0].stripePayments[0].createdAt, "yyyy-MM-dd HH:mm") : "Inget medlemskap",
+  datePaid: user.memberShips[0]?.stripePayments[0] ? formatSwedishTime(user.memberShips[0].stripePayments[0].createdAt, "yyyy-MM-dd HH:mm") : "Inget medlemskap",
   phone: user.phone,
   email: user.email,
 });
@@ -103,12 +103,12 @@ const adminEventFormatter = (awayGame: AdminUserProfile['eventParticipations'][n
   id: awayGame.event.name,
   name: awayGame.event.name,
   date: awayGame.event.date,
-  payedAt: awayGame?.stripePayments[0]?.createdAt ? format(awayGame?.stripePayments[0]?.createdAt, "yyyy-MM-dd HH:mm") : null,
+  payedAt: awayGame?.stripePayments[0]?.createdAt ? formatSwedishTime(awayGame?.stripePayments[0]?.createdAt, "yyyy-MM-dd HH:mm") : null,
   payAmount: awayGame?.stripePayments[0]?.amount,
   hasCancelled: awayGame?.stripeRefunds.length > 0,
   isCancelable: isEventCancelable(awayGame.event.date),
   cancellationToken: awayGame.cancellationToken,
-  cancellationDate: awayGame.cancellationDate ? format(awayGame.cancellationDate, "yyyy-MM-dd HH:mm") : null,
+  cancellationDate: awayGame.cancellationDate ? formatSwedishTime(awayGame.cancellationDate, "yyyy-MM-dd HH:mm") : null,
 });
 
 export const adminRouter = createTRPCRouter({

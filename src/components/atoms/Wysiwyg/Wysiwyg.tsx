@@ -13,14 +13,16 @@ const options: HTMLReactParserOptions = {
     // Look for an img tag and replace it with Image.
     if (shouldReplace && 'name' in domNode && 'attribs' in domNode && domNode.name === "img") {
       const { src, alt, width, height } = domNode.attribs
+      const isMap = src?.includes('hitta.gif')
+      const mapClassName = isMap ? 'w-[100px] py-2' : ''
       return (
         <Image
           src={src || ''}
-          width={Number(width) || 400}
-          height={Number(height) || 400}
+          width={Number(width) || 1600}
+          height={Number(height) || 900}
           alt={alt || ''}
-          objectFit="cover"
-          className='w-full h-full aspect-auto rounded-md'
+          style={{ objectFit: 'contain' }}
+          className={`m-auto rounded-md ${mapClassName}`}
         />
       )
     }
@@ -30,7 +32,7 @@ const options: HTMLReactParserOptions = {
 export const Wysiwyg = ({ content } : WysiwygProps) => {
 
   return (
-    <div className="[&_p]:mb-4 [&_h3]:mb-4 [&_div]:mb-4 [&_a]:underline">
+    <div className="[&_p]:mb-4 [&_h3]:mb-4 [&_div]:mb-4 [&_a]:underline [&_iframe]:w-full [&_iframe]:rounded-md">
       {parse(content, options)}
     </div>
   )

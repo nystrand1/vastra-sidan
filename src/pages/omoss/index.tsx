@@ -30,6 +30,9 @@ export const AboutUsPage = () => {
           <Link className="hover:text-gray-200" href="/bortaresor/regler">
             Regler för bortaresor
           </Link>
+          <Link className="hover:text-gray-200" href="/omoss/wall-of-fame">
+            Wall of fame
+          </Link>
         </div>
         <div className="flex justify-center space-x-5 pb-6 text-lg">
           <p className="md:hidden">Swishnummer: <Link target="_blank" className="hover:text-gray-200 underline underline-offset-4" href="https://app.swish.nu/1/p/sw/?sw=1232314342">123 231 43 42</Link></p>
