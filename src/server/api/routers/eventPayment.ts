@@ -227,13 +227,14 @@ export const eventPaymentRouter = createTRPCRouter({
         (p) => p.status === StripePaymentStatus.SUCCEEDED
       );
 
+      
       if (!stripePayment || !payAmount) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Payment not found"
         });
       }
-
+      
       if (!event) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -242,20 +243,21 @@ export const eventPaymentRouter = createTRPCRouter({
       }
       // const [eventNameShort] = event.name.replaceAll("/", "-").split(" ");
       // const message = `Återbetalning: ${eventNameShort ?? ""}, ${
-      //   participant.name
-      // }`;
-
-
+        //   participant.name
+        // }`;
+        
+        
+      const payAmountInCents = payAmount * 100;
       try {
         const stripeRefundIntent = await createRefundIntent({ 
           paymentIntentId: stripePayment.stripePaymentId,
-          amount: payAmount,
+          amount: payAmountInCents,
         });
 
         const refundIntent = await ctx.prisma.stripeRefund.create({
           data: {
             stripeRefundId: stripeRefundIntent.id,
-            amount: payAmount,
+            amount: payAmountInCents,
             status: StripePaymentStatus.CREATED,
             participantId: participant.id,
             originalPaymentId: stripePayment.id
