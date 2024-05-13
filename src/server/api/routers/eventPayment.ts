@@ -113,7 +113,7 @@ const participantFormatter = (participant: ParticipantWithParticipants['stripePa
 };
 
 export const eventPaymentRouter = createTRPCRouter({
-  requestSwishPayment: publicProcedure
+  requestStripePayment: publicProcedure
     .input(
       z.object({
         participants: participantSchema.array().min(1),
@@ -267,11 +267,8 @@ export const eventPaymentRouter = createTRPCRouter({
         return refundIntent.originalPaymentId;
       } catch (err) {
         console.error("Error creating refund request");
-        const error = err as { response: { data: any } };
-        console.error(error?.response?.data);
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR"
-        });
+        console.error(err);
+        throw err;
       }
     }),
   checkRefundStatus: publicProcedure
@@ -289,6 +286,7 @@ export const eventPaymentRouter = createTRPCRouter({
         select: {
           phone: true,
           event: true,
+          cancellationDate: true,
           stripePayments: {
             select: {
               id: true,

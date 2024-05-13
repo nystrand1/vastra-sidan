@@ -1,4 +1,5 @@
 import { PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import { useState } from "react";
 import toast from "react-hot-toast";
 import { Button } from "~/components/atoms/Button/Button";
 import Modal from "~/components/atoms/Modal/Modal";
@@ -15,12 +16,14 @@ interface StripeModalProps {
 export const StripeModal = ({ isOpen, onClose, clientSecret } : StripeModalProps) => {
   const stripe = useStripe();
   const elements = useElements();
+  const [isLoading, setIsLoading] = useState(false);
   if (!clientSecret || !stripe || !elements) return null;
 
   const onSubmit = async () => {
     if (!stripe || !elements) {
       return;
     }
+    setIsLoading(true);
     const result = await toast.promise(stripe.confirmPayment({
       elements,
       confirmParams: {
@@ -38,7 +41,7 @@ export const StripeModal = ({ isOpen, onClose, clientSecret } : StripeModalProps
       success: 'Klart!',
       error: 'Något gick fel'
     });
-
+    setIsLoading(false);
     if (result.error) {
       console.log(result.error.message);
     } else {
@@ -60,7 +63,7 @@ export const StripeModal = ({ isOpen, onClose, clientSecret } : StripeModalProps
           }
       }
       }} />
-      <Button disabled={!stripe} className="w-full mt-3" onClick={onSubmit}>Betala</Button>
+      <Button disabled={!stripe || isLoading} className="w-full mt-3" onClick={onSubmit}>Betala</Button>
     </Modal>
   )
 }

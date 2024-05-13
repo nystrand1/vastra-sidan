@@ -64,7 +64,14 @@ export const handleRefund = async (refund: Stripe.ChargeRefundedEvent) => {
   const refundIntent = await prisma.stripeRefund.findFirst({
     where: {
       originalPaymentId: payment.id,
-      status: StripeRefundStatus.CREATED
+      status: StripeRefundStatus.CREATED,
+      participant: {
+        stripeRefunds: {
+          none: {
+            status: StripeRefundStatus.REFUNDED
+          }
+        }
+      }
     }
   });
 
@@ -76,7 +83,7 @@ export const handleRefund = async (refund: Stripe.ChargeRefundedEvent) => {
     await prisma.stripeRefund.create({
       data: {
         status: StripeRefundStatus.REFUNDED,
-        amount: refund.data.object.amount_refunded,
+        amount: refund.data.object.amount,
         stripeRefundId: refundId,
         originalPaymentId: payment.id,
         participantId: refundIntent.participantId,

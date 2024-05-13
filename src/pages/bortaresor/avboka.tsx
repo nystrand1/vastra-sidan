@@ -71,7 +71,7 @@ export const CancelPage = () => {
                 <Button className="w-full" disabled={isCancelling} onClick={() => handleCancel(participant)}>Avboka</Button>
               )}
               {participant.hasCancelled && (
-                <p className="rounded-md border p-2 text-center">Du har redan avbokat denna resa</p>
+                <p className="rounded-md border p-2 text-center">Avbokad!</p>
               )}
               {participant.cancellationDisabled && !participant.hasCancelled && (
                 <p>Du kan inte avboka inom 48h från avgång</p>

@@ -198,7 +198,7 @@ export const AwayGameForm = () => {
   if (!id) return null
   if (Array.isArray(id)) return null;
   const { data: awayGame, isLoading } = api.public.getAwayGame.useQuery({ id: id });
-  const { mutateAsync: createPaymentIntent, data: clientSecret } = api.eventPayment.requestSwishPayment.useMutation();
+  const { mutateAsync: createPaymentIntent, data: clientSecret } = api.eventPayment.requestStripePayment.useMutation();
 
   if (isLoading) return null;
   if (!awayGame) return null;
