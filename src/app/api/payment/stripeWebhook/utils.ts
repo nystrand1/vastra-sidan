@@ -78,6 +78,10 @@ export const handleRefund = async (refund: Stripe.ChargeRefundedEvent) => {
   if (!refundIntent) {
     throw new Error("Refund not found");
   }
+  
+  if (!refundIntent.participantId) {
+    throw new Error("Participant not found");
+  }
 
   if (status === 'succeeded') {
     await prisma.stripeRefund.create({
@@ -87,6 +91,14 @@ export const handleRefund = async (refund: Stripe.ChargeRefundedEvent) => {
         stripeRefundId: refundId,
         originalPaymentId: payment.id,
         participantId: refundIntent.participantId,
+      }
+    });
+    await prisma.participant.update({
+      where: {
+        id: refundIntent.participantId
+      },
+      data: {
+        cancellationDate: new Date()
       }
     });
   }
