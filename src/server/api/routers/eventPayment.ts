@@ -342,5 +342,46 @@ export const eventPaymentRouter = createTRPCRouter({
         eventName: payer.event.name,
         departureTime: formatSwedishTime(payer.event.date, "HH:mm"),
       }
-    })
+    }),
+  getBooking: publicProcedure
+    .input(z.object({ paymentId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const payment = await ctx.prisma.stripePayment.findFirst({
+        where: {
+          stripePaymentId: input.paymentId
+        },
+        include: {
+          participants: {
+            include: {
+              event: true,
+              stripeRefunds: true
+            }
+          }
+        }
+      });
+
+      if (!payment) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Payment not found"
+        });
+      }
+
+      const participants = payment.participants.map(participantFormatter);
+      if (participants.length < 1 || !participants[0]) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No participants found"
+        });
+      }
+      return {
+        participants,
+        eventName: participants[0].eventName,
+        departureTime: participants[0].departureTime,
+        totalPrice: payment.amount / 100,
+        gameInfo: payment.participants[0]?.event.description
+      };
+    }),
+
+    
 });

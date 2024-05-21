@@ -27,7 +27,7 @@ export const StripeModal = ({ isOpen, onClose, clientSecret } : StripeModalProps
     const result = await toast.promise(stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: env.NEXT_PUBLIC_WEBSITE_URL,
+        return_url: env.NEXT_PUBLIC_WEBSITE_URL + '/bortaresor/tack',
         payment_method_data: {
           billing_details: {
             address: {
