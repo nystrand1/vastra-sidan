@@ -65,13 +65,7 @@ export const env = createEnv({
     NEXT_PUBLIC_ENABLE_LOGIN: z.literal("true").or(z.literal("false")).default("false"),
     NEXT_PUBLIC_ENABLE_AWAYGAMES: z.literal("true").or(z.literal("false")).default("false"),
     NEXT_PUBLIC_STRIPE_API_KEY: z.string().min(1),
-    NEXT_PUBLIC_WEBSITE_URL: z.preprocess(
-      // This makes Vercel deployments not fail if you don't set NEXTAUTH_URL
-      // Since NextAuth.js automatically uses the VERCEL_URL if present.
-      (str) => str ? str : `https://${process.env.VERCEL_URL}`,
-      // VERCEL_URL doesn't include `https` so it cant be validated as a URL
-      process.env.VERCEL ? z.string().min(1) : z.string().url()
-    )
+    NEXT_PUBLIC_WEBSITE_URL: z.string().url().default(`https://${process.env.NEXT_PUBLIC_VERCEL_URL || 'localhost:3000'}`),
   },
 
   /**
