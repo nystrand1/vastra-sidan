@@ -348,7 +348,8 @@ export const eventPaymentRouter = createTRPCRouter({
     .query(async ({ input, ctx }) => {
       const payment = await ctx.prisma.stripePayment.findFirst({
         where: {
-          stripePaymentId: input.paymentId
+          stripePaymentId: input.paymentId,
+          status: StripePaymentStatus.SUCCEEDED
         },
         include: {
           participants: {
