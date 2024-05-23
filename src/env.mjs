@@ -29,6 +29,12 @@ export const env = createEnv({
     SWISH_MERCHANT_BASEURL: z.string().url(),
     BOOKING_EMAIL: z.string().email(),
     LOCAL_SWISH_CERTS: z.literal("true").or(z.literal("false")).default("true"),
+    STRIPE_API_KEY: z.string().min(1),
+    STRIPE_WEBHOOK_SECRET: (
+      process.env.NODE_ENV === "production"
+        ? z.string().min(1)
+        : z.string().min(1).optional()
+    ),
     SWISH_CERT: process.env.VERCEL_URL ? z.string().min(1) : z.string().min(1).optional(),
     SWISH_KEY: (!!process.env.VERCEL_ENV && process.env.VERCEL_ENV !== 'production') ? z.string().min(1) : z.string().min(1).optional(),
     SWISH_CA: process.env.VERCEL_URL ? z.string().min(1) : z.string().min(1).optional(),
@@ -58,6 +64,8 @@ export const env = createEnv({
     NEXT_PUBLIC_ENABLE_MEMBERSHIPS: z.literal("true").or(z.literal("false")).default("false"),
     NEXT_PUBLIC_ENABLE_LOGIN: z.literal("true").or(z.literal("false")).default("false"),
     NEXT_PUBLIC_ENABLE_AWAYGAMES: z.literal("true").or(z.literal("false")).default("false"),
+    NEXT_PUBLIC_STRIPE_API_KEY: z.string().min(1),
+    NEXT_PUBLIC_WEBSITE_URL: z.string().url().default(`https://${process.env.NEXT_PUBLIC_VERCEL_URL || 'localhost:3000'}`),
   },
 
   /**
@@ -78,6 +86,8 @@ export const env = createEnv({
     API_URL: process.env.API_URL,
     BOOKING_EMAIL: process.env.BOOKING_EMAIL,
     LOCAL_SWISH_CERTS: process.env.LOCAL_SWISH_CERTS,
+    STRIPE_API_KEY: process.env.STRIPE_API_KEY,
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
     SWISH_CA: process.env.SWISH_CA,
     SWISH_CERT: process.env.SWISH_CERT,
     SWISH_KEY: process.env.SWISH_KEY,
@@ -87,10 +97,12 @@ export const env = createEnv({
     CARDSKIPPER_USERNAME: process.env.CARDSKIPPER_USERNAME,
     CARDSKIPPER_PASSWORD: process.env.CARDSKIPPER_PASSWORD,
     CARDSKIPPER_ORG_NUMBER: process.env.CARDSKIPPER_ORG_NUMBER,
+    WEBSITE_URL: process.env.WEBSITE_URL,
     NEXT_PUBLIC_ENABLE_MEMBERSHIPS: process.env.NEXT_PUBLIC_ENABLE_MEMBERSHIPS,
     NEXT_PUBLIC_ENABLE_LOGIN: process.env.NEXT_PUBLIC_ENABLE_LOGIN,
     NEXT_PUBLIC_ENABLE_AWAYGAMES: process.env.NEXT_PUBLIC_ENABLE_AWAYGAMES,
-    WEBSITE_URL: process.env.WEBSITE_URL,
+    NEXT_PUBLIC_STRIPE_API_KEY: process.env.NEXT_PUBLIC_STRIPE_API_KEY,
+    NEXT_PUBLIC_WEBSITE_URL: process.env.NEXT_PUBLIC_WEBSITE_URL,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.

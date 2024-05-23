@@ -39,18 +39,22 @@ export const CancelPage = () => {
 
   const handleCancel = async (participant: typeof participants[number]) => {
     if (!participant.cancellationToken) return null;
+
+    const toastId =toast.loading("Avbokar...")
     // Get the refund ID from cancel booking
     // Use the refund ID to poll the refund status
-    const refundId = await cancelBooking({ token: participant.cancellationToken })
+    const originalPaymentId = await cancelBooking({ token: participant.cancellationToken })
 
     try {
-      await toast.promise(pollRefundStatus(refundId, checkRefundStatus), {
-        success: "Avbokning slutförd",
-        error: "Något gick fel, kontakta styrelsen",
-        loading: "Avbokar..."
-      })
+      await pollRefundStatus(originalPaymentId, checkRefundStatus);
+      toast.success("Avbokning slutförd", {
+        id: toastId
+      });
       await refetchParticipant();
     } catch (e) {
+      toast.error("Något gick fel, kontakta styrelsen", {
+        id: toastId
+      });
       console.error(e);
     }
   }
@@ -70,8 +74,8 @@ export const CancelPage = () => {
               {!participant.cancellationDisabled && !participant.hasCancelled && (
                 <Button className="w-full" disabled={isCancelling} onClick={() => handleCancel(participant)}>Avboka</Button>
               )}
-              {participant.hasCancelled && (
-                <p className="rounded-md border p-2 text-center">Du har redan avbokat denna resa</p>
+              {participant.hasCancelled && participant.cancellationDate && (
+                <p className="rounded-md border p-2 text-center">{`Avbokad! (${participant.cancellationDate})`}</p>
               )}
               {participant.cancellationDisabled && !participant.hasCancelled && (
                 <p>Du kan inte avboka inom 48h från avgång</p>

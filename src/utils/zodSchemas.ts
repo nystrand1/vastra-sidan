@@ -1,7 +1,7 @@
 import {
   MembershipType,
-  SwishPaymentStatus,
-  SwishRefundStatus
+  StripePaymentStatus,
+  StripeRefundStatus
 } from "@prisma/client";
 import { z } from "zod";
 
@@ -16,19 +16,19 @@ export const participantSchema = z.object({
   youth: z.boolean()
 });
 
-const SwishPaymentStatuses: [SwishPaymentStatus, ...SwishPaymentStatus[]] = [
+const StripePaymentStatuses: [StripePaymentStatus, ...StripePaymentStatus[]] = [
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  Object.values(SwishPaymentStatus)[0]!,
-  ...Object.values(SwishPaymentStatus).slice(1)
+  Object.values(StripePaymentStatus)[0]!,
+  ...Object.values(StripePaymentStatus).slice(1)
 ];
 
-const SwishRefundStatuses: [SwishRefundStatus, ...SwishRefundStatus[]] = [
+const StripeRefundStatuses: [StripeRefundStatus, ...StripeRefundStatus[]] = [
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  Object.values(SwishRefundStatus)[0]!,
-  ...Object.values(SwishRefundStatus).slice(1)
+  Object.values(StripeRefundStatus)[0]!,
+  ...Object.values(StripeRefundStatus).slice(1)
 ];
 
-export const swishCallbackPaymentSchema = z.object({
+export const StripeCallbackPaymentSchema = z.object({
   id: z.string(),
   payeePaymentReference: z.string(),
   paymentReference: z.string(),
@@ -38,14 +38,14 @@ export const swishCallbackPaymentSchema = z.object({
   currency: z.string(),
   message: z.string(),
   errorMessage: z.string().nullable(),
-  status: z.enum(SwishPaymentStatuses),
+  status: z.enum(StripePaymentStatuses),
   amount: z.number(),
   dateCreated: z.string(),
   datePaid: z.string().nullable(),
   errorCode: z.string().nullable()
 });
 
-export const swishCallbackRefundSchema = z.object({
+export const StripeCallbackRefundSchema = z.object({
   amount: z.preprocess((val) => Number(val), z.number()),
   originalPaymentReference: z.string(),
   dateCreated: z.string(),
@@ -57,7 +57,7 @@ export const swishCallbackRefundSchema = z.object({
   id: z.string(),
   payeeAlias: z.string().nullable(),
   message: z.string(),
-  status: z.enum(SwishRefundStatuses)
+  status: z.enum(StripeRefundStatuses)
 });
 
 export const signupSchema = z

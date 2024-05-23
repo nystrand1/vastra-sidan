@@ -1,7 +1,7 @@
 import {
   MembershipType,
-  SwishPaymentStatus,
-  SwishRefundStatus
+  StripePaymentStatus,
+  StripeRefundStatus
 } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { subHours } from "date-fns";
@@ -9,8 +9,8 @@ import { z } from "zod";
 import { createTRPCRouter, membershipProcedure, publicProcedure } from "~/server/api/trpc";
 import { getCardSkipperMemberCount } from "~/server/utils/cardSkipper";
 import { GetNewsDocument } from "~/types/wordpresstypes/graphql";
-import { parseDateString, stripHtmlTags } from "./wordpress";
 import { featureFlags } from "~/utils/featureFlags";
+import { parseDateString, stripHtmlTags } from "./wordpress";
 import { toUTCDate } from "~/server/utils/helpers";
 
 const busesWithPaidPassengers = {
@@ -20,14 +20,14 @@ const busesWithPaidPassengers = {
         select: {
           passengers: {
             where: {
-              swishPayments: {
+              stripePayments: {
                 some: {
-                  status: SwishPaymentStatus.PAID
+                  status: StripePaymentStatus.SUCCEEDED
                 }
               },
-              swishRefunds: {
+              stripeRefunds: {
                 none: {
-                  status: SwishRefundStatus.PAID
+                  status: StripeRefundStatus.REFUNDED
                 }
               }
             }

@@ -1,5 +1,5 @@
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { type Role } from "@prisma/client";
+import { StripePaymentStatus, type Role } from "@prisma/client";
 import { createHash } from "crypto";
 import { type GetServerSidePropsContext } from "next";
 import {
@@ -122,9 +122,9 @@ export const authOptions: NextAuthOptions = {
                 endDate: {
                   gte: new Date()
                 },
-                swishPayments: {
+                stripePayments: {
                   some: {
-                    status: "PAID"
+                    status: StripePaymentStatus.SUCCEEDED
                   }
                 }
               }

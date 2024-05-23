@@ -1,4 +1,4 @@
-import { SwishPaymentStatus, SwishRefundStatus, type Prisma } from "@prisma/client";
+import { StripePaymentStatus, StripeRefundStatus, type Prisma } from "@prisma/client";
 import { z } from "zod";
 import { adminProcedure, createTRPCRouter } from "~/server/api/trpc";
 import { isEventCancelable } from "~/server/utils/event";
@@ -10,17 +10,17 @@ const busesWithPaidPassengers = {
     include: {
       passengers: {
         where: {
-          swishPayments: {
+          stripePayments: {
             some: {
-              status: SwishPaymentStatus.PAID
+              status: StripePaymentStatus.SUCCEEDED
             }
           },
-          swishRefunds: {
+          stripeRefunds: {
             none: {
-              status: SwishRefundStatus.PAID
+              status: StripeRefundStatus.REFUNDED
             }
           }
-        }
+        },
       }
     }
   }
@@ -36,7 +36,7 @@ export type User = Prisma.UserGetPayload<{
     memberShips: {
       select: {
         type: true,
-        swishPayments: {
+        stripePayments: {
           select: {
             createdAt: true
           }
@@ -50,9 +50,9 @@ export type User = Prisma.UserGetPayload<{
         endDate: {
           gte: true,
         },
-        swishPayments: {
+        stripePayments: {
           some: {
-            status: "PAID"
+            status: "SUCCEEDED"
           }
         }
       }
@@ -70,14 +70,14 @@ export type AdminUserProfile = Prisma.UserGetPayload<{
     eventParticipations: {
       include: {
         event: true,
-        swishPayments: true,
-        swishRefunds: true,
+        stripePayments: true,
+        stripeRefunds: true,
       }
     },
     memberShips: {
       select: {
         type: true,
-        swishPayments: {
+        stripePayments: {
           select: {
             createdAt: true
           }
@@ -94,7 +94,7 @@ const adminUserFormatter = (user: User) => ({
   name: `${user.firstName} ${user.lastName}`,
   id: user.id,
   activeMembershipType: user.memberShips[0] ? friendlyMembershipNames[user.memberShips[0].type] : "Inget medlemskap",
-  datePaid: user.memberShips[0]?.swishPayments[0] ? formatSwedishTime(user.memberShips[0].swishPayments[0].createdAt, "yyyy-MM-dd HH:mm") : "Inget medlemskap",
+  datePaid: user.memberShips[0]?.stripePayments[0] ? formatSwedishTime(user.memberShips[0].stripePayments[0].createdAt, "yyyy-MM-dd HH:mm") : "Inget medlemskap",
   phone: user.phone,
   email: user.email,
 });
@@ -103,9 +103,9 @@ const adminEventFormatter = (awayGame: AdminUserProfile['eventParticipations'][n
   id: awayGame.event.name,
   name: awayGame.event.name,
   date: awayGame.event.date,
-  payedAt: awayGame?.swishPayments[0]?.createdAt ? formatSwedishTime(awayGame?.swishPayments[0]?.createdAt, "yyyy-MM-dd HH:mm") : null,
-  payAmount: awayGame?.swishPayments[0]?.amount,
-  hasCancelled: awayGame?.swishRefunds.length > 0,
+  payedAt: awayGame?.stripePayments[0]?.createdAt ? formatSwedishTime(awayGame?.stripePayments[0]?.createdAt, "yyyy-MM-dd HH:mm") : null,
+  payAmount: awayGame?.stripePayments[0]?.amount,
+  hasCancelled: awayGame?.stripeRefunds.length > 0,
   isCancelable: isEventCancelable(awayGame.event.date),
   cancellationToken: awayGame.cancellationToken,
   cancellationDate: awayGame.cancellationDate ? formatSwedishTime(awayGame.cancellationDate, "yyyy-MM-dd HH:mm") : null,
@@ -157,7 +157,7 @@ export const adminRouter = createTRPCRouter({
           memberShips: {
             select: {
               type: true,
-              swishPayments: {
+              stripePayments: {
                 select: {
                   createdAt: true
                 }
@@ -171,9 +171,9 @@ export const adminRouter = createTRPCRouter({
               endDate: {
                 gte: new Date()
               },
-              swishPayments: {
+              stripePayments: {
                 some: {
-                  status: "PAID"
+                  status: "SUCCEEDED"
                 }
               }
             }
@@ -195,14 +195,14 @@ export const adminRouter = createTRPCRouter({
           eventParticipations: {
             include: {
               event: true,
-              swishPayments: true,
-              swishRefunds: true,
+              stripePayments: true,
+              stripeRefunds: true,
             }
           },
           memberShips: {
             select: {
               type: true,
-              swishPayments: {
+              stripePayments: {
                 select: {
                   createdAt: true
                 }

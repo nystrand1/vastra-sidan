@@ -1,20 +1,22 @@
 import { type VastraEvent } from "@prisma/client";
+import { Elements, ElementsConsumer } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
 import { type inferRouterOutputs } from "@trpc/server";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import Checkbox from "~/components/atoms/Checkbox/Checkbox";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { TextArea } from "~/components/atoms/TextArea/TextArea";
+import { env } from "~/env.mjs";
 import { type AppRouter } from "~/server/api/root";
 import { participantSchema } from "~/utils/zodSchemas";
 import { api } from "../../../utils/api";
 import { Button } from "../../atoms/Button/Button";
 import { InputField } from "../../atoms/InputField/InputField";
 import { OutlinedButton } from "../../atoms/OutlinedButton/OutlinedButton";
-import { SwishModal } from "../SwishModal/SwishModal";
-import { useSession } from "next-auth/react";
-import { pollPaymentStatus } from "~/utils/payment";
+import { StripeModal } from "../StripeModal/StripeModal";
 
 
 interface IPassenger {
@@ -65,8 +67,6 @@ const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : Passe
     }
   })
 
-  const isSwishNumber = index === 0;
-
   return (
     <div className="flex flex-col space-y-2 p-4 bg-slate-800 rounded-lg">
       <InputField
@@ -99,9 +99,6 @@ const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : Passe
         onChange={(e) => { onChange({ phone: e.target.value }) }}
         required
       />
-      {isSwishNumber && (
-        <span className="text-xs">Detta nummer kommer användas för Swish-betalning</span>
-      )}
       <InputField
         label="Email"
         placeholder="Email..."
@@ -171,6 +168,8 @@ const formToParticipant = (form: Record<string, IPassenger>) => {
   })
 }
 
+const stripePromise = loadStripe(env.NEXT_PUBLIC_STRIPE_API_KEY);
+
 
 export const AwayGameForm = () => {
   const { query } = useRouter();
@@ -187,6 +186,7 @@ export const AwayGameForm = () => {
         lastName: sessionData?.user.lastName ?? '',
         email: sessionData?.user.email ?? '',
         member: !!sessionData?.user.isMember,
+        phone: sessionData?.user.phone ?? '',
       }
       setPassengers([initialPassenger]);
     }
@@ -194,14 +194,14 @@ export const AwayGameForm = () => {
   if (!id) return null
   if (Array.isArray(id)) return null;
   const { data: awayGame, isLoading } = api.public.getAwayGame.useQuery({ id: id });
-  const { mutateAsync: createPayment } = api.eventPayment.requestSwishPayment.useMutation();
-  const { mutateAsync: checkPaymentStatus } = api.eventPayment.checkPaymentStatus.useMutation();
+  const { mutateAsync: createPaymentIntent, data: clientSecret } = api.eventPayment.requestStripePayment.useMutation();
 
   if (isLoading) return null;
   if (!awayGame) return null;
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setModalOpen(true);
     const formData = new FormData(event.currentTarget);
     const values = Object.fromEntries(formData.entries());
     const formattedValues = Object.entries(values).reduce((acc, [key, value]) => {
@@ -228,26 +228,25 @@ export const AwayGameForm = () => {
     }
 
     try {
-      const paymentId = await createPayment({
+      await createPaymentIntent({
         participants,
         eventId: id,
       });
-
-      const payment = await pollPaymentStatus(paymentId, checkPaymentStatus);
-
-      if (payment.success) {
-        toast.success("Nu är du anmäld! Bekräftelse skickas till din mail.");
-        setPassengers([{ index: 0 }]);
-        formRef.current?.reset();
-      }
     } catch (error) {
       toast.error("Något gick fel, försök igen!");
     }
-    setModalOpen(false);
   }
   return (
     <>
-      <SwishModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
+    {clientSecret && (
+      <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'night' }, locale: 'sv' }}>
+          <StripeModal 
+            isOpen={modalOpen} 
+            onClose={() => setModalOpen(false)} 
+            clientSecret={clientSecret} 
+          />
+      </Elements>
+    )}
       <form onSubmit={handleSubmit} ref={formRef} className="w-full md:w-96">
         <div className="w-full grid gap-8">
           {passengers.map((passenger) => {

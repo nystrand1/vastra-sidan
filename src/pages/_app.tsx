@@ -1,3 +1,5 @@
+import { setDefaultOptions } from "date-fns";
+import { sv } from "date-fns/locale/sv";
 import { type Session } from "next-auth";
 import { SessionProvider } from "next-auth/react";
 import { type AppType } from "next/app";
@@ -8,9 +10,8 @@ import AdminLayout from "~/components/layouts/AdminLayout";
 import Layout from "~/components/layouts/Layout";
 import "~/styles/globals.css";
 import { api } from "~/utils/api";
-import { setDefaultOptions } from "date-fns";
-import { sv } from "date-fns/locale/sv";
 setDefaultOptions({ locale: sv });
+
  
 const MyApp: AppType<{ session: Session | null}> = ({
   Component,
@@ -19,7 +20,7 @@ const MyApp: AppType<{ session: Session | null}> = ({
   const { route } = useRouter();
   const isAdminRoute = route.includes('/admin');
   return (
-    <>
+    <> 
     <Head>
       <link rel="icon" href="/favicon/favicon.ico" />
       <link rel="apple-touch-icon" sizes="57x57" href="/favicon/apple-icon-57x57.png" />
@@ -37,7 +38,13 @@ const MyApp: AppType<{ session: Session | null}> = ({
       <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
     </Head>
     <SessionProvider session={session}>
-      <Toaster position="bottom-center" />
+      <Toaster position="bottom-center" toastOptions={{
+        style: {
+          borderRadius: '10px',
+          background: '#333',
+          color: '#fff',
+        }
+      }} />
       <Layout>
         {isAdminRoute ? (
           <AdminLayout>

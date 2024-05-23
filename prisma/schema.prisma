@@ -46,19 +46,19 @@ model Session {
 }
 
 model Membership {
-  id            String         @id @default(cuid())
-  name          String
-  wordpressId   String
-  imageUrl      String
-  type          MembershipType
-  price         Int
-  startDate     DateTime
-  endDate       DateTime
-  users         User[]
-  swishPayments SwishPayment[]
-  swishRefunds  SwishRefund[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id             String          @id @default(cuid())
+  name           String
+  wordpressId    String
+  imageUrl       String
+  type           MembershipType
+  price          Int
+  startDate      DateTime
+  endDate        DateTime
+  users          User[]
+  stripePayments StripePayment[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  stripeRefunds  StripeRefund[]
 
   @@index([wordpressId])
 }
@@ -70,21 +70,21 @@ enum MembershipType {
 }
 
 model User {
-  id                  String         @id @default(cuid())
-  firstName           String         @default("Västra")
-  lastName            String         @default("Sidan")
-  email               String?        @unique
+  id                  String          @id @default(cuid())
+  firstName           String          @default("Västra")
+  lastName            String          @default("Sidan")
+  email               String?         @unique
   emailVerified       DateTime?
   image               String?
   password            String?
   phone               String?
-  role                Role           @default(USER)
+  role                Role            @default(USER)
   accounts            Account[]
   sessions            Session[]
   memberShips         Membership[]
   eventParticipations Participant[]
-  swishPayments       SwishPayment[]
-  swishRefunds        SwishRefund[]
+  stripePayments      StripePayment[]
+  stripeRefunds       StripeRefund[]
 }
 
 enum Role {
@@ -129,109 +129,97 @@ model Bus {
 }
 
 model Participant {
-  id                String         @id @default(cuid())
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  id                String          @id @default(cuid())
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
   name              String
   email             String
   phone             String
-  note              String?        @db.Text
-  event             VastraEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  note              String?         @db.Text
+  event             VastraEvent     @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId           String
-  bus               Bus?           @relation(fields: [busId], references: [id])
+  bus               Bus?            @relation(fields: [busId], references: [id])
   busId             String?
-  cancellationToken String?        @default(uuid())
+  cancellationToken String?         @default(uuid())
   cancellationDate  DateTime?
-  swishPayments     SwishPayment[]
   payAmount         Float?
-  checkedIn         Boolean        @default(false)
-  member            Boolean        @default(false)
-  youth             Boolean        @default(false)
-  swishRefunds      SwishRefund[]
+  checkedIn         Boolean         @default(false)
+  member            Boolean         @default(false)
+  youth             Boolean         @default(false)
   userEmail         String?
-  user              User?          @relation(fields: [userEmail], references: [email])
+  user              User?           @relation(fields: [userEmail], references: [email])
+  stripePayments    StripePayment[]
+  stripeRefunds     StripeRefund[]
 
   @@index([eventId])
   @@index([busId])
   @@index([userEmail])
 }
 
-model SwishPayment {
-  id                String             @id @default(cuid())
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  paymentId         String
-  paymentRequestUrl String
-  paymentReference  String?
-  payerAlias        String
-  payeeAlias        String
-  amount            Float
-  message           String?
-  status            SwishPaymentStatus
-  errorCode         String?
-  errorMessage      String?
-  participants      Participant[]
-  refunds           SwishRefund[]
-  memberShipId      String?
-  memberShip        Membership?        @relation(fields: [memberShipId], references: [id])
-  userId            String?
-  user              User?              @relation(fields: [userId], references: [id])
+model StripePayment {
+  id              String              @id @default(cuid())
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  stripePaymentId String
+  amount          Float
+  participants    Participant[]
+  memberShipId    String?
+  memberShip      Membership?         @relation(fields: [memberShipId], references: [id])
+  userId          String?
+  user            User?               @relation(fields: [userId], references: [id])
+  status          StripePaymentStatus
+  stripeRefunds   StripeRefund[]
 
-  @@index([paymentId])
+  @@index([stripePaymentId])
   @@index([memberShipId])
   @@index([userId])
 }
 
-enum SwishPaymentStatus {
+enum StripePaymentStatus {
+  REQUIRES_PAYMENT_METHOD
+  REQUIRES_CONFIRMATION
+  REQUIRES_ACTION
+  PROCESSING
+  SUCCEEDED
+  CANCELED
   CREATED
-  PAID
-  DECLINED
-  ERROR
-  CANCELLED
 }
 
-model SwishRefund {
-  id               String            @id @default(cuid())
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  refundId         String
-  paymentId        String
-  paymentReference String?
-  payerAlias       String
-  payeeAlias       String
-  amount           Float
-  message          String?
-  status           SwishRefundStatus
-  errorCode        String?
-  errorMessage     String?
-  dateRefunded     DateTime?
-  participantId    String?
-  participant      Participant?      @relation(fields: [participantId], references: [id])
-  memberShipId     String?
-  memberShip       Membership?       @relation(fields: [memberShipId], references: [id])
-  userId           String?
-  user             User?             @relation(fields: [userId], references: [id])
-  originalPayment  SwishPayment      @relation(fields: [paymentId], references: [id])
+model StripeRefund {
+  id                 String             @id @default(cuid())
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  stripeRefundId     String
+  amount             Float
+  status             StripeRefundStatus
+  errorMessage       String?
+  errorCode          String?
+  participantId      String?
+  participant        Participant?       @relation(fields: [participantId], references: [id])
+  memberShipId       String?
+  memberShip         Membership?        @relation(fields: [memberShipId], references: [id])
+  userId             String?
+  user               User?              @relation(fields: [userId], references: [id])
+  originalPaymentId  String
+  originalPayment    StripePayment      @relation(fields: [originalPaymentId], references: [id])
 
-  @@index([refundId])
+  @@index([id])
   @@index([participantId])
-  @@index([paymentId])
+  @@index([originalPaymentId])
   @@index([memberShipId])
   @@index([userId])
 }
 
-enum SwishRefundStatus {
+enum StripeRefundStatus {
   CREATED
-  DEBITED
-  VALIDATED
-  PAID
+  REFUNDED
   ERROR
 }
 
 model TicketSalesRecord {
   id            String       @id @default(cuid())
   createdAt     DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  updatedAt     DateTime     @updatedAt
   ticketsSold   Int
   fotballGame   FotballGame? @relation(fields: [fotballGameId], references: [id])
   fotballGameId String?
@@ -240,13 +228,13 @@ model TicketSalesRecord {
 }
 
 model FotballGame {
-  id          String       @id @default(cuid())
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  date        DateTime
-  homeTeam    String
-  awayTeam    String
-  ticketLink  String
-  location    String
+  id                 String              @id @default(cuid())
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  date               DateTime
+  homeTeam           String
+  awayTeam           String
+  ticketLink         String
+  location           String
   ticketSalesRecords TicketSalesRecord[]
 }
