@@ -47,6 +47,7 @@ export const createRefundIntent = async ({ paymentIntentId, amount }: CreateRefu
     payment_intent: paymentIntentId,
     amount,
     reason: "requested_by_customer",
+    refund_application_fee: false,
   });
 }
 

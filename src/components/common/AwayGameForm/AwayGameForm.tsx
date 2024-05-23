@@ -67,8 +67,6 @@ const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : Passe
     }
   })
 
-  const isSwishNumber = index === 0;
-
   return (
     <div className="flex flex-col space-y-2 p-4 bg-slate-800 rounded-lg">
       <InputField
@@ -101,9 +99,6 @@ const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : Passe
         onChange={(e) => { onChange({ phone: e.target.value }) }}
         required
       />
-      {isSwishNumber && (
-        <span className="text-xs">Detta nummer kommer användas för Swish-betalning</span>
-      )}
       <InputField
         label="Email"
         placeholder="Email..."
@@ -191,6 +186,7 @@ export const AwayGameForm = () => {
         lastName: sessionData?.user.lastName ?? '',
         email: sessionData?.user.email ?? '',
         member: !!sessionData?.user.isMember,
+        phone: sessionData?.user.phone ?? '',
       }
       setPassengers([initialPassenger]);
     }

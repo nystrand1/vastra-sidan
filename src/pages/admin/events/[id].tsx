@@ -7,11 +7,12 @@ import { toast } from "react-hot-toast";
 import { Button } from "~/components/atoms/Button/Button";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { OutlinedButton } from "~/components/atoms/OutlinedButton/OutlinedButton";
+import { Progressbar } from "~/components/atoms/Progressbar/Progressbar";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { prisma } from "~/server/db";
 import { api } from "~/utils/api";
 
-const PassengerCard = ({ passenger } : { passenger: Participant }) => {
+const PassengerCard = ({ passenger, refetch } : { passenger: Participant, refetch: () => void }) => {
   const { data: updatedCheckIn, mutateAsync: toggleCheckIn } = api.admin.checkInParticipant.useMutation();
 
   const checkedIn = updatedCheckIn ?? passenger.checkedIn;
@@ -21,7 +22,8 @@ const PassengerCard = ({ passenger } : { passenger: Participant }) => {
       success: `${passenger.name} ${checkedIn ? 'utcheckad' : 'incheckad'}`,
       error: "Något gick fel, kontakta Filip",
       loading: checkedIn ? "Checkar ut..." : "Checkar in..."
-    })
+    });
+    refetch();
   }
   return (
     <Card>
@@ -59,7 +61,7 @@ const PassengerCard = ({ passenger } : { passenger: Participant }) => {
 export const AdminEventPage = () => {
   const { query } = useRouter();
   const { data: sessionData } = useSession();
-  const { data: event, isLoading } = api.admin.getEvent.useQuery(
+  const { data: event, isLoading, refetch } = api.admin.getEvent.useQuery(
     { id: query.id as string },
     { enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN && !!query.id }
   );
@@ -69,6 +71,9 @@ export const AdminEventPage = () => {
   useEffect(() => {
     setSelectedBus(event?.buses[0] || null);
   }, [event])
+
+  const passengerAmount = selectedBus?.passengers.length || 0;
+  const checkedInAmount = selectedBus?.passengers.filter((x) => x.checkedIn).length || 0;
 
   if (!event && isLoading) {
     return <p className="text-center">Laddar event...</p>
@@ -91,10 +96,11 @@ export const AdminEventPage = () => {
             }
           }}
         />
+        <Progressbar maxValue={passengerAmount} label="Incheckade" currentValue={checkedInAmount} />
       </Card>
       {selectedBus && selectedBus.passengers.length > 0 && (
         <div key={selectedBus.id} className="flex flex-col space-y-4">
-        {selectedBus.passengers.map((passenger) => <PassengerCard key={passenger.id} passenger={passenger} />)}
+        {selectedBus.passengers.map((passenger) => <PassengerCard key={passenger.id} passenger={passenger} refetch={refetch} />)}
       </div>
       )}
       {selectedBus && selectedBus.passengers.length === 0 && (

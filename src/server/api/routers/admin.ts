@@ -20,7 +20,7 @@ const busesWithPaidPassengers = {
               status: StripeRefundStatus.REFUNDED
             }
           }
-        }
+        },
       }
     }
   }

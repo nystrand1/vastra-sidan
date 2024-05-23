@@ -166,7 +166,6 @@ export const MemberPage = () => {
               onChange={(e) => setPhone(e.target.value)}
               required
             />
-            <span className="text-xs">Detta nummer kommer användas för Swish-betalning</span>
             <SelectField
               label="Medlemskap"
               name="membershipType"

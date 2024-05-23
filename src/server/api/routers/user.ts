@@ -79,7 +79,7 @@ const eventFormatter = (awayGame: UserData['eventParticipations'][number]) => ({
   name: awayGame.event.name,
   date: awayGame.event.date,
   payedAt: awayGame?.stripePayments[0]?.createdAt,
-  payAmount: awayGame?.stripePayments[0]?.amount,
+  payAmount: awayGame?.stripePayments[0] ? awayGame?.stripePayments[0].amount / 100 : null,
   cancellationToken: awayGame.cancellationToken,
   cancellationDate: awayGame.cancellationDate ? formatSwedishTime(awayGame.cancellationDate, "yyyy-MM-dd HH:mm") : null,
   isPayer: true, // TODO: Implement this maybe
@@ -184,6 +184,11 @@ export const userRouter = createTRPCRouter({
               }
             },
           },
+          orderBy: {
+            event: {
+              date: 'desc'
+            }
+          }
         }
       }
     });

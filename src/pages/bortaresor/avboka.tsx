@@ -39,18 +39,22 @@ export const CancelPage = () => {
 
   const handleCancel = async (participant: typeof participants[number]) => {
     if (!participant.cancellationToken) return null;
+
+    const toastId =toast.loading("Avbokar...")
     // Get the refund ID from cancel booking
     // Use the refund ID to poll the refund status
     const originalPaymentId = await cancelBooking({ token: participant.cancellationToken })
 
     try {
-      await toast.promise(pollRefundStatus(originalPaymentId, checkRefundStatus), {
-        success: "Avbokning slutförd",
-        error: "Något gick fel, kontakta styrelsen",
-        loading: "Avbokar..."
-      })
+      await pollRefundStatus(originalPaymentId, checkRefundStatus);
+      toast.success("Avbokning slutförd", {
+        id: toastId
+      });
       await refetchParticipant();
     } catch (e) {
+      toast.error("Något gick fel, kontakta styrelsen", {
+        id: toastId
+      });
       console.error(e);
     }
   }
