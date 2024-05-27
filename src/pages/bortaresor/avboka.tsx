@@ -67,6 +67,9 @@ export const CancelPage = () => {
             <p>
               Avbokning kan endast ske senast 48 timmar innan avresa annars debiteras du fullt pris.
             </p>
+            <p>
+              Du blir återbetald hela summan minus serviceavgift från Stripe. Läs mer om Stripe&apos;s avgifter <a href="https://stripe.com/pricing">här</a>
+            </p>
           </div>
           {participants.map((participant) => (
             <div key={participant.cancellationToken} className="space-y-2 pt-2">
