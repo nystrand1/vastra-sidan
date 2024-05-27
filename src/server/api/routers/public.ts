@@ -16,6 +16,7 @@ import { toUTCDate } from "~/server/utils/helpers";
 const busesWithPaidPassengers = {
   buses: {
     include: {
+      seats: true,
       _count: {
         select: {
           passengers: {
@@ -72,8 +73,13 @@ export const publicRouter = createTRPCRouter({
       if (!res) {
         throw new TRPCError({ code: "NOT_FOUND" });
       }
-
-      return res;
+      return {
+        ...res,
+        buses: res.buses.map((bus) => ({
+          ...bus,
+          availableSeats: bus.seats - bus._count.passengers
+        }))
+      };
     }),
   getAvailableMemberships: membershipProcedure.query(async ({ ctx }) => {
     const res = await ctx.prisma.membership.findMany({
