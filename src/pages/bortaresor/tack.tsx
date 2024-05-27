@@ -1,4 +1,3 @@
-import { type GetStaticProps } from "next";
 import { useRouter } from "next/router";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { api } from "~/utils/api";

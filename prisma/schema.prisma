@@ -162,6 +162,7 @@ model StripePayment {
   updatedAt       DateTime            @updatedAt
   stripePaymentId String
   amount          Float
+  netAmount       Float               @default(0) 
   participants    Participant[]
   memberShipId    String?
   memberShip      Membership?         @relation(fields: [memberShipId], references: [id])

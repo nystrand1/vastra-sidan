@@ -79,21 +79,6 @@ const calculateCost = (
   return totalCost * 100;
 };
 
-const sendConfirmationEmail = async (
-  participant: ParticipantWithBusAndEvent
-) => {
-  const cancellationUrl = `${env.CANCELLATION_URL}?token=${
-    participant?.cancellationToken || ""
-  }`;
-  return await resend.emails.send({
-    from: env.BOOKING_EMAIL,
-    to: env.USE_DEV_MODE === "true" ? "filip.nystrand@gmail.com" : participant.email,
-    subject: `Anmälan till ${participant?.event?.name}`,
-    react: EventSignUp({ participant, cancellationUrl })
-  });
-};
-
-
 const participantFormatter = (participant: ParticipantWithParticipants['stripePayments'][number]['participants'][number]) => {
   const isCancelable = isEventCancelable(participant.event.date);
   const hasCancelled = participant.stripeRefunds.some(

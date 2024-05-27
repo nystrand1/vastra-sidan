@@ -3,7 +3,7 @@ import type Stripe from "stripe";
 import { env } from "~/env.mjs";
 import { stripe } from "~/server/stripe";
 import { sendEventConfirmationEmail } from "~/server/utils/email";
-import { handleFailedPayment, handleRefund, handleSuccessfulPayment } from "./utils";
+import { handleChargeUpdate, handleFailedPayment, handleRefund, handleSuccessfulPayment } from "./utils";
 
 
 const endpointSecret = env.STRIPE_WEBHOOK_SECRET || "whsec_8691b2bf8e9dca6022c686d929fd5dc87acd4c888c46a9ea6902a157b19334b7";
@@ -18,6 +18,9 @@ const handleStripeEvent = async (event: Stripe.Event) => {
       break;
     case 'payment_intent.payment_failed':
       await handleFailedPayment(event);
+      break;
+    case 'charge.updated': 
+      await handleChargeUpdate(event);
       break;
     case 'charge.refunded':
       await handleRefund(event);

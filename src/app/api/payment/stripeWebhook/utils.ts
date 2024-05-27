@@ -1,6 +1,7 @@
 import { StripePaymentStatus, StripeRefundStatus } from "@prisma/client";
 import type Stripe from "stripe";
 import { prisma } from "~/server/db";
+import { stripe } from "~/server/stripe";
 
 export const handleSuccessfulPayment = async (paymentIntent: Stripe.PaymentIntentSucceededEvent) => {
   const originalPayment = await prisma.stripePayment.findFirst({
@@ -17,6 +18,7 @@ export const handleSuccessfulPayment = async (paymentIntent: Stripe.PaymentInten
   return await prisma.stripePayment.create({
     data: {
       amount: paymentIntent.data.object.amount,
+      netAmount: paymentIntent.data.object.amount,
       stripePaymentId: paymentIntent.data.object.id,
       status: StripePaymentStatus.SUCCEEDED,
       participants: {
@@ -43,6 +45,37 @@ export const handleFailedPayment = async (paymentIntent: Stripe.PaymentIntentPay
     }
   });
 };
+
+export const handleChargeUpdate = async (charge: Stripe.ChargeUpdatedEvent) => {
+  const paymentIntentId = charge.data.object.payment_intent;
+  const transactionId = charge.data.object.balance_transaction;
+  if (!paymentIntentId) {
+    throw new Error("Payment intent not found");
+  }
+  const payment = await prisma.stripePayment.findFirst({
+    where: {
+      stripePaymentId: paymentIntentId.toString(),
+      status: StripePaymentStatus.SUCCEEDED
+    }
+  });
+  if (!payment || !transactionId) {
+    throw new Error("Payment not found");
+  }
+
+  const strapiFee = await stripe.balanceTransactions.retrieve(transactionId.toString());
+
+  if (strapiFee.fee) {
+    await prisma.stripePayment.update({
+      where: {
+        id: payment.id
+      },
+      data: {
+        netAmount: strapiFee.net,
+        amount: strapiFee.amount,
+      }
+    });
+  }
+}
 
 
 export const handleRefund = async (refund: Stripe.ChargeRefundedEvent) => {
