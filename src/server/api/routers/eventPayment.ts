@@ -6,10 +6,7 @@ import {
 } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { isWithinInterval, subDays } from "date-fns";
-import { Resend } from "resend";
 import { z } from "zod";
-import { EventSignUp } from "~/components/emails/EventSignUp";
-import { env } from "~/env.mjs";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { isEventCancelable } from "~/server/utils/event";
 import { checkRefundStatus } from "~/server/utils/payment";
@@ -19,7 +16,6 @@ import {
   participantSchema
 } from "~/utils/zodSchemas";
 
-const resend = new Resend(env.RESEND_API_KEY);
 
 type ParticipantInput = z.infer<typeof participantSchema>;
 
@@ -183,7 +179,16 @@ export const eventPaymentRouter = createTRPCRouter({
         },
         include: {
           event: true,
-          stripePayments: true
+          stripePayments: {
+            select: {
+              id: true,
+              stripePaymentId: true,
+              participants: true,
+              amount: true,
+              netAmount: true,
+              status: true,
+            }
+          }
         }
       });
 
@@ -209,14 +214,13 @@ export const eventPaymentRouter = createTRPCRouter({
         });
       }
 
-      const { payAmount, event, stripePayments } = participant;
+      const { event, stripePayments } = participant;
 
       const stripePayment = stripePayments?.find(
         (p) => p.status === StripePaymentStatus.SUCCEEDED
       );
-
       
-      if (!stripePayment || !payAmount) {
+      if (!stripePayment) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Payment not found"
@@ -229,23 +233,19 @@ export const eventPaymentRouter = createTRPCRouter({
           message: `No related event to participant: ${participant.id}`
         });
       }
-      // const [eventNameShort] = event.name.replaceAll("/", "-").split(" ");
-      // const message = `Återbetalning: ${eventNameShort ?? ""}, ${
-        //   participant.name
-        // }`;
         
-        
-      const payAmountInCents = payAmount * 100;
+      const amountOfParticipants = stripePayment.participants.length;
+      const participantPayAmount = stripePayment.netAmount / amountOfParticipants;
       try {
         const stripeRefundIntent = await createRefundIntent({ 
           paymentIntentId: stripePayment.stripePaymentId,
-          amount: payAmountInCents,
+          amount: participantPayAmount,
         });
 
         const refundIntent = await ctx.prisma.stripeRefund.create({
           data: {
             stripeRefundId: stripeRefundIntent.id,
-            amount: payAmountInCents,
+            amount: participantPayAmount,
             status: StripePaymentStatus.CREATED,
             participantId: participant.id,
             originalPaymentId: stripePayment.id
