@@ -16,7 +16,6 @@ import { toUTCDate } from "~/server/utils/helpers";
 const busesWithPaidPassengers = {
   buses: {
     include: {
-      seats: true,
       _count: {
         select: {
           passengers: {
