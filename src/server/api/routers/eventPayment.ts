@@ -108,12 +108,49 @@ export const eventPaymentRouter = createTRPCRouter({
       const event = await ctx.prisma.vastraEvent.findFirst({
         where: {
           id: input.eventId
+        },
+        include: {
+          buses: {
+            include: {
+              passengers: {
+                select: {
+                  _count: true
+                },
+                where: {
+                  stripePayments: {
+                    some: {
+                      status: StripePaymentStatus.SUCCEEDED
+                    }
+                  },
+                  stripeRefunds: {
+                    none: {
+                      status: StripeRefundStatus.REFUNDED
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       });
+
       if (!event) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Event not found"
+        });
+      }
+      // check if we have slots on the buses
+      const someBusIsFull = event.buses.some((bus) => {
+        const participantsOnBus = input.participants.filter((p) => p.busId === bus.id);
+        const availableSeats = bus.seats - bus.passengers.length;
+        return availableSeats < participantsOnBus.length;
+      });
+
+      if (someBusIsFull) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "BUS_FULL"
         });
       }
 
@@ -235,7 +272,7 @@ export const eventPaymentRouter = createTRPCRouter({
       }
         
       const amountOfParticipants = stripePayment.participants.length;
-      const participantPayAmount = stripePayment.netAmount / amountOfParticipants;
+      const participantPayAmount = Math.floor(stripePayment.netAmount / amountOfParticipants);
       try {
         const stripeRefundIntent = await createRefundIntent({ 
           paymentIntentId: stripePayment.stripePaymentId,

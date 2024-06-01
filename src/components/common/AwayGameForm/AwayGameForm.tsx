@@ -1,161 +1,16 @@
-import { type VastraEvent } from "@prisma/client";
-import { Elements, ElementsConsumer } from "@stripe/react-stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import { type inferRouterOutputs } from "@trpc/server";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
-import Checkbox from "~/components/atoms/Checkbox/Checkbox";
-import { SelectField } from "~/components/atoms/SelectField/SelectField";
-import { TextArea } from "~/components/atoms/TextArea/TextArea";
 import { env } from "~/env.mjs";
-import { type AppRouter } from "~/server/api/root";
 import { participantSchema } from "~/utils/zodSchemas";
 import { api } from "../../../utils/api";
 import { Button } from "../../atoms/Button/Button";
-import { InputField } from "../../atoms/InputField/InputField";
-import { OutlinedButton } from "../../atoms/OutlinedButton/OutlinedButton";
 import { StripeModal } from "../StripeModal/StripeModal";
-
-
-interface IPassenger {
-  firstName: string;
-  lastName: string;
-  phone: string;
-  email: string;
-  member: boolean;
-  youth: boolean;
-  note: string;
-  consent: boolean;
-  busId: string;
-}
-
-type PassengerWithIndex = Partial<IPassenger> & { index: number };
-
-interface PassengerFormProps {
-  passenger: PassengerWithIndex;
-  onRemove: (index: number) => void;
-  onChange: (passenger: Partial<IPassenger>) => void;
-  buses: inferRouterOutputs<AppRouter>['public']['getAwayGame']['buses'];
-  eventId: string;
-}
-
-const getPassengerPrice = (member: boolean, youth: boolean, event: VastraEvent) => {
-  if (member && youth) {
-    return event.youthMemberPrice;
-  }
-  if (youth) {
-    return event.youthPrice;
-  }
-  if (member) {
-    return event.memberPrice;
-  }
-  return event.defaultPrice
-};
-
-const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } : PassengerFormProps) => {
-  const { data: event } = api.public.getAwayGame.useQuery({ id: eventId });
-  const { index, member, youth } = passenger;
-  if (!event) return null;
-  const busOptions = buses.map((bus) => {
-    const fullyBooked = bus._count.passengers >= bus.seats;
-    return {
-      value: bus.id,
-      label: `${bus.name} - (${bus._count.passengers}/${bus.seats})` + (fullyBooked ? " - Fullbokad" : "") ,
-      disabled: fullyBooked
-    }
-  })
-
-  return (
-    <div className="flex flex-col space-y-2 p-4 bg-slate-800 rounded-lg">
-      <InputField
-        label="Förnamn"
-        placeholder="Förnamn..."
-        id={`firstName_${index}`}
-        name={`firstName_${index}`}
-        value={passenger.firstName}
-        onChange={(e) => {
-          onChange({ firstName: e.target.value });
-        }}
-        required
-      />
-       <InputField
-        label="Efternamn"
-        placeholder="Efternamn..."
-        id={`lastName_${index}`}
-        name={`lastName_${index}`}
-        value={passenger.lastName}
-        onChange={(e) => { onChange({ lastName: e.target.value }) }}
-        required
-      />
-       <InputField
-        label="Mobilnummer"
-        placeholder="Mobil..."
-        id={`phone_${index}`}
-        name={`phone_${index}`}
-        type="tel"
-        value={passenger.phone}
-        onChange={(e) => { onChange({ phone: e.target.value }) }}
-        required
-      />
-      <InputField
-        label="Email"
-        placeholder="Email..."
-        id={`email_${index}`}
-        name={`email_${index}`}
-        value={passenger.email}
-        onChange={(e) => { onChange({ email: e.target.value }) }}
-        required
-      />
-      <SelectField
-        label="Buss"
-        id={`busId_${index}`}
-        name={`busId_${index}`}
-        placeholder="Välj buss..."
-        onChange={(e) => { onChange({ busId: e.target.value }) }}
-        options={busOptions}
-      />
-      <TextArea
-        label="Övrigt"
-        id={`note_${index}`}
-        name={`note_${index}`}
-        onChange={(e) => { onChange({ note: e.target.value }) }}
-        placeholder="Övrigt... (t.ex endast dit)"
-      />
-      <Checkbox
-        label="Medlem"
-        id={`member_${index}`}
-        name={`member_${index}`}
-        checked={member}
-        onChange={(e) => { 
-          onChange({ member: e.target.checked });
-        }}
-      />
-      <Checkbox
-        label="Ungdom (upp till 20 år)"
-        id={`youth_${index}`}
-        name={`youth_${index}`}
-        checked={youth}
-        onChange={(e) => { 
-          onChange({ youth: e.target.checked }) 
-        }}
-      />
-      <Checkbox
-        label="Jag har läst & förstått reglerna kring bussresorna"
-        id={`consent_${index}`}
-        name={`consent_${index}`}
-        checked={passenger.consent}
-        onChange={(e) => { onChange({ consent: e.target.checked }) }}
-        required
-      />
-      {index > 0 && (
-        <OutlinedButton type="button" onClick={() => onRemove(index)}>Ta bort</OutlinedButton>
-      )}
-      <p>Pris: {getPassengerPrice(!!member, !!youth, event)} kr</p>
-    </div>
-  )
-}
+import { PassengerForm, getPassengerPrice, type IPassenger, type PassengerWithIndex } from "./PassengerForm";
+import { TRPCClientError } from "@trpc/client";
 
 const formToParticipant = (form: Record<string, IPassenger>) => {
   return Object.values(form).map((input) => {
@@ -187,6 +42,7 @@ export const AwayGameForm = () => {
         email: sessionData?.user.email ?? '',
         member: !!sessionData?.user.isMember,
         phone: sessionData?.user.phone ?? '',
+        busId: awayGame?.buses[0]?.id ?? '',
       }
       setPassengers([initialPassenger]);
     }
@@ -219,11 +75,15 @@ export const AwayGameForm = () => {
     const participants = participantSchema.array().parse(formToParticipant(formattedValues));
     if (participants.length < 1) return;
     setModalOpen(true);
-    const payer = participants[0];
+    
+    const fullBusses = awayGame.buses.filter((bus) => {
+      const participantsOnBus = participants.filter((p) => p.busId === bus.id);
+      return bus.availableSeats < participantsOnBus.length;
+    });
 
-    if (!payer) {
-      toast.error("Du måste ange en betalare");
-      setModalOpen(false);
+    if (fullBusses.length > 0) {
+      const busNames = fullBusses.map((bus) => bus.name).join(", ");
+      toast.error(`${busNames} har för få platser, vänligen välj en annan buss.`);
       return;
     }
 
@@ -233,18 +93,24 @@ export const AwayGameForm = () => {
         eventId: id,
       });
     } catch (error) {
-      toast.error("Något gick fel, försök igen!");
+      if (error instanceof TRPCClientError) {
+        if (error.message === 'BUS_FULL') {
+          toast.error("Någon buss är fullbokad, vänligen välj en annan buss");
+          return;
+        }
+        toast.error("Något gick fel, försök igen!");
+      }
     }
   }
   return (
     <>
     {clientSecret && (
       <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'night' }, locale: 'sv' }}>
-          <StripeModal 
-            isOpen={modalOpen} 
-            onClose={() => setModalOpen(false)} 
-            clientSecret={clientSecret} 
-          />
+        <StripeModal 
+          isOpen={modalOpen} 
+          onClose={() => setModalOpen(false)} 
+          clientSecret={clientSecret} 
+        />
       </Elements>
     )}
       <form onSubmit={handleSubmit} ref={formRef} className="w-full md:w-96">
@@ -254,7 +120,7 @@ export const AwayGameForm = () => {
               <div key={passenger.index}>
                 <PassengerForm
                   buses={awayGame.buses}
-                  passenger={passenger}
+                  passenger={passenger}                  
                   eventId={id}
                   onChange={(x: Partial<IPassenger>) => {
                     setPassengers(passengers.map((p) => {
@@ -278,7 +144,7 @@ export const AwayGameForm = () => {
             <Button
               type="button"
               onClick={() => {
-                setPassengers([...passengers, { index: passengers.length }])
+                setPassengers([...passengers, { index: passengers.length, busId: awayGame.buses[0]?.id, }])
               }}
               >
                 Lägg till passagerare
