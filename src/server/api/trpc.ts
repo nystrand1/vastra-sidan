@@ -19,6 +19,7 @@ import { getServerAuthSession } from "~/server/auth";
 import { prisma } from "~/server/db";
 import { featureFlags } from "~/utils/featureFlags";
 import { apolloClient } from "../utils/apolloClient";
+import { stripe } from "../stripe";
 
 /**
  * 1. CONTEXT
@@ -48,6 +49,7 @@ const createInnerTRPCContext = (opts: CreateContextOptions) => {
   return {
     session: opts.session,
     prisma,
+    stripe,
     cronKey: opts.cronKey,
     apolloClient,
   };

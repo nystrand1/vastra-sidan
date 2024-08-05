@@ -14,6 +14,7 @@ import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 import { featureFlags } from "~/utils/featureFlags";
+import { delay } from "~/utils/helpers";
 import { pollPaymentStatus } from "~/utils/payment";
 import { memberSignupSchema } from "~/utils/zodSchemas";
 
@@ -65,9 +66,13 @@ export const MemberPage = () => {
   const selectedMembership = Object.values(memberships).find((x) => x?.id === membershipId);
 
   const becomeMember = async (payload: Zod.infer<typeof memberSignupSchema>) => {
-    const { paymentId } = await createPayment(payload);
-    // Poll payment status
-    return await pollPaymentStatus(paymentId, checkPaymentStatus);
+    await delay(1000);
+    return {
+      success: true
+    }
+    // const { paymentId } = await createPayment(payload);
+    // // Poll payment status
+    // return await pollPaymentStatus(paymentId, checkPaymentStatus);
   }
 
   const handleSignup = async () => {
@@ -161,7 +166,6 @@ export const MemberPage = () => {
               onChange={(e) => setPhone(e.target.value)}
               required
             />
-            <span className="text-xs">Detta nummer kommer användas för Swish-betalning</span>
             <SelectField
               label="Medlemskap"
               name="membershipType"

@@ -1,7 +1,7 @@
-import { SwishRefundStatus } from "@prisma/client";
-import { delay } from "./helpers";
-import { env } from "~/env.mjs";
+import { StripePaymentStatus, StripeRefundStatus } from "@prisma/client";
 import { v4 as uuidv4 } from 'uuid';
+import { env } from "~/env.mjs";
+import { delay } from "./helpers";
 
 export const pollPaymentStatus = async (
   paymentId: string,
@@ -18,7 +18,7 @@ export const pollPaymentStatus = async (
 
   const payment = await checkPaymentStatus({ paymentId });
 
-  if (payment.status === SwishRefundStatus.PAID) {
+  if (payment.status === StripePaymentStatus.SUCCEEDED) {
     return {
       success: true
     };
@@ -28,11 +28,11 @@ export const pollPaymentStatus = async (
 };
 
 export const pollRefundStatus = async (
-  refundId: string,
+  originalPaymentId: string,
   checkRefundStatus: ({
-    refundId
+    originalPaymentId
   }: {
-    refundId: string;
+    originalPaymentId: string;
   }) => Promise<{ status: string }>,
   attempt = 0
 ): Promise<{ success: boolean }> => {
@@ -40,15 +40,15 @@ export const pollRefundStatus = async (
     throw new Error("Could not poll refund status");
   }
 
-  const refund = await checkRefundStatus({ refundId });
+  const refund = await checkRefundStatus({ originalPaymentId });
 
-  if (refund.status === SwishRefundStatus.PAID) {
+  if (refund.status === StripeRefundStatus.REFUNDED) {
     return {
       success: true
     };
   }
   await delay(1000);
-  return pollRefundStatus(refundId, checkRefundStatus, attempt + 1);
+  return pollRefundStatus(originalPaymentId, checkRefundStatus, attempt + 1);
 };
 
 interface CreatePaymentIntentPayload {
