@@ -10,9 +10,12 @@ import { featureFlags } from "~/utils/featureFlags";
 import { loginSchema } from "~/utils/zodSchemas";
 
 
+interface LoginPageProps {
+  adminLogin?: boolean;
+}
 
 
-export const LoginPage = () => {
+export const LoginPage = ({ adminLogin }: LoginPageProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
@@ -25,7 +28,7 @@ export const LoginPage = () => {
     }
   }, [router.query]);
   
-  if (!featureFlags.ENABLE_LOGIN) {
+  if (!featureFlags.ENABLE_LOGIN && !adminLogin) {
     return <Error statusCode={404} />
   }
 
@@ -39,7 +42,7 @@ export const LoginPage = () => {
     if (res?.status === 401) {
       toast.error("Felaktig inloggning, försök igen")
     }
-    if (res?.ok) {
+    if (res?.ok && !adminLogin) {
       await router.push("/");
     }
   }
@@ -78,12 +81,14 @@ export const LoginPage = () => {
           >
             Logga In
           </Button>
-          <Button 
-            className="w-full"
-            onClick={() => router.push("/skapakonto")}
-          >
-            Skapa konto
-          </Button>
+          {featureFlags.ENABLE_LOGIN && (
+            <Button 
+              className="w-full"
+              onClick={() => router.push("/skapakonto")}
+            >
+              Skapa konto
+            </Button>
+          )}
         </form>
       </Card>
     </div>
