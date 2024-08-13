@@ -1,5 +1,3 @@
-import { format } from "date-fns";
-import { GetStaticPropsContext } from "next";
 import Head from "next/head";
 import { useEffect, useState } from "react";
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";

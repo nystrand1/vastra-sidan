@@ -73,7 +73,7 @@ export default function Home() {
             >
               <div className="space-y-1">
                 <p className="text-lg font-semibold">{upcomingEvent.name}</p>
-                <p className="text-md font-semibold">Bussen avgår {formatSwedishTime(upcomingEvent.date, "HH:mm")}</p>
+                <p className="text-md font-semibold">Bussen avgår {formatSwedishTime(upcomingEvent.date, "HH:mm", { locale: sv, timeZone: 'Europe' })}</p>
               </div>
               <Progressbar
                 label="Antal anmälda"

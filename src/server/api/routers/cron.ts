@@ -1,3 +1,4 @@
+import { captureMessage } from "@sentry/nextjs";
 import { subMilliseconds } from "date-fns";
 import { getTimezoneOffset } from "date-fns-tz";
 import { createTRPCRouter, cronProcedure } from "~/server/api/trpc";
@@ -99,6 +100,7 @@ export const cronRouter = createTRPCRouter({
 
     if (!securityToken) {
       console.error('Could not find security token');
+      captureMessage('Could not find security token')
       return;
     }
 

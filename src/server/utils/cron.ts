@@ -12,6 +12,7 @@ import {
   type Membership as WPMembership
 } from "~/types/wordpressTypes";
 import { type createTRPCContext } from "../api/trpc";
+import { captureException } from "@sentry/nextjs";
 
 const apiKey = env.WORDPRESS_API_KEY;
 
@@ -49,6 +50,7 @@ export const makeRequest = async <T>(
     return res.json() as T;
   } catch (error) {
     console.error(error);
+    captureException(error);
     throw error;
   }
 };
