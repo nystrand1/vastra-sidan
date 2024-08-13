@@ -1,3 +1,4 @@
+import { captureException } from "@sentry/nextjs";
 import { type inferRouterOutputs } from "@trpc/server";
 import { type GetServerSidePropsContext } from "next";
 import { useRouter } from "next/router";
@@ -52,6 +53,7 @@ export const CancelPage = () => {
       });
       await refetchParticipant();
     } catch (e) {
+      captureException(e);
       toast.error("Något gick fel, kontakta styrelsen", {
         id: toastId
       });

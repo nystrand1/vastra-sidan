@@ -4,6 +4,7 @@ import { env } from "~/env.mjs";
 import { stripe } from "~/server/stripe";
 import { sendEventConfirmationEmail } from "~/server/utils/email";
 import { handleChargeUpdate, handleFailedPayment, handleRefund, handleSuccessfulPayment } from "./utils";
+import { captureException } from "@sentry/nextjs";
 
 
 const endpointSecret = env.STRIPE_WEBHOOK_SECRET || "whsec_8691b2bf8e9dca6022c686d929fd5dc87acd4c888c46a9ea6902a157b19334b7";
@@ -44,6 +45,7 @@ export async function POST(req: Request) {
     await handleStripeEvent(event);
   } catch (err) {
     console.log('error', err);
+    captureException(err);
     const error = err as Error;
     return NextResponse.json(`Webhook Error: ${error.message}`, { status: 400 });
   }

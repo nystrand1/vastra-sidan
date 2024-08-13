@@ -4,6 +4,7 @@ import {
   type Prisma,
   type VastraEvent
 } from "@prisma/client";
+import { captureException, captureMessage } from "@sentry/nextjs";
 import { TRPCError } from "@trpc/server";
 import { isWithinInterval, subDays } from "date-fns";
 import { z } from "zod";
@@ -202,6 +203,8 @@ export const eventPaymentRouter = createTRPCRouter({
         const error = err as { response: { data: any } };
         console.error(error);
         console.error(error?.response?.data);
+        captureMessage("Error creating payment request");
+        captureException(err);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR"
         });

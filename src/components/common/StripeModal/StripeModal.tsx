@@ -1,3 +1,4 @@
+import { captureException, captureMessage } from "@sentry/nextjs";
 import { PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { useState } from "react";
 import toast from "react-hot-toast";
@@ -21,6 +22,7 @@ export const StripeModal = ({ isOpen, onClose, clientSecret } : StripeModalProps
 
   const onSubmit = async () => {
     if (!stripe || !elements) {
+      captureMessage("Stripe or elements not loaded");
       return;
     }
     setIsLoading(true);
@@ -44,6 +46,7 @@ export const StripeModal = ({ isOpen, onClose, clientSecret } : StripeModalProps
     setIsLoading(false);
     if (result.error) {
       console.log(result.error.message);
+      captureException(result.error);
     } else {
       console.log('successful', result)
     }

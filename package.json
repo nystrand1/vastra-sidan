@@ -21,6 +21,7 @@
     "@react-email/components": "^0.0.14",
     "@react-email/html": "^0.0.7",
     "@react-email/tailwind": "0.0.14",
+    "@sentry/nextjs": "^8",
     "@stripe/react-stripe-js": "^2.7.0",
     "@stripe/stripe-js": "^3.3.0",
     "@t3-oss/env-nextjs": "^0.8.0",

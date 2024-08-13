@@ -1,5 +1,6 @@
 import { useRouter } from "next/router";
 import Card from "~/components/atoms/CardLink/CardLink";
+import { Wysiwyg } from "~/components/atoms/Wysiwyg/Wysiwyg";
 import { api } from "~/utils/api";
 
 
@@ -54,7 +55,7 @@ const ThanksPage = () => {
             <p>Avgångstid: {data.departureTime}</p>
             <p>Totalpris: {data.totalPrice} kr</p>
             {data.gameInfo && (
-              <p>Reseinfo: {data.gameInfo}</p>
+              <Wysiwyg content={`Reseinfo: ${data.gameInfo}`} />
             )}
             <p>
               Avbokning kan endast ske senast 48 timmar innan avresa annars debiteras du fullt pris.
