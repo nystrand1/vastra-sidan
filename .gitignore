@@ -45,3 +45,5 @@ yarn-error.log*
 .react-email
 
 swishCerts
+# Sentry Config File
+.env.sentry-build-plugin

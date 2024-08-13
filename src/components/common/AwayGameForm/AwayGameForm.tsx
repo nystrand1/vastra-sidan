@@ -1,5 +1,7 @@
+import { captureException } from "@sentry/nextjs";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
+import { TRPCClientError } from "@trpc/client";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
@@ -10,7 +12,6 @@ import { api } from "../../../utils/api";
 import { Button } from "../../atoms/Button/Button";
 import { StripeModal } from "../StripeModal/StripeModal";
 import { PassengerForm, getPassengerPrice, type IPassenger, type PassengerWithIndex } from "./PassengerForm";
-import { TRPCClientError } from "@trpc/client";
 
 const formToParticipant = (form: Record<string, IPassenger>) => {
   return Object.values(form).map((input) => {
@@ -32,6 +33,7 @@ export const AwayGameForm = () => {
   const { id } = query;
   const [passengers, setPassengers] = useState<PassengerWithIndex[]>([{ index: 0 }]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const formRef = useRef<HTMLFormElement>(null); 
   useEffect(() => {
     if (sessionData?.user) {
@@ -98,7 +100,9 @@ export const AwayGameForm = () => {
           toast.error("Någon buss är fullbokad, vänligen välj en annan buss");
           return;
         }
+        captureException(error);
         toast.error("Något gick fel, försök igen!");
+        setModalOpen(false);
       }
     }
   }
@@ -113,7 +117,11 @@ export const AwayGameForm = () => {
         />
       </Elements>
     )}
-      <form onSubmit={handleSubmit} ref={formRef} className="w-full md:w-96">
+      <form onSubmit={async (event) => {
+        setIsSubmitting(true);
+        await handleSubmit(event);
+        setIsSubmitting(false);
+      }} ref={formRef} className="w-full md:w-96">
         <div className="w-full grid gap-8">
           {passengers.map((passenger) => {
             return (
@@ -149,7 +157,7 @@ export const AwayGameForm = () => {
               >
                 Lägg till passagerare
               </Button>
-            <Button type="submit">Anmäl</Button>
+            <Button disabled={isSubmitting || modalOpen} type="submit">Anmäl</Button>
               <p className="text-center">Summa: {passengers.reduce((acc, { member, youth }) => {
                 return acc + getPassengerPrice(!!member, !!youth, awayGame);
               }, 0)} kr</p>

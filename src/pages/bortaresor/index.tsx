@@ -30,6 +30,7 @@ export default function AwaygamesPage() {
             {awayGames?.map((game, index) => {
               let centerClass = "";
               const gameExpired = isAfter(new Date(), game.date);
+              console.log('date', game.date);
               if (index === 0) {
                 centerClass = awayGames.length === 1 ? "md:col-start-4 xl:col-start-5" 
                   : awayGames.length === 2 ? "md:col-start-1 xl:col-start-3"
