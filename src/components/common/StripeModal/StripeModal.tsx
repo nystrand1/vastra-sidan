@@ -46,7 +46,9 @@ export const StripeModal = ({ isOpen, onClose, clientSecret } : StripeModalProps
     setIsLoading(false);
     if (result.error) {
       console.log(result.error.message);
+      toast.error(result.error.message || 'Något gick fel med betalningen');
       captureException(result.error);
+      captureMessage(result.error.message || 'Något gick fel med betalningen');
     } else {
       console.log('successful', result)
     }
