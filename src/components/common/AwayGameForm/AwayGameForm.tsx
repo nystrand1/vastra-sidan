@@ -59,7 +59,6 @@ export const AwayGameForm = () => {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setModalOpen(true);
     const formData = new FormData(event.currentTarget);
     const values = Object.fromEntries(formData.entries());
     const formattedValues = Object.entries(values).reduce((acc, [key, value]) => {
@@ -86,6 +85,7 @@ export const AwayGameForm = () => {
     if (fullBusses.length > 0) {
       const busNames = fullBusses.map((bus) => bus.name).join(", ");
       toast.error(`${busNames} har för få platser, vänligen välj en annan buss.`);
+      setModalOpen(false);
       return;
     }
 
@@ -96,13 +96,13 @@ export const AwayGameForm = () => {
       });
     } catch (error) {
       if (error instanceof TRPCClientError) {
+        setModalOpen(false);
         if (error.message === 'BUS_FULL') {
           toast.error("Någon buss är fullbokad, vänligen välj en annan buss");
           return;
         }
         captureException(error);
         toast.error("Något gick fel, försök igen!");
-        setModalOpen(false);
       }
     }
   }
