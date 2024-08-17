@@ -16,8 +16,10 @@ interface StripeModalProps {
 
 export const StripeModal = ({ isOpen, onClose, clientSecret } : StripeModalProps) => {
   const stripe = useStripe();
+
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
+  const [stripeReady, setStripeReady] = useState(false);
   if (!clientSecret || !stripe || !elements) return null;
 
   const onSubmit = async () => {
@@ -59,7 +61,9 @@ export const StripeModal = ({ isOpen, onClose, clientSecret } : StripeModalProps
       isOpen={isOpen}
       onClose={onClose}
     >
-      <PaymentElement options={{
+      <PaymentElement 
+      onReady={() => setStripeReady(true)}
+      options={{
         fields: {
           billingDetails: {
               address: {
@@ -68,7 +72,7 @@ export const StripeModal = ({ isOpen, onClose, clientSecret } : StripeModalProps
           }
       }
       }} />
-      <Button disabled={!stripe || isLoading} className="w-full mt-3" onClick={onSubmit}>Betala</Button>
+      <Button disabled={!stripe || isLoading || !stripeReady} className="w-full mt-3" onClick={onSubmit}>Betala</Button>
     </Modal>
   )
 }
