@@ -29,31 +29,31 @@ const stripePromise = loadStripe(env.NEXT_PUBLIC_STRIPE_API_KEY);
 
 export const AwayGameForm = () => {
   const { query } = useRouter();
+  const { id } = query as { id: string };
+  const { data: awayGame, isLoading } = api.public.getAwayGame.useQuery({ id: id });
+  const { mutateAsync: createPaymentIntent, data: clientSecret } = api.eventPayment.requestStripePayment.useMutation();
+
   const { data: sessionData } = useSession();
-  const { id } = query;
   const [passengers, setPassengers] = useState<PassengerWithIndex[]>([{ index: 0 }]);
   const [modalOpen, setModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const formRef = useRef<HTMLFormElement>(null); 
-  useEffect(() => {
-    if (sessionData?.user) {
-      const initialPassenger: PassengerWithIndex = {
-        index: 0,
-        firstName: sessionData?.user.firstName ?? '',
-        lastName: sessionData?.user.lastName ?? '',
-        email: sessionData?.user.email ?? '',
-        member: !!sessionData?.user.isMember,
-        phone: sessionData?.user.phone ?? '',
-        busId: awayGame?.buses[0]?.id ?? '',
-      }
-      setPassengers([initialPassenger]);
-    }
-  }, [sessionData])
-  if (!id) return null
-  if (Array.isArray(id)) return null;
-  const { data: awayGame, isLoading } = api.public.getAwayGame.useQuery({ id: id });
-  const { mutateAsync: createPaymentIntent, data: clientSecret } = api.eventPayment.requestStripePayment.useMutation();
+  const firstAvailableBus = awayGame?.buses.find((bus) => bus.availableSeats > 0);
 
+  useEffect(() => {
+    const initialPassenger: PassengerWithIndex = {
+      index: 0,
+      firstName: sessionData?.user.firstName ?? '',
+      lastName: sessionData?.user.lastName ?? '',
+      email: sessionData?.user.email ?? '',
+      member: !!sessionData?.user.isMember,
+      phone: sessionData?.user.phone ?? '',
+      busId: firstAvailableBus?.id ?? '',
+    }
+    setPassengers([initialPassenger]);
+  }, [sessionData, firstAvailableBus])
+
+  if (!id) return null
   if (isLoading) return null;
   if (!awayGame) return null;
 
