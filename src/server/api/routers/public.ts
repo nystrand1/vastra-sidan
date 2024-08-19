@@ -44,8 +44,9 @@ export const publicRouter = createTRPCRouter({
       include: busesWithPaidPassengers,
       where: {
         date: {
-          gte: subHours(new Date(), 8)
-        }
+          gte: subHours(new Date(), 8),
+        },
+        active: true,
       }
     });
     const eventWithParticiantCount = res.map((event) => ({
@@ -64,7 +65,8 @@ export const publicRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const res = await ctx.prisma.vastraEvent.findUnique({
         where: {
-          id: input.id
+          id: input.id,
+          active: true,
         },
         include: busesWithPaidPassengers,
       });
@@ -107,7 +109,8 @@ export const publicRouter = createTRPCRouter({
       where: {
         date: {
           gte: subHours(new Date(), 8)
-        }
+        },
+        active: true,
       }
     }) : null;
 

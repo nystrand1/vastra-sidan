@@ -8,11 +8,11 @@ import { type inferAsyncReturnType } from "@trpc/server";
 import { parseISO } from "date-fns";
 import { env } from "~/env.mjs";
 import {
-  type AwayGame,
   type Membership as WPMembership
 } from "~/types/wordpressTypes";
 import { type createTRPCContext } from "../api/trpc";
 import { captureException } from "@sentry/nextjs";
+import { type GetActiveAwayGamesQuery } from "~/types/wordpresstypes/graphql";
 
 const apiKey = env.WORDPRESS_API_KEY;
 
@@ -55,20 +55,17 @@ export const makeRequest = async <T>(
   }
 };
 
-export const awayGameMapper = (awayGame: AwayGame) => ({
-  ...awayGame.acf,
-  id: awayGame.id,
-  enemyTeam: awayGame.acf.enemyteam,
-  busInfo: awayGame.acf.businfo,
-  memberPrice: awayGame.acf.memberprice,
-  memberPriceYouth: awayGame.acf.memberprice_youth,
-  nonMemberPrice: awayGame.acf.nonmemberprice,
-  nonMemberPriceYouth: awayGame.acf.nonmemberprice_youth,
-  maxSeats: awayGame.acf.buses.reduce(
+type AwayGame = GetActiveAwayGamesQuery['awayGames']['nodes'][0];
+
+export const awayGameMapper = ({ awayGame, id, status }: AwayGame) => ({
+  ...awayGame,
+  status,
+  id,
+  maxSeats: awayGame.buses.reduce(
     (acc, bus) => acc + Number(bus.maxSeats),
     0
   ),
-  bookedSeats: awayGame.acf.buses.reduce(
+  bookedSeats: awayGame.buses.reduce(
     (acc, bus) => acc + Number(bus.occupiedSeats),
     0
   )
@@ -87,7 +84,8 @@ export const awayGameToEvent = (
     defaultPrice: Number(awayGame.nonMemberPrice),
     memberPrice: Number(awayGame.memberPrice),
     youthPrice: Number(awayGame.nonMemberPriceYouth),
-    youthMemberPrice: Number(awayGame.memberPriceYouth)
+    youthMemberPrice: Number(awayGame.memberPriceYouth),
+    active: awayGame.status === "publish"
   },
   buses: awayGameToBuses(awayGame)
 });
@@ -95,13 +93,14 @@ export const awayGameToEvent = (
 const awayGameToBuses = (
   awayGame: ReturnType<typeof awayGameMapper>
 ): Bus[] => {
+  // If VSK game, use the legacy ID
   return awayGame.buses.map((bus) => ({
-    id: `${awayGame.id}-${bus.busName}`,
+    id: awayGame.id === '3473' ? `${awayGame.id}-${bus.busName}` : bus.id,
     name: bus.busName,
     seats: Number(bus.maxSeats),
     createdAt: new Date(),
     updatedAt: new Date(),
-    eventId: awayGame.id.toString()
+    eventId: awayGame.id,
   }));
 };
 

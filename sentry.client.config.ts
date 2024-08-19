@@ -24,6 +24,7 @@ Sentry.init({
       // Additional Replay configuration goes in here, for example:
       maskAllText: true,
       blockAllMedia: true,
+      unmask: [".sentry-unmask, [data-sentry-unmask]"],
     }),
   ],
 });

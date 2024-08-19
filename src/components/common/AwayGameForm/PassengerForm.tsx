@@ -48,7 +48,7 @@ export const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } 
   const { index, member, youth } = passenger;
   if (!event) return null;
   const busOptions = buses.map((bus) => {
-    const fullyBooked = bus.availableSeats < 0;
+    const fullyBooked = bus.availableSeats <= 0;
     return {
       value: bus.id,
       label: `${bus.name} - (${bus._count.passengers}/${bus.seats})` + (fullyBooked ? " - Fullbokad" : "") ,
@@ -102,6 +102,7 @@ export const PassengerForm = ({ passenger, onRemove, onChange, buses, eventId } 
         id={`busId_${index}`}
         name={`busId_${index}`}
         placeholder="Välj buss..."
+        value={passenger.busId}
         onChange={(e) => { onChange({ busId: e.target.value }) }}
         options={busOptions}
       />

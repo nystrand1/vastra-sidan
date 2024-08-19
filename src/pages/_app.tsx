@@ -38,12 +38,15 @@ const MyApp: AppType<{ session: Session | null}> = ({
       <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
     </Head>
     <SessionProvider session={session}>
-      <Toaster position="bottom-center" toastOptions={{
-        style: {
-          borderRadius: '10px',
-          background: '#333',
-          color: '#fff',
-        }
+      <Toaster 
+        position="bottom-center" 
+        toastOptions={{
+          style: {
+            borderRadius: '10px',
+            background: '#333',
+            color: '#fff',
+          },
+          className: ".sentry-unmask"
       }} />
       <Layout>
         {isAdminRoute ? (

@@ -1,0 +1,24 @@
+query GetActiveAwayGames {
+  awayGames: awaygames {
+    nodes {
+      id
+      status
+      awayGame: awaygame {
+        date
+        busInfo: businfo
+        enemyTeam: enemyteam
+        memberPrice: memberprice
+        memberPriceYouth: memberpriceYouth
+        nonMemberPrice: nonmemberprice
+        nonMemberPriceYouth: nonmemberpriceYouth
+        buses {
+          id
+          busName: busname
+          maxSeats: maxseats
+          requiredSeats: requiredseats
+          occupiedSeats: occupiedseats
+        }
+      }
+    }
+  }
+}
