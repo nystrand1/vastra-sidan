@@ -95,12 +95,12 @@ const awayGameToBuses = (
 ): Bus[] => {
   // If VSK game, use the legacy ID
   return awayGame.buses.map((bus) => ({
-    id: awayGame.id === '3473' ? `${awayGame.id}-${bus.busName}` : bus.id,
+    id: awayGame.id.toString() === '3473' ? `${awayGame.id}-${bus.busName}` : bus.id,
     name: bus.busName,
     seats: Number(bus.maxSeats),
     createdAt: new Date(),
     updatedAt: new Date(),
-    eventId: awayGame.id,
+    eventId: awayGame.id.toString(),
   }));
 };
 
