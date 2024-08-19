@@ -29,6 +29,7 @@ const mockEvent: EventSignUpProps['participant']['event'] = {
   youthMemberPrice: 100,
   createdAt: new Date(),
   updatedAt: new Date(),
+  active: true,
 }
 
 const mockParticipant: EventSignUpProps['participant'] = {
