@@ -48,27 +48,6 @@ export interface WPOptionsPage {
   };
 }
 
-export interface AwayGame {
-  id: number;
-  acf: {
-    enemyTeam: string;
-    busInfo: string;
-    memberPrice: string;
-    memberPriceYouth: string;
-    nonMemberPrice: string;
-    nonMemberPriceYouth: string;
-    date: string;
-    buses: Bus[];
-    // Wrongly typed in WP
-    enemyteam: string;
-    businfo: string;
-    memberprice: string;
-    memberprice_youth: string;
-    nonmemberprice: string;
-    nonmemberprice_youth: string;
-  };
-}
-
 export interface Bus {
   busName: string;
   occupiedSeats: string;

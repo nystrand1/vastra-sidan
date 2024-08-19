@@ -165,6 +165,183 @@ export enum AvatarRatingEnum {
   X = 'X'
 }
 
+/** The Awaygame type */
+export type Awaygame = ContentNode & DatabaseIdentifier & MenuItemLinkable & Node & NodeWithTemplate & NodeWithTitle & Previewable & UniformResourceIdentifiable & {
+  __typename?: 'Awaygame';
+  /** Added to the GraphQL Schema because the ACF Field Group &quot;Bussresa&quot; was set to Show in GraphQL. */
+  awaygame: Maybe<Awaygame_Awaygame>;
+  /**
+   * The id field matches the WP_Post-&gt;ID field.
+   * @deprecated Deprecated in favor of the databaseId field
+   */
+  awaygameId: Scalars['Int']['output'];
+  /** Connection between the ContentNode type and the ContentType type */
+  contentType: Maybe<ContentNodeToContentTypeConnectionEdge>;
+  /** The name of the Content Type the node belongs to */
+  contentTypeName: Scalars['String']['output'];
+  /** The unique identifier stored in the database */
+  databaseId: Scalars['Int']['output'];
+  /** Post publishing date. */
+  date: Maybe<Scalars['String']['output']>;
+  /** The publishing date set in GMT. */
+  dateGmt: Maybe<Scalars['String']['output']>;
+  /** The desired slug of the post */
+  desiredSlug: Maybe<Scalars['String']['output']>;
+  /** If a user has edited the node within the past 15 seconds, this will return the user that last edited. Null if the edit lock doesn&#039;t exist or is greater than 15 seconds */
+  editingLockedBy: Maybe<ContentNodeToEditLockConnectionEdge>;
+  /** The RSS enclosure for the object */
+  enclosure: Maybe<Scalars['String']['output']>;
+  /** Connection between the ContentNode type and the EnqueuedScript type */
+  enqueuedScripts: Maybe<ContentNodeToEnqueuedScriptConnection>;
+  /** Connection between the ContentNode type and the EnqueuedStylesheet type */
+  enqueuedStylesheets: Maybe<ContentNodeToEnqueuedStylesheetConnection>;
+  /** The global unique identifier for this post. This currently matches the value stored in WP_Post-&gt;guid and the guid column in the &quot;post_objects&quot; database table. */
+  guid: Maybe<Scalars['String']['output']>;
+  /** The globally unique identifier of the awaygames object. */
+  id: Scalars['ID']['output'];
+  /** Whether the node is a Content Node */
+  isContentNode: Scalars['Boolean']['output'];
+  /** Whether the object is a node in the preview state */
+  isPreview: Maybe<Scalars['Boolean']['output']>;
+  /** Whether the object is restricted from the current viewer */
+  isRestricted: Maybe<Scalars['Boolean']['output']>;
+  /** Whether the node is a Term */
+  isTermNode: Scalars['Boolean']['output'];
+  /** The user that most recently edited the node */
+  lastEditedBy: Maybe<ContentNodeToEditLastConnectionEdge>;
+  /** The permalink of the post */
+  link: Maybe<Scalars['String']['output']>;
+  /** The local modified time for a post. If a post was recently updated the modified field will change to match the corresponding time. */
+  modified: Maybe<Scalars['String']['output']>;
+  /** The GMT modified time for a post. If a post was recently updated the modified field will change to match the corresponding time in GMT. */
+  modifiedGmt: Maybe<Scalars['String']['output']>;
+  /** Connection between the Awaygame type and the Awaygame type */
+  preview: Maybe<AwaygameToPreviewConnectionEdge>;
+  /** The database id of the preview node */
+  previewRevisionDatabaseId: Maybe<Scalars['Int']['output']>;
+  /** Whether the object is a node in the preview state */
+  previewRevisionId: Maybe<Scalars['ID']['output']>;
+  /** The uri slug for the post. This is equivalent to the WP_Post-&gt;post_name field and the post_name column in the database for the &quot;post_objects&quot; table. */
+  slug: Maybe<Scalars['String']['output']>;
+  /** The current status of the object */
+  status: Maybe<Scalars['String']['output']>;
+  /** The template assigned to the node */
+  template: Maybe<ContentTemplate>;
+  /** The title of the post. This is currently just the raw title. An amendment to support rendered title needs to be made. */
+  title: Maybe<Scalars['String']['output']>;
+  /** The unique resource identifier path */
+  uri: Maybe<Scalars['String']['output']>;
+};
+
+
+/** The Awaygame type */
+export type AwaygameEnqueuedScriptsArgs = {
+  after: InputMaybe<Scalars['String']['input']>;
+  before: InputMaybe<Scalars['String']['input']>;
+  first: InputMaybe<Scalars['Int']['input']>;
+  last: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+/** The Awaygame type */
+export type AwaygameEnqueuedStylesheetsArgs = {
+  after: InputMaybe<Scalars['String']['input']>;
+  before: InputMaybe<Scalars['String']['input']>;
+  first: InputMaybe<Scalars['Int']['input']>;
+  last: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+/** The Awaygame type */
+export type AwaygameTitleArgs = {
+  format: InputMaybe<PostObjectFieldFormatEnum>;
+};
+
+/** Connection to Awaygame Nodes */
+export type AwaygameConnection = {
+  /** A list of edges (relational context) between RootQuery and connected Awaygame Nodes */
+  edges: Array<AwaygameConnectionEdge>;
+  /** A list of connected Awaygame Nodes */
+  nodes: Array<Awaygame>;
+  /** Information about pagination in a connection. */
+  pageInfo: AwaygameConnectionPageInfo;
+};
+
+/** Edge between a Node and a connected Awaygame */
+export type AwaygameConnectionEdge = {
+  /** Opaque reference to the nodes position in the connection. Value can be used with pagination args. */
+  cursor: Maybe<Scalars['String']['output']>;
+  /** The connected Awaygame Node */
+  node: Awaygame;
+};
+
+/** Page Info on the connected AwaygameConnectionEdge */
+export type AwaygameConnectionPageInfo = {
+  /** When paginating forwards, the cursor to continue. */
+  endCursor: Maybe<Scalars['String']['output']>;
+  /** When paginating forwards, are there more items? */
+  hasNextPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, are there more items? */
+  hasPreviousPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, the cursor to continue. */
+  startCursor: Maybe<Scalars['String']['output']>;
+};
+
+/** The Type of Identifier used to fetch a single resource. Default is ID. */
+export enum AwaygameIdType {
+  /** Identify a resource by the Database ID. */
+  DatabaseId = 'DATABASE_ID',
+  /** Identify a resource by the (hashed) Global ID. */
+  Id = 'ID',
+  /** Identify a resource by the slug. Available to non-hierarchcial Types where the slug is a unique identifier. */
+  Slug = 'SLUG',
+  /** Identify a resource by the URI. */
+  Uri = 'URI'
+}
+
+/** Connection between the Awaygame type and the Awaygame type */
+export type AwaygameToPreviewConnectionEdge = AwaygameConnectionEdge & Edge & OneToOneConnection & {
+  __typename?: 'AwaygameToPreviewConnectionEdge';
+  /** Opaque reference to the nodes position in the connection. Value can be used with pagination args. */
+  cursor: Maybe<Scalars['String']['output']>;
+  /** The node of the connection, without the edges */
+  node: Awaygame;
+};
+
+/** Field Group */
+export type Awaygame_Awaygame = AcfFieldGroup & {
+  __typename?: 'Awaygame_Awaygame';
+  buses: Maybe<Array<Maybe<Awaygame_Awaygame_Buses>>>;
+  /** Skriv information om bussen/bussarna. T.ex pris förmedlem/icke medlem, när bussen avgår/kommer tillbaka och ifall det är en pubbuss. */
+  businfo: Maybe<Scalars['String']['output']>;
+  /** När avgår bussen? */
+  date: Maybe<Scalars['String']['output']>;
+  /** Vilken bortamatch är det? T.ex Norrköping, AIK */
+  enemyteam: Maybe<Scalars['String']['output']>;
+  /** The name of the ACF Field Group */
+  fieldGroupName: Maybe<Scalars['String']['output']>;
+  /** Skriv kostnaden för bussresan för medlemmar i Västra */
+  memberprice: Maybe<Scalars['Float']['output']>;
+  /** Skriv ungdomspriset för bussresan för medlemmar i Västra */
+  memberpriceYouth: Maybe<Scalars['Float']['output']>;
+  /** Skriv priset för bussresan för en icke-medlem i Västra */
+  nonmemberprice: Maybe<Scalars['Float']['output']>;
+  /** Skriv ungdomspriset för bussresan för en icke-medlem i Västra */
+  nonmemberpriceYouth: Maybe<Scalars['Float']['output']>;
+};
+
+/** Field Group */
+export type Awaygame_Awaygame_Buses = AcfFieldGroup & {
+  __typename?: 'Awaygame_Awaygame_buses';
+  busname: Maybe<Scalars['String']['output']>;
+  /** The name of the ACF Field Group */
+  fieldGroupName: Maybe<Scalars['String']['output']>;
+  id: Maybe<Scalars['String']['output']>;
+  maxseats: Maybe<Scalars['Float']['output']>;
+  occupiedseats: Maybe<Scalars['Float']['output']>;
+  requiredseats: Maybe<Scalars['Float']['output']>;
+};
+
 /** The Awayguide type */
 export type Awayguide = ContentNode & DatabaseIdentifier & MenuItemLinkable & Node & NodeWithTemplate & NodeWithTitle & Previewable & UniformResourceIdentifiable & {
   __typename?: 'Awayguide';
@@ -359,7 +536,7 @@ export type Category = DatabaseIdentifier & HierarchicalNode & HierarchicalTermN
   enqueuedScripts: Maybe<TermNodeToEnqueuedScriptConnection>;
   /** Connection between the TermNode type and the EnqueuedStylesheet type */
   enqueuedStylesheets: Maybe<TermNodeToEnqueuedStylesheetConnection>;
-  /** The unique resource identifier path */
+  /** The globally unique ID for the object */
   id: Scalars['ID']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
@@ -1377,7 +1554,7 @@ export type ContentNode = {
   enqueuedStylesheets: Maybe<ContentNodeToEnqueuedStylesheetConnection>;
   /** The global unique identifier for this post. This currently matches the value stored in WP_Post-&gt;guid and the guid column in the &quot;post_objects&quot; database table. */
   guid: Maybe<Scalars['String']['output']>;
-  /** The unique resource identifier path */
+  /** The globally unique ID for the object */
   id: Scalars['ID']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
@@ -1691,6 +1868,8 @@ export enum ContentTypeEnum {
   /** The Type of Content object */
   Attachment = 'ATTACHMENT',
   /** The Type of Content object */
+  Awaygames = 'AWAYGAMES',
+  /** The Type of Content object */
   Bortaguiden = 'BORTAGUIDEN',
   /** The Type of Content object */
   Chronicles = 'CHRONICLES',
@@ -1835,6 +2014,33 @@ export enum ContentTypesOfTagEnum {
   /** The Type of Content object */
   Post = 'POST'
 }
+
+/** Input for the createAwaygame mutation. */
+export type CreateAwaygameInput = {
+  /** This is an ID that can be passed to a mutation by the client to track the progress of mutations and catch possible duplicate mutation submissions. */
+  clientMutationId: InputMaybe<Scalars['String']['input']>;
+  /** The date of the object. Preferable to enter as year/month/day (e.g. 01/31/2017) as it will rearrange date as fit if it is not specified. Incomplete dates may have unintended results for example, "2017" as the input will use current date with timestamp 20:17  */
+  date: InputMaybe<Scalars['String']['input']>;
+  /** A field used for ordering posts. This is typically used with nav menu items or for special ordering of hierarchical content types. */
+  menuOrder: InputMaybe<Scalars['Int']['input']>;
+  /** The password used to protect the content of the object */
+  password: InputMaybe<Scalars['String']['input']>;
+  /** The slug of the object */
+  slug: InputMaybe<Scalars['String']['input']>;
+  /** The status of the object */
+  status: InputMaybe<PostStatusEnum>;
+  /** The title of the object */
+  title: InputMaybe<Scalars['String']['input']>;
+};
+
+/** The payload for the createAwaygame mutation. */
+export type CreateAwaygamePayload = {
+  __typename?: 'CreateAwaygamePayload';
+  /** The Post object mutation type. */
+  awaygame: Maybe<Awaygame>;
+  /** If a &#039;clientMutationId&#039; input is provided to the mutation, it will be returned as output on the mutation. This ID can be used by the client to track the progress of mutations and catch possible duplicate mutation submissions. */
+  clientMutationId: Maybe<Scalars['String']['output']>;
+};
 
 /** Input for the createAwayguide mutation. */
 export type CreateAwayguideInput = {
@@ -2271,6 +2477,29 @@ export type DefaultTemplate = ContentTemplate & {
   __typename?: 'DefaultTemplate';
   /** The name of the template */
   templateName: Maybe<Scalars['String']['output']>;
+};
+
+/** Input for the deleteAwaygame mutation. */
+export type DeleteAwaygameInput = {
+  /** This is an ID that can be passed to a mutation by the client to track the progress of mutations and catch possible duplicate mutation submissions. */
+  clientMutationId: InputMaybe<Scalars['String']['input']>;
+  /** Whether the object should be force deleted instead of being moved to the trash */
+  forceDelete: InputMaybe<Scalars['Boolean']['input']>;
+  /** The ID of the Awaygame to delete */
+  id: Scalars['ID']['input'];
+  /** Override the edit lock when another user is editing the post */
+  ignoreEditLock: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+/** The payload for the deleteAwaygame mutation. */
+export type DeleteAwaygamePayload = {
+  __typename?: 'DeleteAwaygamePayload';
+  /** The object before it was deleted */
+  awaygame: Maybe<Awaygame>;
+  /** If a &#039;clientMutationId&#039; input is provided to the mutation, it will be returned as output on the mutation. This ID can be used by the client to track the progress of mutations and catch possible duplicate mutation submissions. */
+  clientMutationId: Maybe<Scalars['String']['output']>;
+  /** The ID of the deleted object */
+  deletedId: Maybe<Scalars['ID']['output']>;
 };
 
 /** Input for the deleteAwayguide mutation. */
@@ -3691,7 +3920,7 @@ export type MenuItemConnectionPageInfo = {
 export type MenuItemLinkable = {
   /** The unique identifier stored in the database */
   databaseId: Scalars['Int']['output'];
-  /** The unique resource identifier path */
+  /** The globally unique ID for the object */
   id: Scalars['ID']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
@@ -3718,7 +3947,7 @@ export enum MenuItemNodeIdTypeEnum {
 }
 
 /** Deprecated in favor of MenuItemLinkeable Interface */
-export type MenuItemObjectUnion = Awayguide | Category | Chronicle | NewsPost | Page | Post | SeasonChronicle | Tag;
+export type MenuItemObjectUnion = Awaygame | Awayguide | Category | Chronicle | NewsPost | Page | Post | SeasonChronicle | Tag;
 
 /** Connection between the MenuItem type and the Menu type */
 export type MenuItemToMenuConnectionEdge = Edge & MenuConnectionEdge & OneToOneConnection & {
@@ -3785,14 +4014,8 @@ export type MenuItemToMenuItemLinkableConnectionEdge = Edge & MenuItemLinkableCo
 
 /** Registered menu locations */
 export enum MenuLocationEnum {
-  /** Put the menu in the footer-menu location */
-  FooterMenu = 'FOOTER_MENU',
-  /** Put the menu in the footer-menu-tablet location */
-  FooterMenuTablet = 'FOOTER_MENU_TABLET',
   /** Put the menu in the handheld location */
   Handheld = 'HANDHELD',
-  /** Put the menu in the header-menu location */
-  HeaderMenu = 'HEADER_MENU',
   /** Put the menu in the primary location */
   Primary = 'PRIMARY',
   /** Put the menu in the secondary location */
@@ -5109,7 +5332,7 @@ export type PostFormat = DatabaseIdentifier & Node & TermNode & UniformResourceI
   enqueuedScripts: Maybe<TermNodeToEnqueuedScriptConnection>;
   /** Connection between the TermNode type and the EnqueuedStylesheet type */
   enqueuedStylesheets: Maybe<TermNodeToEnqueuedStylesheetConnection>;
-  /** The unique resource identifier path */
+  /** The globally unique ID for the object */
   id: Scalars['ID']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
@@ -6232,6 +6455,8 @@ export type RestoreCommentPayload = {
 /** The root mutation */
 export type RootMutation = {
   __typename?: 'RootMutation';
+  /** The createAwaygame mutation */
+  createAwaygame: Maybe<CreateAwaygamePayload>;
   /** The createAwayguide mutation */
   createAwayguide: Maybe<CreateAwayguidePayload>;
   /** The createCategory mutation */
@@ -6256,6 +6481,8 @@ export type RootMutation = {
   createTag: Maybe<CreateTagPayload>;
   /** The createUser mutation */
   createUser: Maybe<CreateUserPayload>;
+  /** The deleteAwaygame mutation */
+  deleteAwaygame: Maybe<DeleteAwaygamePayload>;
   /** The deleteAwayguide mutation */
   deleteAwayguide: Maybe<DeleteAwayguidePayload>;
   /** The deleteCategory mutation */
@@ -6290,6 +6517,8 @@ export type RootMutation = {
   restoreComment: Maybe<RestoreCommentPayload>;
   /** Send password reset email to user */
   sendPasswordResetEmail: Maybe<SendPasswordResetEmailPayload>;
+  /** The updateAwaygame mutation */
+  updateAwaygame: Maybe<UpdateAwaygamePayload>;
   /** The updateAwayguide mutation */
   updateAwayguide: Maybe<UpdateAwayguidePayload>;
   /** The updateCategory mutation */
@@ -6316,6 +6545,12 @@ export type RootMutation = {
   updateTag: Maybe<UpdateTagPayload>;
   /** The updateUser mutation */
   updateUser: Maybe<UpdateUserPayload>;
+};
+
+
+/** The root mutation */
+export type RootMutationCreateAwaygameArgs = {
+  input: CreateAwaygameInput;
 };
 
 
@@ -6388,6 +6623,12 @@ export type RootMutationCreateTagArgs = {
 /** The root mutation */
 export type RootMutationCreateUserArgs = {
   input: CreateUserInput;
+};
+
+
+/** The root mutation */
+export type RootMutationDeleteAwaygameArgs = {
+  input: DeleteAwaygameInput;
 };
 
 
@@ -6494,6 +6735,12 @@ export type RootMutationSendPasswordResetEmailArgs = {
 
 
 /** The root mutation */
+export type RootMutationUpdateAwaygameArgs = {
+  input: UpdateAwaygameInput;
+};
+
+
+/** The root mutation */
 export type RootMutationUpdateAwayguideArgs = {
   input: UpdateAwayguideInput;
 };
@@ -6577,6 +6824,15 @@ export type RootQuery = {
   aboutUsPage: Maybe<AboutUsPage>;
   /** Entry point to get all settings for the site */
   allSettings: Maybe<Settings>;
+  /** An object of the Awaygame Type. Har läggs bussresor upp */
+  awaygame: Maybe<Awaygame>;
+  /**
+   * A Awaygame object
+   * @deprecated Deprecated in favor of using the single entry point for this type with ID and IDType fields. For example, instead of postBy( id: &quot;&quot; ), use post(id: &quot;&quot; idType: &quot;&quot;)
+   */
+  awaygameBy: Maybe<Awaygame>;
+  /** Connection between the RootQuery type and the Awaygame type */
+  awaygames: Maybe<RootQueryToAwaygameConnection>;
   /** An object of the Awayguide Type.  */
   awayguide: Maybe<Awayguide>;
   /**
@@ -6718,6 +6974,33 @@ export type RootQuery = {
   viewer: Maybe<User>;
   /** Fields of the &#039;WritingSettings&#039; settings group */
   writingSettings: Maybe<WritingSettings>;
+};
+
+
+/** The root entry point into the Graph */
+export type RootQueryAwaygameArgs = {
+  asPreview: InputMaybe<Scalars['Boolean']['input']>;
+  id: Scalars['ID']['input'];
+  idType: InputMaybe<AwaygameIdType>;
+};
+
+
+/** The root entry point into the Graph */
+export type RootQueryAwaygameByArgs = {
+  awaygameId: InputMaybe<Scalars['Int']['input']>;
+  id: InputMaybe<Scalars['ID']['input']>;
+  slug: InputMaybe<Scalars['String']['input']>;
+  uri: InputMaybe<Scalars['String']['input']>;
+};
+
+
+/** The root entry point into the Graph */
+export type RootQueryAwaygamesArgs = {
+  after: InputMaybe<Scalars['String']['input']>;
+  before: InputMaybe<Scalars['String']['input']>;
+  first: InputMaybe<Scalars['Int']['input']>;
+  last: InputMaybe<Scalars['Int']['input']>;
+  where: InputMaybe<RootQueryToAwaygameConnectionWhereArgs>;
 };
 
 
@@ -7180,6 +7463,77 @@ export type RootQueryUsersArgs = {
   first: InputMaybe<Scalars['Int']['input']>;
   last: InputMaybe<Scalars['Int']['input']>;
   where: InputMaybe<RootQueryToUserConnectionWhereArgs>;
+};
+
+/** Connection between the RootQuery type and the Awaygame type */
+export type RootQueryToAwaygameConnection = AwaygameConnection & Connection & {
+  __typename?: 'RootQueryToAwaygameConnection';
+  /** Edges for the RootQueryToAwaygameConnection connection */
+  edges: Array<RootQueryToAwaygameConnectionEdge>;
+  /** The nodes of the connection, without the edges */
+  nodes: Array<Awaygame>;
+  /** Information about pagination in a connection. */
+  pageInfo: RootQueryToAwaygameConnectionPageInfo;
+};
+
+/** An edge in a connection */
+export type RootQueryToAwaygameConnectionEdge = AwaygameConnectionEdge & Edge & {
+  __typename?: 'RootQueryToAwaygameConnectionEdge';
+  /** A cursor for use in pagination */
+  cursor: Maybe<Scalars['String']['output']>;
+  /** The item at the end of the edge */
+  node: Awaygame;
+};
+
+/** Page Info on the &quot;RootQueryToAwaygameConnection&quot; */
+export type RootQueryToAwaygameConnectionPageInfo = AwaygameConnectionPageInfo & PageInfo & WpPageInfo & {
+  __typename?: 'RootQueryToAwaygameConnectionPageInfo';
+  /** When paginating forwards, the cursor to continue. */
+  endCursor: Maybe<Scalars['String']['output']>;
+  /** When paginating forwards, are there more items? */
+  hasNextPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, are there more items? */
+  hasPreviousPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, the cursor to continue. */
+  startCursor: Maybe<Scalars['String']['output']>;
+};
+
+/** Arguments for filtering the RootQueryToAwaygameConnection connection */
+export type RootQueryToAwaygameConnectionWhereArgs = {
+  /** Filter the connection based on dates */
+  dateQuery: InputMaybe<DateQueryInput>;
+  /** True for objects with passwords; False for objects without passwords; null for all objects with or without passwords */
+  hasPassword: InputMaybe<Scalars['Boolean']['input']>;
+  /** Specific database ID of the object */
+  id: InputMaybe<Scalars['Int']['input']>;
+  /** Array of IDs for the objects to retrieve */
+  in: InputMaybe<Array<InputMaybe<Scalars['ID']['input']>>>;
+  /** Get objects with a specific mimeType property */
+  mimeType: InputMaybe<MimeTypeEnum>;
+  /** Slug / post_name of the object */
+  name: InputMaybe<Scalars['String']['input']>;
+  /** Specify objects to retrieve. Use slugs */
+  nameIn: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+  /** Specify IDs NOT to retrieve. If this is used in the same query as "in", it will be ignored */
+  notIn: InputMaybe<Array<InputMaybe<Scalars['ID']['input']>>>;
+  /** What parameter to use to order the objects by. */
+  orderby: InputMaybe<Array<InputMaybe<PostObjectsConnectionOrderbyInput>>>;
+  /** Use ID to return only children. Use 0 to return only top-level items */
+  parent: InputMaybe<Scalars['ID']['input']>;
+  /** Specify objects whose parent is in an array */
+  parentIn: InputMaybe<Array<InputMaybe<Scalars['ID']['input']>>>;
+  /** Specify posts whose parent is not in an array */
+  parentNotIn: InputMaybe<Array<InputMaybe<Scalars['ID']['input']>>>;
+  /** Show posts with a specific password. */
+  password: InputMaybe<Scalars['String']['input']>;
+  /** Show Posts based on a keyword search */
+  search: InputMaybe<Scalars['String']['input']>;
+  /** Retrieve posts where post status is in an array. */
+  stati: InputMaybe<Array<InputMaybe<PostStatusEnum>>>;
+  /** Show posts with a specific status. */
+  status: InputMaybe<PostStatusEnum>;
+  /** Title of the object */
+  title: InputMaybe<Scalars['String']['input']>;
 };
 
 /** Connection between the RootQuery type and the Awayguide type */
@@ -8917,7 +9271,7 @@ export type Tag = DatabaseIdentifier & MenuItemLinkable & Node & TermNode & Unif
   enqueuedScripts: Maybe<TermNodeToEnqueuedScriptConnection>;
   /** Connection between the TermNode type and the EnqueuedStylesheet type */
   enqueuedStylesheets: Maybe<TermNodeToEnqueuedStylesheetConnection>;
-  /** The unique resource identifier path */
+  /** The globally unique ID for the object */
   id: Scalars['ID']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
@@ -9393,15 +9747,15 @@ export type TaxonomyToTermNodeConnectionPageInfo = PageInfo & TermNodeConnection
 };
 
 /** The template assigned to the node */
-export type Template_FullWidth = ContentTemplate & {
-  __typename?: 'Template_FullWidth';
+export type Template_FullBredd = ContentTemplate & {
+  __typename?: 'Template_FullBredd';
   /** The name of the template */
   templateName: Maybe<Scalars['String']['output']>;
 };
 
 /** The template assigned to the node */
-export type Template_Homepage = ContentTemplate & {
-  __typename?: 'Template_Homepage';
+export type Template_Startsida = ContentTemplate & {
+  __typename?: 'Template_Startsida';
   /** The name of the template */
   templateName: Maybe<Scalars['String']['output']>;
 };
@@ -9418,7 +9772,7 @@ export type TermNode = {
   enqueuedScripts: Maybe<TermNodeToEnqueuedScriptConnection>;
   /** Connection between the TermNode type and the EnqueuedStylesheet type */
   enqueuedStylesheets: Maybe<TermNodeToEnqueuedStylesheetConnection>;
-  /** The unique resource identifier path */
+  /** The globally unique ID for the object */
   id: Scalars['ID']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
@@ -9647,7 +10001,7 @@ export type ThemeConnectionPageInfo = {
 
 /** Any node that has a URI */
 export type UniformResourceIdentifiable = {
-  /** The unique resource identifier path */
+  /** The globally unique ID for the object */
   id: Scalars['ID']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
@@ -9655,6 +10009,37 @@ export type UniformResourceIdentifiable = {
   isTermNode: Scalars['Boolean']['output'];
   /** The unique resource identifier path */
   uri: Maybe<Scalars['String']['output']>;
+};
+
+/** Input for the updateAwaygame mutation. */
+export type UpdateAwaygameInput = {
+  /** This is an ID that can be passed to a mutation by the client to track the progress of mutations and catch possible duplicate mutation submissions. */
+  clientMutationId: InputMaybe<Scalars['String']['input']>;
+  /** The date of the object. Preferable to enter as year/month/day (e.g. 01/31/2017) as it will rearrange date as fit if it is not specified. Incomplete dates may have unintended results for example, "2017" as the input will use current date with timestamp 20:17  */
+  date: InputMaybe<Scalars['String']['input']>;
+  /** The ID of the Awaygame object */
+  id: Scalars['ID']['input'];
+  /** Override the edit lock when another user is editing the post */
+  ignoreEditLock: InputMaybe<Scalars['Boolean']['input']>;
+  /** A field used for ordering posts. This is typically used with nav menu items or for special ordering of hierarchical content types. */
+  menuOrder: InputMaybe<Scalars['Int']['input']>;
+  /** The password used to protect the content of the object */
+  password: InputMaybe<Scalars['String']['input']>;
+  /** The slug of the object */
+  slug: InputMaybe<Scalars['String']['input']>;
+  /** The status of the object */
+  status: InputMaybe<PostStatusEnum>;
+  /** The title of the object */
+  title: InputMaybe<Scalars['String']['input']>;
+};
+
+/** The payload for the updateAwaygame mutation. */
+export type UpdateAwaygamePayload = {
+  __typename?: 'UpdateAwaygamePayload';
+  /** The Post object mutation type. */
+  awaygame: Maybe<Awaygame>;
+  /** If a &#039;clientMutationId&#039; input is provided to the mutation, it will be returned as output on the mutation. This ID can be used by the client to track the progress of mutations and catch possible duplicate mutation submissions. */
+  clientMutationId: Maybe<Scalars['String']['output']>;
 };
 
 /** Input for the updateAwayguide mutation. */
@@ -10994,6 +11379,11 @@ export type GetAboutUsQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type GetAboutUsQuery = { __typename?: 'RootQuery', aboutUsPage: { __typename?: 'AboutUsPage', orgChart: { __typename?: 'AboutUsPage_Orgchart', chart: Array<{ __typename?: 'AboutUsPage_Orgchart_stadgar', text: string, title: string }> }, board: { __typename?: 'AboutUsPage_Board', contactinfo: string, boardmembers: Array<{ __typename?: 'AboutUsPage_Board_boardmembers', details: { __typename?: 'AboutUsPage_Board_boardmembers_Details', name: string, position: string, email: string } }> }, wallOfFame: { __typename?: 'AboutUsPage_Walloffame', awardInfo: string, kjelledine: Array<{ __typename?: 'AboutUsPage_Walloffame_kjelledine', winner: string, year: number }>, tioRyssar: Array<{ __typename?: 'AboutUsPage_Walloffame_tioRyssar', winner: string, year: number }> }, protocols: { __typename?: 'AboutUsPage_Protocols', protocols: Array<{ __typename?: 'AboutUsPage_Protocols_protocols', file: { __typename?: 'MediaItem', mediaItemUrl: string, title: string, date: string } }> } }, documentPage: { __typename?: 'DocumentPage', documents: { __typename?: 'DocumentPage_Documents', document: Array<{ __typename?: 'DocumentPage_Documents_dokument', file: { __typename?: 'MediaItem', mediaItemUrl: string, title: string, date: string } }> } } };
 
+export type GetActiveAwayGamesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetActiveAwayGamesQuery = { __typename?: 'RootQuery', awayGames: { __typename?: 'RootQueryToAwaygameConnection', nodes: Array<{ __typename?: 'Awaygame', id: string, status: string, awayGame: { __typename?: 'Awaygame_Awaygame', date: string, busInfo: string, enemyTeam: string, memberPrice: number, memberPriceYouth: number, nonMemberPrice: number, nonMemberPriceYouth: number, buses: Array<{ __typename?: 'Awaygame_Awaygame_buses', id: string, busName: string, maxSeats: number, requiredSeats: number, occupiedSeats: number }> } }> } };
+
 export type GetAwayGuidesSlugsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -11055,6 +11445,7 @@ export type GetSeasonChronicleBySlugQuery = { __typename?: 'RootQuery', seasonCh
 
 
 export const GetAboutUsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetAboutUs"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"aboutUsPage"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"orgChart"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","alias":{"kind":"Name","value":"chart"},"name":{"kind":"Name","value":"stadgar"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"text"}},{"kind":"Field","alias":{"kind":"Name","value":"title"},"name":{"kind":"Name","value":"titel"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"board"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"contactinfo"}},{"kind":"Field","name":{"kind":"Name","value":"boardmembers"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"details"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"position"}},{"kind":"Field","name":{"kind":"Name","value":"email"}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"wallOfFame"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"awardInfo"}},{"kind":"Field","name":{"kind":"Name","value":"kjelledine"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"winner"}},{"kind":"Field","name":{"kind":"Name","value":"year"}}]}},{"kind":"Field","name":{"kind":"Name","value":"tioRyssar"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"winner"}},{"kind":"Field","name":{"kind":"Name","value":"year"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"protocols"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"protocols"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","alias":{"kind":"Name","value":"file"},"name":{"kind":"Name","value":"protocol"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"mediaItemUrl"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"date"}}]}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"documentPage"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"documents"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","alias":{"kind":"Name","value":"document"},"name":{"kind":"Name","value":"dokument"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","alias":{"kind":"Name","value":"file"},"name":{"kind":"Name","value":"document"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"mediaItemUrl"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"date"}}]}}]}}]}}]}}]}}]} as unknown as DocumentNode<GetAboutUsQuery, GetAboutUsQueryVariables>;
+export const GetActiveAwayGamesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetActiveAwayGames"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","alias":{"kind":"Name","value":"awayGames"},"name":{"kind":"Name","value":"awaygames"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"nodes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","alias":{"kind":"Name","value":"awayGame"},"name":{"kind":"Name","value":"awaygame"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"date"}},{"kind":"Field","alias":{"kind":"Name","value":"busInfo"},"name":{"kind":"Name","value":"businfo"}},{"kind":"Field","alias":{"kind":"Name","value":"enemyTeam"},"name":{"kind":"Name","value":"enemyteam"}},{"kind":"Field","alias":{"kind":"Name","value":"memberPrice"},"name":{"kind":"Name","value":"memberprice"}},{"kind":"Field","alias":{"kind":"Name","value":"memberPriceYouth"},"name":{"kind":"Name","value":"memberpriceYouth"}},{"kind":"Field","alias":{"kind":"Name","value":"nonMemberPrice"},"name":{"kind":"Name","value":"nonmemberprice"}},{"kind":"Field","alias":{"kind":"Name","value":"nonMemberPriceYouth"},"name":{"kind":"Name","value":"nonmemberpriceYouth"}},{"kind":"Field","name":{"kind":"Name","value":"buses"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","alias":{"kind":"Name","value":"busName"},"name":{"kind":"Name","value":"busname"}},{"kind":"Field","alias":{"kind":"Name","value":"maxSeats"},"name":{"kind":"Name","value":"maxseats"}},{"kind":"Field","alias":{"kind":"Name","value":"requiredSeats"},"name":{"kind":"Name","value":"requiredseats"}},{"kind":"Field","alias":{"kind":"Name","value":"occupiedSeats"},"name":{"kind":"Name","value":"occupiedseats"}}]}}]}}]}}]}}]}}]} as unknown as DocumentNode<GetActiveAwayGamesQuery, GetActiveAwayGamesQueryVariables>;
 export const GetAwayGuidesSlugsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetAwayGuidesSlugs"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"awayguides"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"nodes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"slug"}}]}}]}}]}}]} as unknown as DocumentNode<GetAwayGuidesSlugsQuery, GetAwayGuidesSlugsQueryVariables>;
 export const GetAwayGuidesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetAwayGuides"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"after"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"awayguides"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"100"}},{"kind":"Argument","name":{"kind":"Name","value":"after"},"value":{"kind":"Variable","name":{"kind":"Name","value":"after"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"nodes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"awayGuide"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"sport"}},{"kind":"Field","name":{"kind":"Name","value":"division"}}]}},{"kind":"Field","name":{"kind":"Name","value":"slug"}}]}}]}}]}}]} as unknown as DocumentNode<GetAwayGuidesQuery, GetAwayGuidesQueryVariables>;
 export const GetAwayGuideBySlugDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetAwayGuideBySlug"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"slug"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"awayguide"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"slug"}}},{"kind":"Argument","name":{"kind":"Name","value":"idType"},"value":{"kind":"EnumValue","value":"SLUG"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"date"}},{"kind":"Field","name":{"kind":"Name","value":"awayGuide"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"sport"}},{"kind":"Field","name":{"kind":"Name","value":"division"}},{"kind":"Field","name":{"kind":"Name","value":"farger"}},{"kind":"Field","name":{"kind":"Name","value":"avstand"}},{"kind":"Field","name":{"kind":"Name","value":"hemsida"}},{"kind":"Field","name":{"kind":"Name","value":"matcher"}},{"kind":"Field","name":{"kind":"Name","value":"meriter"}},{"kind":"Field","name":{"kind":"Name","value":"lag"}},{"kind":"Field","name":{"kind":"Name","value":"bildad"}},{"kind":"Field","name":{"kind":"Name","value":"logo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"sourceUrl"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"awayGuideContent"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"text"}}]}},{"kind":"Field","name":{"kind":"Name","value":"slug"}}]}}]}}]} as unknown as DocumentNode<GetAwayGuideBySlugQuery, GetAwayGuideBySlugQueryVariables>;
