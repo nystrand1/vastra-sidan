@@ -19,7 +19,6 @@ export const SelectField = ({ id, label, options, name, labelProps, placeholder,
         <select
           id={id}
           name={name}
-          placeholder={placeholder}
           onChange={onChange}
           className={`bg-slate-800 w-full px-4 py-2 border-gray-300 text-slate-50 leading-6 border rounded-lg shadow-sm focus:ring focus:ring-opacity-50 focus:ring-blue-500 ${className || ''}`}
           {...props}
