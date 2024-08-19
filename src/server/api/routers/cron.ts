@@ -1,5 +1,5 @@
 import { captureMessage } from "@sentry/nextjs";
-import { subMilliseconds } from "date-fns";
+import { isAfter, subDays, subMilliseconds } from "date-fns";
 import { getTimezoneOffset } from "date-fns-tz";
 import { createTRPCRouter, cronProcedure } from "~/server/api/trpc";
 import {
@@ -47,8 +47,8 @@ export const cronRouter = createTRPCRouter({
       query: GetActiveAwayGamesDocument,
     })
     const awayGames = gqlRes.awayGames.nodes
-      // uncomment to filter out games that have already happened
-      .filter(({ awayGame }) => awayGame.date >= new Date().toISOString())
+      // uncomment to filter out games that is older than a week
+      .filter(({ awayGame }) => isAfter(subDays(new Date(), 7), new Date(awayGame.date)))
       .sort((a, b) => {
         const [dayA, monthA, yearA] = a.awayGame.date.split("/") as [
           string,

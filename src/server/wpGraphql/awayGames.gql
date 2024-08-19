@@ -1,7 +1,7 @@
 query GetActiveAwayGames {
   awayGames: awaygames {
     nodes {
-      id
+      id: databaseId
       status
       awayGame: awaygame {
         date
