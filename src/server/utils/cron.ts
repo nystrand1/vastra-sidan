@@ -12,7 +12,7 @@ import {
 } from "~/types/wordpressTypes";
 import { type createTRPCContext } from "../api/trpc";
 import { captureException } from "@sentry/nextjs";
-import { type GetActiveAwayGamesQuery } from "~/types/wordpresstypes/graphql";
+import { type GetAwayGamesQuery } from "~/types/wordpresstypes/graphql";
 
 const apiKey = env.WORDPRESS_API_KEY;
 
@@ -55,7 +55,7 @@ export const makeRequest = async <T>(
   }
 };
 
-type AwayGame = GetActiveAwayGamesQuery['awayGames']['nodes'][0];
+type AwayGame = GetAwayGamesQuery['awayGames']['nodes'][0];
 
 export const awayGameMapper = ({ awayGame, id, status }: AwayGame) => ({
   ...awayGame,
