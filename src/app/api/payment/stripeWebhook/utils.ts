@@ -109,7 +109,30 @@ export const handleRefund = async (refund: Stripe.ChargeRefundedEvent) => {
   });
 
   if (!refundIntent) {
-    throw new Error("Refund not found");
+    // Manual refund from Stripe dashboard
+    if (status === 'succeeded') {
+      await prisma.stripeRefund.create({
+        data: {
+          status: StripeRefundStatus.REFUNDED,
+          amount: refund.data.object.amount,
+          stripeRefundId: refundId,
+          originalPaymentId: payment.id,        
+        }
+      });
+    }
+    if (status === 'failed') {
+      await prisma.stripeRefund.create({
+        data: {
+          status: StripeRefundStatus.ERROR,
+          amount: refund.data.object.amount_refunded,
+          stripeRefundId: refundId,
+          errorMessage: refund.data.object.failure_message,
+          errorCode: refund.data.object.failure_code,
+          originalPaymentId: payment.id,
+        }
+      });
+    }
+    return;
   }
   
   if (!refundIntent.participantId) {
