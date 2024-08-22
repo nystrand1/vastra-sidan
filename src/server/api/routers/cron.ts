@@ -46,7 +46,6 @@ export const cronRouter = createTRPCRouter({
     const { data: gqlRes } = await ctx.apolloClient.query({
       query: GetAwayGamesDocument,
     })
-    console.log('gqlRes', gqlRes.awayGames.nodes.length);
     const awayGames = gqlRes.awayGames.nodes
       // uncomment to filter out games that is older than a week
       .filter(({ awayGame }) => isBefore(subDays(new Date(), 7), new Date(awayGame.date)))
@@ -68,7 +67,6 @@ export const cronRouter = createTRPCRouter({
       })
       .map(awayGameMapper)
       .map(awayGameToEvent);
-    console.log('awayGames', awayGames);
     // Upsert events in database
     await Promise.all(
       awayGames.map(async ({ event: awayGame, buses }) => {
