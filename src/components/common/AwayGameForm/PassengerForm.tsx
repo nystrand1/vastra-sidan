@@ -26,7 +26,7 @@ export interface PassengerFormProps {
   passenger: PassengerWithIndex;
   onRemove: (index: number) => void;
   onChange: (passenger: Partial<IPassenger>) => void;
-  buses: inferRouterOutputs<AppRouter>['public']['getAwayGame']['buses'];
+  buses: NonNullable<inferRouterOutputs<AppRouter>['public']['getAwayGame']>['buses'];
   eventId: string;
 }
 

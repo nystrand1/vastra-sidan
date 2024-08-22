@@ -1,9 +1,9 @@
-query GetActiveAwayGames {
-  awayGames: awaygames {
+query GetAwayGames {
+  awayGames: awaygames(where: { stati: [PUBLISH, PRIVATE]}) {
     nodes {
       id: databaseId
       status
-      awayGame: awaygame {
+      awayGame: awaygame {      
         date
         busInfo: businfo
         enemyTeam: enemyteam

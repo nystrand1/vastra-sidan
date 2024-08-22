@@ -72,7 +72,7 @@ export const publicRouter = createTRPCRouter({
       });
 
       if (!res) {
-        throw new TRPCError({ code: "NOT_FOUND" });
+        return null;
       }
       return {
         ...res,

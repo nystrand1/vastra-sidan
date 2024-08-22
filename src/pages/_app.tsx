@@ -46,7 +46,7 @@ const MyApp: AppType<{ session: Session | null}> = ({
             background: '#333',
             color: '#fff',
           },
-          className: ".sentry-unmask"
+          className: "sentry-unmask"
       }} />
       <Layout>
         {isAdminRoute ? (
