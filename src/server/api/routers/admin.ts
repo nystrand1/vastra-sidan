@@ -117,8 +117,16 @@ export const adminRouter = createTRPCRouter({
       include: busesWithPaidPassengers
     });
     return {
-      upcomingEvents: res.filter((event) => event.date > new Date()),
-      pastEvents: res.filter((event) => event.date <= new Date())
+      upcomingEvents: res.filter((event) => event.date > new Date()).map((event) => ({
+        ...event,
+        amountYouth: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => passenger.youth).length, 0),
+        amountAdult: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => !passenger.youth).length, 0),
+      })),
+      pastEvents: res.filter((event) => event.date <= new Date()).map((event) => ({
+        ...event,
+        amountYouth: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => passenger.youth).length, 0),
+        amountAdult: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => !passenger.youth).length, 0),
+      }))
     };
   }),
   getEvent: adminProcedure
