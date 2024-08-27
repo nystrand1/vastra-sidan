@@ -41,6 +41,7 @@ export const AwayGameForm = () => {
   const firstAvailableBus = awayGame?.buses.find((bus) => bus.availableSeats > 0);
 
   useEffect(() => {
+    if (passengers.length > 1) return;
     const initialPassenger: PassengerWithIndex = {
       index: 0,
       firstName: sessionData?.user.firstName ?? '',
@@ -106,6 +107,7 @@ export const AwayGameForm = () => {
       }
     }
   }
+
   return (
     <>
     {clientSecret && (
@@ -152,7 +154,7 @@ export const AwayGameForm = () => {
             <Button
               type="button"
               onClick={() => {
-                setPassengers([...passengers, { index: passengers.length, busId: awayGame.buses[0]?.id, }])
+                setPassengers((prev) => [...prev, { index: prev.length, busId: firstAvailableBus?.id, }])
               }}
               >
                 Lägg till passagerare
