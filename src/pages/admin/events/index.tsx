@@ -20,14 +20,16 @@ export const EventGrid = ({ events }: { events: Events }) => {
             currentValue={bus.passengers.length || 0}
           />
         ))}
-        <div className="flex justify-center gap-8">
+        <div className="flex justify-start gap-12">
           <div className="flex flex-col">
-            <p>Antal vuxna</p>
-            {event.amountAdult}
+            <p className="text-lg">Vuxna</p>
+            <p><span>Medlem: </span>{event.amountAdultMember}</p>
+            <p><span>Ej medlem: </span>{event.amountAdultNonMember}</p>
           </div>
           <div className="flex flex-col">
-            <p>Antal ungdomar</p>
-            {event.amountYouth}
+            <p className="text-lg">Ungdomar</p>
+            <p><span>Medlem: </span>{event.amountYouthMember}</p>
+            <p><span>Ej medlem: </span>{event.amountYouthNonMember}</p>
           </div>
         </div>
       </Card>

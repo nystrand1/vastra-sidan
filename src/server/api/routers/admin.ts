@@ -119,13 +119,17 @@ export const adminRouter = createTRPCRouter({
     return {
       upcomingEvents: res.filter((event) => event.date > new Date()).map((event) => ({
         ...event,
-        amountYouth: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => passenger.youth).length, 0),
-        amountAdult: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => !passenger.youth).length, 0),
+        amountYouthNonMember: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => passenger.youth && !passenger.member).length, 0),
+        amountAdultNonMember: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => !passenger.youth && !passenger.member).length, 0),
+        amountYouthMember: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => passenger.youth && passenger.member).length, 0),
+        amountAdultMember: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => !passenger.youth && passenger.member).length, 0),
       })),
       pastEvents: res.filter((event) => event.date <= new Date()).map((event) => ({
         ...event,
-        amountYouth: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => passenger.youth).length, 0),
-        amountAdult: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => !passenger.youth).length, 0),
+        amountYouthNonMember: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => passenger.youth && !passenger.member).length, 0),
+        amountAdultNonMember: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => !passenger.youth && !passenger.member).length, 0),
+        amountYouthMember: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => passenger.youth && passenger.member).length, 0),
+        amountAdultMember: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => !passenger.youth && passenger.member).length, 0),
       }))
     };
   }),
