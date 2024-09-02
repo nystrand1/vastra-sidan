@@ -28,7 +28,8 @@ export const StripeModal = ({ isOpen, onClose, clientSecret } : StripeModalProps
       return;
     }
     setIsLoading(true);
-    const result = await toast.promise(stripe.confirmPayment({
+    const toastId = toast.loading('Laddar...');
+    const result = await stripe.confirmPayment({
       elements,
       confirmParams: {
         return_url: env.NEXT_PUBLIC_WEBSITE_URL + '/bortaresor/tack',
@@ -40,19 +41,15 @@ export const StripeModal = ({ isOpen, onClose, clientSecret } : StripeModalProps
           }
         }
       },
-    }), {
-      loading: 'Laddar...',
-      success: 'Klart!',
-      error: 'Något gick fel'
-    });
+    })
     setIsLoading(false);
     if (result.error) {
       console.log(result.error.message);
-      toast.error(result.error.message || 'Något gick fel med betalningen');
+      toast.error(result.error.message || 'Något gick fel med betalningen', { id: toastId});
       captureException(result.error);
       captureMessage(result.error.message || 'Något gick fel med betalningen');
     } else {
-      console.log('successful', result)
+      toast.success('Klart!', { id: toastId });
     }
   };
 

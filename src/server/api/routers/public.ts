@@ -13,7 +13,7 @@ import { featureFlags } from "~/utils/featureFlags";
 import { parseDateString, stripHtmlTags } from "./wordpress";
 import { toUTCDate } from "~/server/utils/helpers";
 
-const busesWithPaidPassengers = {
+export const busesWithPaidPassengers = {
   buses: {
     include: {
       _count: {

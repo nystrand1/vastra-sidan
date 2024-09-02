@@ -117,8 +117,20 @@ export const adminRouter = createTRPCRouter({
       include: busesWithPaidPassengers
     });
     return {
-      upcomingEvents: res.filter((event) => event.date > new Date()),
-      pastEvents: res.filter((event) => event.date <= new Date())
+      upcomingEvents: res.filter((event) => event.date > new Date()).map((event) => ({
+        ...event,
+        amountYouthNonMember: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => passenger.youth && !passenger.member).length, 0),
+        amountAdultNonMember: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => !passenger.youth && !passenger.member).length, 0),
+        amountYouthMember: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => passenger.youth && passenger.member).length, 0),
+        amountAdultMember: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => !passenger.youth && passenger.member).length, 0),
+      })),
+      pastEvents: res.filter((event) => event.date <= new Date()).map((event) => ({
+        ...event,
+        amountYouthNonMember: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => passenger.youth && !passenger.member).length, 0),
+        amountAdultNonMember: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => !passenger.youth && !passenger.member).length, 0),
+        amountYouthMember: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => passenger.youth && passenger.member).length, 0),
+        amountAdultMember: event.buses.reduce((acc, bus) => acc + bus.passengers.filter((passenger) => !passenger.youth && passenger.member).length, 0),
+      }))
     };
   }),
   getEvent: adminProcedure

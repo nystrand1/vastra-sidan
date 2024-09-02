@@ -74,6 +74,10 @@ export const AdminEventPage = () => {
 
   const passengerAmount = selectedBus?.passengers.length || 0;
   const checkedInAmount = selectedBus?.passengers.filter((x) => x.checkedIn).length || 0;
+  const amountAdultMember = selectedBus?.passengers.filter((x) => !x.youth && x.member).length || 0;
+  const amountYouthMember = selectedBus?.passengers.filter((x) => x.youth && x.member).length || 0;
+  const amountAdultNonMember = selectedBus?.passengers.filter((x) => !x.youth && !x.member).length || 0;
+  const amountYouthNonMember = selectedBus?.passengers.filter((x) => x.youth && !x.member).length || 0;
 
   if (!event && isLoading) {
     return <p className="text-center">Laddar event...</p>
@@ -96,6 +100,18 @@ export const AdminEventPage = () => {
             }
           }}
         />
+        <div className="flex justify-start gap-12">
+          <div className="flex flex-col">
+            <p className="text-lg">Vuxna</p>
+            <p><span>Medlem: </span>{amountAdultMember}</p>
+            <p><span>Ej medlem: </span>{amountAdultNonMember}</p>
+          </div>
+          <div className="flex flex-col">
+            <p className="text-lg">Ungdomar</p>
+            <p><span>Medlem: </span>{amountYouthMember}</p>
+            <p><span>Ej medlem: </span>{amountYouthNonMember}</p>
+          </div>
+        </div>
         <Progressbar maxValue={passengerAmount} label="Incheckade" currentValue={checkedInAmount} />
       </Card>
       {selectedBus && selectedBus.passengers.length > 0 && (
