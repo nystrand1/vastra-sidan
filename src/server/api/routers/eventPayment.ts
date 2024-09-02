@@ -16,6 +16,7 @@ import { createPaymentIntent, createRefundIntent } from "~/utils/stripeHelpers";
 import {
   participantSchema
 } from "~/utils/zodSchemas";
+import { busesWithPaidPassengers } from "./public";
 
 
 type ParticipantInput = z.infer<typeof participantSchema>;
@@ -88,6 +89,7 @@ const participantFormatter = (participant: ParticipantWithParticipants['stripePa
     cancellationToken: participant.cancellationToken,
     eventName: participant.event.name,
     payAmount: participant.payAmount,
+    busId: participant.busId,
     departureTime: formatSwedishTime(participant.event.date, "HH:mm"),
     cancellationDate: participant.cancellationDate ? formatSwedishTime(participant.cancellationDate, "yyyy-MM-dd HH:mm") : null,
     note: participant.note,
@@ -313,7 +315,10 @@ export const eventPaymentRouter = createTRPCRouter({
         },
         select: {
           phone: true,
-          event: true,
+          busId: true,
+          event: {
+            include: busesWithPaidPassengers
+          },
           cancellationDate: true,
           stripePayments: {
             select: {
@@ -354,19 +359,66 @@ export const eventPaymentRouter = createTRPCRouter({
       }
 
       const participants = payment.participants.map(participantFormatter); 
-      // const isPayer = isSamePhoneNumber(payer.phone, payment.payerAlias);
-      // if (!isPayer) {
-      //   throw new TRPCError({
-      //     code: "BAD_REQUEST",
-      //     message: "You are not the payer"
-      //   });
-      // }
 
       return {
         participants,
         eventName: payer.event.name,
         departureTime: formatSwedishTime(payer.event.date, "HH:mm"),
+        buses: payer.event.buses.map((bus) => ({
+          ...bus,
+          availableSeats: bus.seats - bus._count.passengers
+        })),
       }
+    }),
+  changeBus: publicProcedure
+    .input(z.object({ busId: z.string(), token: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const participant = await ctx.prisma.participant.findFirst({
+        where: {
+          cancellationToken: input.token,
+        },
+      });
+
+      if (!participant) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Participant not found"
+        });
+      }
+
+      const bus = await ctx.prisma.bus.findFirst({
+        where: {
+          id: input.busId,
+        },
+        include: busesWithPaidPassengers.buses.include
+      });
+
+      if (!bus) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Bus not found"
+        });
+      }
+
+      const availableSeats = bus.seats - bus._count.passengers;
+
+      if (!availableSeats) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Bus is full"
+        });
+      }
+
+      await ctx.prisma.participant.update({
+        where: {
+          id: participant.id
+        },
+        data: {
+          busId: input.busId
+        }
+      })
+
+      return "ok";
     }),
   getBooking: publicProcedure
     .input(z.object({ paymentId: z.string() }))
