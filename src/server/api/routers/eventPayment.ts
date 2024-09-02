@@ -394,6 +394,7 @@ export const eventPaymentRouter = createTRPCRouter({
       });
 
       if (!bus) {
+        captureMessage("Bus not found");
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Bus not found"
@@ -403,6 +404,7 @@ export const eventPaymentRouter = createTRPCRouter({
       const availableSeats = bus.seats - bus._count.passengers;
 
       if (!availableSeats) {
+        captureMessage("Bus is full");
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Bus is full"
