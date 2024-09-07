@@ -73,22 +73,24 @@ export const awayGameMapper = ({ awayGame, id, status }: AwayGame) => ({
 
 export const awayGameToEvent = (
   awayGame: ReturnType<typeof awayGameMapper>
-): { event: VastraEvent; buses: Bus[] } => ({
-  event: {
-    id: awayGame.id.toString(),
-    name: `${awayGame.enemyTeam} - ${awayGame.date.split(" ")[0] || ""}`,
-    description: awayGame.busInfo || "",
-    date: parseISO(awayGame.date),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    defaultPrice: Number(awayGame.nonMemberPrice),
-    memberPrice: Number(awayGame.memberPrice),
-    youthPrice: Number(awayGame.nonMemberPriceYouth),
-    youthMemberPrice: Number(awayGame.memberPriceYouth),
-    active: awayGame.status === "publish"
-  },
-  buses: awayGameToBuses(awayGame)
-});
+): { event: VastraEvent; buses: Bus[] } => {
+  return {
+    event: {
+      id: awayGame.id.toString(),
+      name: `${awayGame.enemyTeam} - ${awayGame.date.split(" ")[0] || ""}`,
+      description: awayGame.busInfo || "",
+      date: new Date(awayGame.date),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      defaultPrice: Number(awayGame.nonMemberPrice),
+      memberPrice: Number(awayGame.memberPrice),
+      youthPrice: Number(awayGame.nonMemberPriceYouth),
+      youthMemberPrice: Number(awayGame.memberPriceYouth),
+      active: awayGame.status === "publish"
+    },
+    buses: awayGameToBuses(awayGame)
+  }
+};
 
 const awayGameToBuses = (
   awayGame: ReturnType<typeof awayGameMapper>
