@@ -108,7 +108,7 @@ export const publicRouter = createTRPCRouter({
       include: busesWithPaidPassengers,
       where: {
         date: {
-          gte: subHours(new Date(), 8)
+          gte: subHours(new Date(), 0.5) // Show event for an additional 30 minutes
         },
         active: true,
       }

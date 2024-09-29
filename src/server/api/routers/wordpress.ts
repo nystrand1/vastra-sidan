@@ -216,11 +216,12 @@ export const wordpressRouter = createTRPCRouter({
         });
         
         const { documentPage, aboutUsPage } = data;
-
+        const nonNullDocuments = documentPage.documents.document.filter((doc) => doc.file !== null);
+        const nonNullProtocols = aboutUsPage.protocols.protocols.filter((protocol) => protocol.file !== null);
         return {
-          documents: documentPage.documents.document.sort((a, b) => b.file.date.localeCompare(a.file.date)),
+          documents: nonNullDocuments.sort((a, b) => b.file.date.localeCompare(a.file.date)),
           ...aboutUsPage,
-          protocols: aboutUsPage.protocols.protocols.sort((a, b) => b.file.date.localeCompare(a.file.date)),
+          protocols: nonNullProtocols.sort((a, b) => b.file.date.localeCompare(a.file.date)),
         }
       }),
     getWallOfFamePage: publicProcedure

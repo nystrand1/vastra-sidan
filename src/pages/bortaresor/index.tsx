@@ -30,7 +30,6 @@ export default function AwaygamesPage() {
             {awayGames?.map((game, index) => {
               let centerClass = "";
               const gameExpired = isAfter(new Date(), game.date);
-              console.log('date', game.date);
               if (index === 0) {
                 centerClass = awayGames.length === 1 ? "md:col-start-4 xl:col-start-5" 
                   : awayGames.length === 2 ? "md:col-start-1 xl:col-start-3"
@@ -54,14 +53,14 @@ export default function AwaygamesPage() {
                     maxValue={game.maxSeats}
                     currentValue={game.bookedSeats}
                   />
-                  {game.bookedSeats < game.maxSeats && (
+                  {!gameExpired && game.bookedSeats < game.maxSeats && (
                     <Button>Till anmälan</Button>
                   )}
-                  {game.bookedSeats >= game.maxSeats && !gameExpired && (
+                  {!gameExpired && game.bookedSeats >= game.maxSeats && (
                     <Button disabled>Fullbokat</Button>
                   )}
                   {gameExpired && (
-                    <Button disabled>Resan har redan varit</Button>
+                    <Button disabled>Bussen har avgått</Button>
                   )}
                 </Card>
               </div>
