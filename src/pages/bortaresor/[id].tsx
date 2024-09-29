@@ -1,13 +1,13 @@
-import { format } from "date-fns";
+import { isAfter } from "date-fns";
 import { type GetStaticPropsContext } from "next";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import Accordion from "~/components/atoms/Accordion/Accordion";
 import { awayGameRules } from "~/components/atoms/Accordion/accordionContent";
 import { AwayGameForm } from "~/components/common/AwayGameForm/AwayGameForm";
-import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
+import { formatSwedishTime } from "~/utils/formatSwedishTime";
 
 
 export const BusPage = () => {
@@ -16,6 +16,7 @@ export const BusPage = () => {
 
   if (!game || isLoadingGame) return null;
 
+  const gameExpired = isAfter(new Date(), game.date);
 
   return (
     <>
@@ -51,7 +52,12 @@ export const BusPage = () => {
           ]}
           className="w-full space-y-6" 
           />
-        <AwayGameForm />
+        {!gameExpired && (
+          <AwayGameForm />
+        )}
+        {gameExpired && (
+          <p className="text-white text-lg">Bussen har avgått</p>
+        )}
       </div>
     </>
   )

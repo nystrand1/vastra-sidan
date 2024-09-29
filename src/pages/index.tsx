@@ -1,3 +1,4 @@
+import { isAfter } from "date-fns";
 import { sv } from "date-fns/locale/sv";
 import Head from "next/head";
 import Card from "~/atoms/CardLink/CardLink";
@@ -20,6 +21,8 @@ export default function Home() {
   const { upcomingEvent, member, latestNewsPost, upcomingGame } = startPage;
 
   const seoDescription = "Välkommen till Västra Sidan. Vi är en supporterförening till IK Sirius som arbetar för att skapa en bättre upplevelse för blåsvarta supportrar."
+
+  const upcomingEventExpired = upcomingEvent ? isAfter(new Date(), upcomingEvent.date) : false;
 
   return (
     <>
@@ -80,10 +83,13 @@ export default function Home() {
                 maxValue={upcomingEvent.maxSeats}
                 currentValue={upcomingEvent.bookedSeats}
               />
-              {upcomingEvent.bookedSeats < upcomingEvent.maxSeats && (
+              {upcomingEventExpired && (
+                <Button disabled>Bussen har avgått</Button>
+              )}
+              {!upcomingEventExpired && upcomingEvent.bookedSeats < upcomingEvent.maxSeats && (
                 <Button>Till anmälan</Button>
               )}
-              {upcomingEvent.bookedSeats >= upcomingEvent.maxSeats && (
+              {!upcomingEventExpired && upcomingEvent.bookedSeats >= upcomingEvent.maxSeats && (
                 <Button disabled>Fullbokat</Button>
               )}
             </Card>
