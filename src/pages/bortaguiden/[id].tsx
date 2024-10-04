@@ -72,9 +72,11 @@ const AwayGuideTable = (awayGuide: AwayGuide) => {
           ))}
         </tbody>
       </table>
-      <div className="flex items-center justify-center order-1 xl:order-2">
-        <Image src={awayGuide.logo.sourceUrl} width={200} height={200} alt={awayGuide.lag} />
-      </div>
+      {awayGuide.logo?.sourceUrl && (
+        <div className="flex items-center justify-center order-1 xl:order-2">
+          <Image src={awayGuide.logo.sourceUrl} width={200} height={200} alt={awayGuide.lag} />
+        </div>
+      )}
     </div>
   )
 };
