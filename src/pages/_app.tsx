@@ -45,8 +45,7 @@ const MyApp: AppType<{ session: Session | null}> = ({
         <Script async src="https://www.googletagmanager.com/gtag/js?id=G-P1J3LPRH51" />       
       )}
       {featureFlags.ENABLE_ANALYTICS && (
-        <Script 
-          async
+        <Script
           id="gtag"
           dangerouslySetInnerHTML={{
             __html: `
