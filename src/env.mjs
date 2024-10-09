@@ -66,6 +66,7 @@ export const env = createEnv({
     NEXT_PUBLIC_ENABLE_AWAYGAMES: z.literal("true").or(z.literal("false")).default("false"),
     NEXT_PUBLIC_STRIPE_API_KEY: z.string().min(1),
     NEXT_PUBLIC_WEBSITE_URL: z.string().url().default(`https://${process.env.NEXT_PUBLIC_VERCEL_URL || 'localhost:3000'}`),
+    NEXT_PUBLIC_ENABLE_ANALYTICS: z.literal("true").or(z.literal("false")).default("false"),
   },
 
   /**
@@ -101,6 +102,7 @@ export const env = createEnv({
     NEXT_PUBLIC_ENABLE_MEMBERSHIPS: process.env.NEXT_PUBLIC_ENABLE_MEMBERSHIPS,
     NEXT_PUBLIC_ENABLE_LOGIN: process.env.NEXT_PUBLIC_ENABLE_LOGIN,
     NEXT_PUBLIC_ENABLE_AWAYGAMES: process.env.NEXT_PUBLIC_ENABLE_AWAYGAMES,
+    NEXT_PUBLIC_ENABLE_ANALYTICS: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS,
     NEXT_PUBLIC_STRIPE_API_KEY: process.env.NEXT_PUBLIC_STRIPE_API_KEY,
     NEXT_PUBLIC_WEBSITE_URL: process.env.NEXT_PUBLIC_WEBSITE_URL,
   },
