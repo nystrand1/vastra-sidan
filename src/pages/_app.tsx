@@ -5,11 +5,13 @@ import { SessionProvider } from "next-auth/react";
 import { type AppType } from "next/app";
 import Head from "next/head";
 import { useRouter } from "next/router";
+import Script from "next/script";
 import { Toaster } from "react-hot-toast";
 import AdminLayout from "~/components/layouts/AdminLayout";
 import Layout from "~/components/layouts/Layout";
 import "~/styles/globals.css";
 import { api } from "~/utils/api";
+import { featureFlags } from "~/utils/featureFlags";
 setDefaultOptions({ locale: sv });
 
  
@@ -38,6 +40,23 @@ const MyApp: AppType<{ session: Session | null}> = ({
       <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
     </Head>
     <SessionProvider session={session}>
+      {featureFlags.ENABLE_ANALYTICS && (
+        <Script async src="https://www.googletagmanager.com/gtag/js?id=G-P1J3LPRH51" />       
+      )}
+      {featureFlags.ENABLE_ANALYTICS && (
+        <Script
+          id="gtag"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+
+              gtag('config', 'G-P1J3LPRH51');
+            `
+          }}
+        />
+      )}
       <Toaster 
         position="bottom-center" 
         toastOptions={{
