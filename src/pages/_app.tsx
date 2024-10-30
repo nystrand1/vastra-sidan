@@ -9,7 +9,6 @@ import Script from "next/script";
 import { Toaster } from "react-hot-toast";
 import AdminLayout from "~/components/layouts/AdminLayout";
 import Layout from "~/components/layouts/Layout";
-import { env } from "~/env.mjs";
 import "~/styles/globals.css";
 import { api } from "~/utils/api";
 import { featureFlags } from "~/utils/featureFlags";
