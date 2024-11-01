@@ -168,6 +168,11 @@ export enum AvatarRatingEnum {
 /** The Awaygame type */
 export type Awaygame = ContentNode & DatabaseIdentifier & MenuItemLinkable & Node & NodeWithTemplate & NodeWithTitle & Previewable & UniformResourceIdentifiable & {
   __typename?: 'Awaygame';
+  /**
+   * The ancestors of the content node.
+   * @deprecated This content type is not hierarchical and typically will not have ancestors
+   */
+  ancestors: Maybe<AwaygameToAwaygameConnection>;
   /** Added to the GraphQL Schema because the ACF Field Group &quot;Bussresa&quot; was set to Show in GraphQL. */
   awaygame: Maybe<Awaygame_Awaygame>;
   /**
@@ -197,10 +202,18 @@ export type Awaygame = ContentNode & DatabaseIdentifier & MenuItemLinkable & Nod
   enqueuedStylesheets: Maybe<ContentNodeToEnqueuedStylesheetConnection>;
   /** The global unique identifier for this post. This currently matches the value stored in WP_Post-&gt;guid and the guid column in the &quot;post_objects&quot; database table. */
   guid: Maybe<Scalars['String']['output']>;
+  /** Whether the awaygames object is password protected. */
+  hasPassword: Maybe<Scalars['Boolean']['output']>;
   /** The globally unique identifier of the awaygames object. */
   id: Scalars['ID']['output'];
+  /** Whether the node is a Comment */
+  isComment: Scalars['Boolean']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
+  /** Whether the node represents the front page. */
+  isFrontPage: Scalars['Boolean']['output'];
+  /** Whether  the node represents the blog page. */
+  isPostsPage: Scalars['Boolean']['output'];
   /** Whether the object is a node in the preview state */
   isPreview: Maybe<Scalars['Boolean']['output']>;
   /** Whether the object is restricted from the current viewer */
@@ -215,6 +228,13 @@ export type Awaygame = ContentNode & DatabaseIdentifier & MenuItemLinkable & Nod
   modified: Maybe<Scalars['String']['output']>;
   /** The GMT modified time for a post. If a post was recently updated the modified field will change to match the corresponding time in GMT. */
   modifiedGmt: Maybe<Scalars['String']['output']>;
+  /**
+   * The parent of the content node.
+   * @deprecated This content type is not hierarchical and typically will not have a parent
+   */
+  parent: Maybe<AwaygameToParentConnectionEdge>;
+  /** The password for the awaygames object. */
+  password: Maybe<Scalars['String']['output']>;
   /** Connection between the Awaygame type and the Awaygame type */
   preview: Maybe<AwaygameToPreviewConnectionEdge>;
   /** The database id of the preview node */
@@ -231,6 +251,15 @@ export type Awaygame = ContentNode & DatabaseIdentifier & MenuItemLinkable & Nod
   title: Maybe<Scalars['String']['output']>;
   /** The unique resource identifier path */
   uri: Maybe<Scalars['String']['output']>;
+};
+
+
+/** The Awaygame type */
+export type AwaygameAncestorsArgs = {
+  after: InputMaybe<Scalars['String']['input']>;
+  before: InputMaybe<Scalars['String']['input']>;
+  first: InputMaybe<Scalars['Int']['input']>;
+  last: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -300,6 +329,57 @@ export enum AwaygameIdType {
 }
 
 /** Connection between the Awaygame type and the Awaygame type */
+export type AwaygameToAwaygameConnection = AwaygameConnection & Connection & {
+  __typename?: 'AwaygameToAwaygameConnection';
+  /** Edges for the AwaygameToAwaygameConnection connection */
+  edges: Array<AwaygameToAwaygameConnectionEdge>;
+  /** The nodes of the connection, without the edges */
+  nodes: Array<Awaygame>;
+  /** Information about pagination in a connection. */
+  pageInfo: AwaygameToAwaygameConnectionPageInfo;
+};
+
+/** An edge in a connection */
+export type AwaygameToAwaygameConnectionEdge = AwaygameConnectionEdge & Edge & {
+  __typename?: 'AwaygameToAwaygameConnectionEdge';
+  /**
+   * A cursor for use in pagination
+   * @deprecated This content type is not hierarchical and typically will not have ancestors
+   */
+  cursor: Maybe<Scalars['String']['output']>;
+  /**
+   * The item at the end of the edge
+   * @deprecated This content type is not hierarchical and typically will not have ancestors
+   */
+  node: Awaygame;
+};
+
+/** Page Info on the &quot;AwaygameToAwaygameConnection&quot; */
+export type AwaygameToAwaygameConnectionPageInfo = AwaygameConnectionPageInfo & PageInfo & WpPageInfo & {
+  __typename?: 'AwaygameToAwaygameConnectionPageInfo';
+  /** When paginating forwards, the cursor to continue. */
+  endCursor: Maybe<Scalars['String']['output']>;
+  /** When paginating forwards, are there more items? */
+  hasNextPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, are there more items? */
+  hasPreviousPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, the cursor to continue. */
+  startCursor: Maybe<Scalars['String']['output']>;
+};
+
+/** Connection between the Awaygame type and the Awaygame type */
+export type AwaygameToParentConnectionEdge = AwaygameConnectionEdge & Edge & OneToOneConnection & {
+  __typename?: 'AwaygameToParentConnectionEdge';
+  /** Opaque reference to the nodes position in the connection. Value can be used with pagination args. */
+  cursor: Maybe<Scalars['String']['output']>;
+  /**
+   * The node of the connection, without the edges
+   * @deprecated This content type is not hierarchical and typically will not have a parent
+   */
+  node: Awaygame;
+};
+
+/** Connection between the Awaygame type and the Awaygame type */
 export type AwaygameToPreviewConnectionEdge = AwaygameConnectionEdge & Edge & OneToOneConnection & {
   __typename?: 'AwaygameToPreviewConnectionEdge';
   /** Opaque reference to the nodes position in the connection. Value can be used with pagination args. */
@@ -345,6 +425,11 @@ export type Awaygame_Awaygame_Buses = AcfFieldGroup & {
 /** The Awayguide type */
 export type Awayguide = ContentNode & DatabaseIdentifier & MenuItemLinkable & Node & NodeWithTemplate & NodeWithTitle & Previewable & UniformResourceIdentifiable & {
   __typename?: 'Awayguide';
+  /**
+   * The ancestors of the content node.
+   * @deprecated This content type is not hierarchical and typically will not have ancestors
+   */
+  ancestors: Maybe<AwayguideToAwayguideConnection>;
   /** Added to the GraphQL Schema because the ACF Field Group &quot;Bortaguide&quot; was set to Show in GraphQL. */
   awayGuide: Maybe<Awayguide_Awayguide>;
   /** Added to the GraphQL Schema because the ACF Field Group &quot;Bortaguide - content&quot; was set to Show in GraphQL. */
@@ -376,10 +461,18 @@ export type Awayguide = ContentNode & DatabaseIdentifier & MenuItemLinkable & No
   enqueuedStylesheets: Maybe<ContentNodeToEnqueuedStylesheetConnection>;
   /** The global unique identifier for this post. This currently matches the value stored in WP_Post-&gt;guid and the guid column in the &quot;post_objects&quot; database table. */
   guid: Maybe<Scalars['String']['output']>;
+  /** Whether the bortaguiden object is password protected. */
+  hasPassword: Maybe<Scalars['Boolean']['output']>;
   /** The globally unique identifier of the bortaguiden object. */
   id: Scalars['ID']['output'];
+  /** Whether the node is a Comment */
+  isComment: Scalars['Boolean']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
+  /** Whether the node represents the front page. */
+  isFrontPage: Scalars['Boolean']['output'];
+  /** Whether  the node represents the blog page. */
+  isPostsPage: Scalars['Boolean']['output'];
   /** Whether the object is a node in the preview state */
   isPreview: Maybe<Scalars['Boolean']['output']>;
   /** Whether the object is restricted from the current viewer */
@@ -394,6 +487,13 @@ export type Awayguide = ContentNode & DatabaseIdentifier & MenuItemLinkable & No
   modified: Maybe<Scalars['String']['output']>;
   /** The GMT modified time for a post. If a post was recently updated the modified field will change to match the corresponding time in GMT. */
   modifiedGmt: Maybe<Scalars['String']['output']>;
+  /**
+   * The parent of the content node.
+   * @deprecated This content type is not hierarchical and typically will not have a parent
+   */
+  parent: Maybe<AwayguideToParentConnectionEdge>;
+  /** The password for the bortaguiden object. */
+  password: Maybe<Scalars['String']['output']>;
   /** Connection between the Awayguide type and the Awayguide type */
   preview: Maybe<AwayguideToPreviewConnectionEdge>;
   /** The database id of the preview node */
@@ -410,6 +510,15 @@ export type Awayguide = ContentNode & DatabaseIdentifier & MenuItemLinkable & No
   title: Maybe<Scalars['String']['output']>;
   /** The unique resource identifier path */
   uri: Maybe<Scalars['String']['output']>;
+};
+
+
+/** The Awayguide type */
+export type AwayguideAncestorsArgs = {
+  after: InputMaybe<Scalars['String']['input']>;
+  before: InputMaybe<Scalars['String']['input']>;
+  first: InputMaybe<Scalars['Int']['input']>;
+  last: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -479,6 +588,57 @@ export enum AwayguideIdType {
 }
 
 /** Connection between the Awayguide type and the Awayguide type */
+export type AwayguideToAwayguideConnection = AwayguideConnection & Connection & {
+  __typename?: 'AwayguideToAwayguideConnection';
+  /** Edges for the AwayguideToAwayguideConnection connection */
+  edges: Array<AwayguideToAwayguideConnectionEdge>;
+  /** The nodes of the connection, without the edges */
+  nodes: Array<Awayguide>;
+  /** Information about pagination in a connection. */
+  pageInfo: AwayguideToAwayguideConnectionPageInfo;
+};
+
+/** An edge in a connection */
+export type AwayguideToAwayguideConnectionEdge = AwayguideConnectionEdge & Edge & {
+  __typename?: 'AwayguideToAwayguideConnectionEdge';
+  /**
+   * A cursor for use in pagination
+   * @deprecated This content type is not hierarchical and typically will not have ancestors
+   */
+  cursor: Maybe<Scalars['String']['output']>;
+  /**
+   * The item at the end of the edge
+   * @deprecated This content type is not hierarchical and typically will not have ancestors
+   */
+  node: Awayguide;
+};
+
+/** Page Info on the &quot;AwayguideToAwayguideConnection&quot; */
+export type AwayguideToAwayguideConnectionPageInfo = AwayguideConnectionPageInfo & PageInfo & WpPageInfo & {
+  __typename?: 'AwayguideToAwayguideConnectionPageInfo';
+  /** When paginating forwards, the cursor to continue. */
+  endCursor: Maybe<Scalars['String']['output']>;
+  /** When paginating forwards, are there more items? */
+  hasNextPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, are there more items? */
+  hasPreviousPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, the cursor to continue. */
+  startCursor: Maybe<Scalars['String']['output']>;
+};
+
+/** Connection between the Awayguide type and the Awayguide type */
+export type AwayguideToParentConnectionEdge = AwayguideConnectionEdge & Edge & OneToOneConnection & {
+  __typename?: 'AwayguideToParentConnectionEdge';
+  /** Opaque reference to the nodes position in the connection. Value can be used with pagination args. */
+  cursor: Maybe<Scalars['String']['output']>;
+  /**
+   * The node of the connection, without the edges
+   * @deprecated This content type is not hierarchical and typically will not have a parent
+   */
+  node: Awayguide;
+};
+
+/** Connection between the Awayguide type and the Awayguide type */
 export type AwayguideToPreviewConnectionEdge = AwayguideConnectionEdge & Edge & OneToOneConnection & {
   __typename?: 'AwayguideToPreviewConnectionEdge';
   /** Opaque reference to the nodes position in the connection. Value can be used with pagination args. */
@@ -538,8 +698,14 @@ export type Category = DatabaseIdentifier & HierarchicalNode & HierarchicalTermN
   enqueuedStylesheets: Maybe<TermNodeToEnqueuedStylesheetConnection>;
   /** The globally unique ID for the object */
   id: Scalars['ID']['output'];
+  /** Whether the node is a Comment */
+  isComment: Scalars['Boolean']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
+  /** Whether the node represents the front page. */
+  isFrontPage: Scalars['Boolean']['output'];
+  /** Whether  the node represents the blog page. */
+  isPostsPage: Scalars['Boolean']['output'];
   /** Whether the object is restricted from the current viewer */
   isRestricted: Maybe<Scalars['Boolean']['output']>;
   /** Whether the node is a Term */
@@ -976,6 +1142,11 @@ export type CategoryToTaxonomyConnectionEdge = Edge & OneToOneConnection & Taxon
 /** The Chronicle type */
 export type Chronicle = ContentNode & DatabaseIdentifier & MenuItemLinkable & Node & NodeWithFeaturedImage & NodeWithTemplate & Previewable & UniformResourceIdentifiable & {
   __typename?: 'Chronicle';
+  /**
+   * The ancestors of the content node.
+   * @deprecated This content type is not hierarchical and typically will not have ancestors
+   */
+  ancestors: Maybe<ChronicleToChronicleConnection>;
   /** Added to the GraphQL Schema because the ACF Field Group &quot;Krönika&quot; was set to Show in GraphQL. */
   chronicle: Maybe<Chronicle_Chronicle>;
   /**
@@ -1011,10 +1182,18 @@ export type Chronicle = ContentNode & DatabaseIdentifier & MenuItemLinkable & No
   featuredImageId: Maybe<Scalars['ID']['output']>;
   /** The global unique identifier for this post. This currently matches the value stored in WP_Post-&gt;guid and the guid column in the &quot;post_objects&quot; database table. */
   guid: Maybe<Scalars['String']['output']>;
+  /** Whether the chronicles object is password protected. */
+  hasPassword: Maybe<Scalars['Boolean']['output']>;
   /** The globally unique identifier of the chronicles object. */
   id: Scalars['ID']['output'];
+  /** Whether the node is a Comment */
+  isComment: Scalars['Boolean']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
+  /** Whether the node represents the front page. */
+  isFrontPage: Scalars['Boolean']['output'];
+  /** Whether  the node represents the blog page. */
+  isPostsPage: Scalars['Boolean']['output'];
   /** Whether the object is a node in the preview state */
   isPreview: Maybe<Scalars['Boolean']['output']>;
   /** Whether the object is restricted from the current viewer */
@@ -1029,6 +1208,13 @@ export type Chronicle = ContentNode & DatabaseIdentifier & MenuItemLinkable & No
   modified: Maybe<Scalars['String']['output']>;
   /** The GMT modified time for a post. If a post was recently updated the modified field will change to match the corresponding time in GMT. */
   modifiedGmt: Maybe<Scalars['String']['output']>;
+  /**
+   * The parent of the content node.
+   * @deprecated This content type is not hierarchical and typically will not have a parent
+   */
+  parent: Maybe<ChronicleToParentConnectionEdge>;
+  /** The password for the chronicles object. */
+  password: Maybe<Scalars['String']['output']>;
   /** Connection between the Chronicle type and the Chronicle type */
   preview: Maybe<ChronicleToPreviewConnectionEdge>;
   /** The database id of the preview node */
@@ -1043,6 +1229,15 @@ export type Chronicle = ContentNode & DatabaseIdentifier & MenuItemLinkable & No
   template: Maybe<ContentTemplate>;
   /** The unique resource identifier path */
   uri: Maybe<Scalars['String']['output']>;
+};
+
+
+/** The Chronicle type */
+export type ChronicleAncestorsArgs = {
+  after: InputMaybe<Scalars['String']['input']>;
+  before: InputMaybe<Scalars['String']['input']>;
+  first: InputMaybe<Scalars['Int']['input']>;
+  last: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -1106,6 +1301,57 @@ export enum ChronicleIdType {
 }
 
 /** Connection between the Chronicle type and the Chronicle type */
+export type ChronicleToChronicleConnection = ChronicleConnection & Connection & {
+  __typename?: 'ChronicleToChronicleConnection';
+  /** Edges for the ChronicleToChronicleConnection connection */
+  edges: Array<ChronicleToChronicleConnectionEdge>;
+  /** The nodes of the connection, without the edges */
+  nodes: Array<Chronicle>;
+  /** Information about pagination in a connection. */
+  pageInfo: ChronicleToChronicleConnectionPageInfo;
+};
+
+/** An edge in a connection */
+export type ChronicleToChronicleConnectionEdge = ChronicleConnectionEdge & Edge & {
+  __typename?: 'ChronicleToChronicleConnectionEdge';
+  /**
+   * A cursor for use in pagination
+   * @deprecated This content type is not hierarchical and typically will not have ancestors
+   */
+  cursor: Maybe<Scalars['String']['output']>;
+  /**
+   * The item at the end of the edge
+   * @deprecated This content type is not hierarchical and typically will not have ancestors
+   */
+  node: Chronicle;
+};
+
+/** Page Info on the &quot;ChronicleToChronicleConnection&quot; */
+export type ChronicleToChronicleConnectionPageInfo = ChronicleConnectionPageInfo & PageInfo & WpPageInfo & {
+  __typename?: 'ChronicleToChronicleConnectionPageInfo';
+  /** When paginating forwards, the cursor to continue. */
+  endCursor: Maybe<Scalars['String']['output']>;
+  /** When paginating forwards, are there more items? */
+  hasNextPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, are there more items? */
+  hasPreviousPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, the cursor to continue. */
+  startCursor: Maybe<Scalars['String']['output']>;
+};
+
+/** Connection between the Chronicle type and the Chronicle type */
+export type ChronicleToParentConnectionEdge = ChronicleConnectionEdge & Edge & OneToOneConnection & {
+  __typename?: 'ChronicleToParentConnectionEdge';
+  /** Opaque reference to the nodes position in the connection. Value can be used with pagination args. */
+  cursor: Maybe<Scalars['String']['output']>;
+  /**
+   * The node of the connection, without the edges
+   * @deprecated This content type is not hierarchical and typically will not have a parent
+   */
+  node: Chronicle;
+};
+
+/** Connection between the Chronicle type and the Chronicle type */
 export type ChronicleToPreviewConnectionEdge = ChronicleConnectionEdge & Edge & OneToOneConnection & {
   __typename?: 'ChronicleToPreviewConnectionEdge';
   /** Opaque reference to the nodes position in the connection. Value can be used with pagination args. */
@@ -1127,7 +1373,7 @@ export type Chronicle_Chronicle = AcfFieldGroup & {
 };
 
 /** A Comment object */
-export type Comment = DatabaseIdentifier & Node & {
+export type Comment = DatabaseIdentifier & Node & UniformResourceIdentifiable & {
   __typename?: 'Comment';
   /** User agent used to post the comment. This field is equivalent to WP_Comment-&gt;comment_agent and the value matching the &quot;comment_agent&quot; column in SQL. */
   agent: Maybe<Scalars['String']['output']>;
@@ -1157,10 +1403,22 @@ export type Comment = DatabaseIdentifier & Node & {
   dateGmt: Maybe<Scalars['String']['output']>;
   /** The globally unique identifier for the comment object */
   id: Scalars['ID']['output'];
+  /** Whether the node is a Comment */
+  isComment: Scalars['Boolean']['output'];
+  /** Whether the node is a Content Node */
+  isContentNode: Scalars['Boolean']['output'];
+  /** Whether the node represents the front page. */
+  isFrontPage: Scalars['Boolean']['output'];
+  /** Whether  the node represents the blog page. */
+  isPostsPage: Scalars['Boolean']['output'];
   /** Whether the object is restricted from the current viewer */
   isRestricted: Maybe<Scalars['Boolean']['output']>;
+  /** Whether the node is a Term */
+  isTermNode: Scalars['Boolean']['output'];
   /** Karma value for the comment. This field is equivalent to WP_Comment-&gt;comment_karma and the value matching the &quot;comment_karma&quot; column in SQL. */
   karma: Maybe<Scalars['Int']['output']>;
+  /** The permalink of the comment */
+  link: Maybe<Scalars['String']['output']>;
   /** Connection between the Comment type and the Comment type */
   parent: Maybe<CommentToParentCommentConnectionEdge>;
   /** The database id of the parent comment node or null if it is the root comment */
@@ -1173,6 +1431,8 @@ export type Comment = DatabaseIdentifier & Node & {
   status: Maybe<CommentStatusEnum>;
   /** Type of comment. This field is equivalent to WP_Comment-&gt;comment_type and the value matching the &quot;comment_type&quot; column in SQL. */
   type: Maybe<Scalars['String']['output']>;
+  /** The unique resource identifier path */
+  uri: Maybe<Scalars['String']['output']>;
 };
 
 
@@ -1556,8 +1816,14 @@ export type ContentNode = {
   guid: Maybe<Scalars['String']['output']>;
   /** The globally unique ID for the object */
   id: Scalars['ID']['output'];
+  /** Whether the node is a Comment */
+  isComment: Scalars['Boolean']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
+  /** Whether the node represents the front page. */
+  isFrontPage: Scalars['Boolean']['output'];
+  /** Whether  the node represents the blog page. */
+  isPostsPage: Scalars['Boolean']['output'];
   /** Whether the object is a node in the preview state */
   isPreview: Maybe<Scalars['Boolean']['output']>;
   /** Whether the object is restricted from the current viewer */
@@ -1770,6 +2036,8 @@ export type ContentType = Node & UniformResourceIdentifiable & {
   hierarchical: Maybe<Scalars['Boolean']['output']>;
   /** The globally unique identifier of the post-type object. */
   id: Scalars['ID']['output'];
+  /** Whether the node is a Comment */
+  isComment: Scalars['Boolean']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
   /** Whether this page is set to the static front page. */
@@ -1873,6 +2141,8 @@ export enum ContentTypeEnum {
   Bortaguiden = 'BORTAGUIDEN',
   /** The Type of Content object */
   Chronicles = 'CHRONICLES',
+  /** The Type of Content object */
+  Membership = 'MEMBERSHIP',
   /** The Type of Content object */
   News = 'NEWS',
   /** The Type of Content object */
@@ -2197,6 +2467,33 @@ export type CreateMediaItemPayload = {
   clientMutationId: Maybe<Scalars['String']['output']>;
   /** The MediaItem object mutation type. */
   mediaItem: Maybe<MediaItem>;
+};
+
+/** Input for the createMembership mutation. */
+export type CreateMembershipInput = {
+  /** This is an ID that can be passed to a mutation by the client to track the progress of mutations and catch possible duplicate mutation submissions. */
+  clientMutationId: InputMaybe<Scalars['String']['input']>;
+  /** The date of the object. Preferable to enter as year/month/day (e.g. 01/31/2017) as it will rearrange date as fit if it is not specified. Incomplete dates may have unintended results for example, "2017" as the input will use current date with timestamp 20:17  */
+  date: InputMaybe<Scalars['String']['input']>;
+  /** A field used for ordering posts. This is typically used with nav menu items or for special ordering of hierarchical content types. */
+  menuOrder: InputMaybe<Scalars['Int']['input']>;
+  /** The password used to protect the content of the object */
+  password: InputMaybe<Scalars['String']['input']>;
+  /** The slug of the object */
+  slug: InputMaybe<Scalars['String']['input']>;
+  /** The status of the object */
+  status: InputMaybe<PostStatusEnum>;
+  /** The title of the object */
+  title: InputMaybe<Scalars['String']['input']>;
+};
+
+/** The payload for the createMembership mutation. */
+export type CreateMembershipPayload = {
+  __typename?: 'CreateMembershipPayload';
+  /** If a &#039;clientMutationId&#039; input is provided to the mutation, it will be returned as output on the mutation. This ID can be used by the client to track the progress of mutations and catch possible duplicate mutation submissions. */
+  clientMutationId: Maybe<Scalars['String']['output']>;
+  /** The Post object mutation type. */
+  membership: Maybe<Membership>;
 };
 
 /** Input for the createNewsPost mutation. */
@@ -2607,6 +2904,29 @@ export type DeleteMediaItemPayload = {
   deletedId: Maybe<Scalars['ID']['output']>;
   /** The mediaItem before it was deleted */
   mediaItem: Maybe<MediaItem>;
+};
+
+/** Input for the deleteMembership mutation. */
+export type DeleteMembershipInput = {
+  /** This is an ID that can be passed to a mutation by the client to track the progress of mutations and catch possible duplicate mutation submissions. */
+  clientMutationId: InputMaybe<Scalars['String']['input']>;
+  /** Whether the object should be force deleted instead of being moved to the trash */
+  forceDelete: InputMaybe<Scalars['Boolean']['input']>;
+  /** The ID of the Membership to delete */
+  id: Scalars['ID']['input'];
+  /** Override the edit lock when another user is editing the post */
+  ignoreEditLock: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+/** The payload for the deleteMembership mutation. */
+export type DeleteMembershipPayload = {
+  __typename?: 'DeleteMembershipPayload';
+  /** If a &#039;clientMutationId&#039; input is provided to the mutation, it will be returned as output on the mutation. This ID can be used by the client to track the progress of mutations and catch possible duplicate mutation submissions. */
+  clientMutationId: Maybe<Scalars['String']['output']>;
+  /** The ID of the deleted object */
+  deletedId: Maybe<Scalars['ID']['output']>;
+  /** The object before it was deleted */
+  membership: Maybe<Membership>;
 };
 
 /** Input for the deleteNewsPost mutation. */
@@ -3023,8 +3343,14 @@ export type HierarchicalContentNode = {
   guid: Maybe<Scalars['String']['output']>;
   /** The globally unique ID for the object */
   id: Scalars['ID']['output'];
+  /** Whether the node is a Comment */
+  isComment: Scalars['Boolean']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
+  /** Whether the node represents the front page. */
+  isFrontPage: Scalars['Boolean']['output'];
+  /** Whether  the node represents the blog page. */
+  isPostsPage: Scalars['Boolean']['output'];
   /** Whether the object is a node in the preview state */
   isPreview: Maybe<Scalars['Boolean']['output']>;
   /** Whether the object is restricted from the current viewer */
@@ -3278,8 +3604,14 @@ export type HierarchicalTermNode = {
   enqueuedStylesheets: Maybe<TermNodeToEnqueuedStylesheetConnection>;
   /** The globally unique ID for the object */
   id: Scalars['ID']['output'];
+  /** Whether the node is a Comment */
+  isComment: Scalars['Boolean']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
+  /** Whether the node represents the front page. */
+  isFrontPage: Scalars['Boolean']['output'];
+  /** Whether  the node represents the blog page. */
+  isPostsPage: Scalars['Boolean']['output'];
   /** Whether the object is restricted from the current viewer */
   isRestricted: Maybe<Scalars['Boolean']['output']>;
   /** Whether the node is a Term */
@@ -3393,10 +3725,18 @@ export type MediaItem = ContentNode & DatabaseIdentifier & HierarchicalContentNo
   fileSize: Maybe<Scalars['Int']['output']>;
   /** The global unique identifier for this post. This currently matches the value stored in WP_Post-&gt;guid and the guid column in the &quot;post_objects&quot; database table. */
   guid: Maybe<Scalars['String']['output']>;
+  /** Whether the attachment object is password protected. */
+  hasPassword: Maybe<Scalars['Boolean']['output']>;
   /** The globally unique identifier of the attachment object. */
   id: Scalars['ID']['output'];
+  /** Whether the node is a Comment */
+  isComment: Scalars['Boolean']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
+  /** Whether the node represents the front page. */
+  isFrontPage: Scalars['Boolean']['output'];
+  /** Whether  the node represents the blog page. */
+  isPostsPage: Scalars['Boolean']['output'];
   /** Whether the object is a node in the preview state */
   isPreview: Maybe<Scalars['Boolean']['output']>;
   /** Whether the object is restricted from the current viewer */
@@ -3430,6 +3770,8 @@ export type MediaItem = ContentNode & DatabaseIdentifier & HierarchicalContentNo
   parentDatabaseId: Maybe<Scalars['Int']['output']>;
   /** The globally unique identifier of the parent node. */
   parentId: Maybe<Scalars['ID']['output']>;
+  /** The password for the attachment object. */
+  password: Maybe<Scalars['String']['output']>;
   /** The database id of the preview node */
   previewRevisionDatabaseId: Maybe<Scalars['Int']['output']>;
   /** Whether the object is a node in the preview state */
@@ -3757,6 +4099,242 @@ export type MediaSize = {
   width: Maybe<Scalars['String']['output']>;
 };
 
+/** The Membership type */
+export type Membership = ContentNode & DatabaseIdentifier & MenuItemLinkable & Node & NodeWithTemplate & NodeWithTitle & Previewable & UniformResourceIdentifiable & {
+  __typename?: 'Membership';
+  /**
+   * The ancestors of the content node.
+   * @deprecated This content type is not hierarchical and typically will not have ancestors
+   */
+  ancestors: Maybe<MembershipToMembershipConnection>;
+  /** Connection between the ContentNode type and the ContentType type */
+  contentType: Maybe<ContentNodeToContentTypeConnectionEdge>;
+  /** The name of the Content Type the node belongs to */
+  contentTypeName: Scalars['String']['output'];
+  /** The unique identifier stored in the database */
+  databaseId: Scalars['Int']['output'];
+  /** Post publishing date. */
+  date: Maybe<Scalars['String']['output']>;
+  /** The publishing date set in GMT. */
+  dateGmt: Maybe<Scalars['String']['output']>;
+  /** The desired slug of the post */
+  desiredSlug: Maybe<Scalars['String']['output']>;
+  /** If a user has edited the node within the past 15 seconds, this will return the user that last edited. Null if the edit lock doesn&#039;t exist or is greater than 15 seconds */
+  editingLockedBy: Maybe<ContentNodeToEditLockConnectionEdge>;
+  /** The RSS enclosure for the object */
+  enclosure: Maybe<Scalars['String']['output']>;
+  /** Connection between the ContentNode type and the EnqueuedScript type */
+  enqueuedScripts: Maybe<ContentNodeToEnqueuedScriptConnection>;
+  /** Connection between the ContentNode type and the EnqueuedStylesheet type */
+  enqueuedStylesheets: Maybe<ContentNodeToEnqueuedStylesheetConnection>;
+  /** The global unique identifier for this post. This currently matches the value stored in WP_Post-&gt;guid and the guid column in the &quot;post_objects&quot; database table. */
+  guid: Maybe<Scalars['String']['output']>;
+  /** Whether the membership object is password protected. */
+  hasPassword: Maybe<Scalars['Boolean']['output']>;
+  /** The globally unique identifier of the membership object. */
+  id: Scalars['ID']['output'];
+  /** Whether the node is a Comment */
+  isComment: Scalars['Boolean']['output'];
+  /** Whether the node is a Content Node */
+  isContentNode: Scalars['Boolean']['output'];
+  /** Whether the node represents the front page. */
+  isFrontPage: Scalars['Boolean']['output'];
+  /** Whether  the node represents the blog page. */
+  isPostsPage: Scalars['Boolean']['output'];
+  /** Whether the object is a node in the preview state */
+  isPreview: Maybe<Scalars['Boolean']['output']>;
+  /** Whether the object is restricted from the current viewer */
+  isRestricted: Maybe<Scalars['Boolean']['output']>;
+  /** Whether the node is a Term */
+  isTermNode: Scalars['Boolean']['output'];
+  /** The user that most recently edited the node */
+  lastEditedBy: Maybe<ContentNodeToEditLastConnectionEdge>;
+  /** The permalink of the post */
+  link: Maybe<Scalars['String']['output']>;
+  /** Added to the GraphQL Schema because the ACF Field Group &quot;Medlemskap&quot; was set to Show in GraphQL. */
+  membership: Maybe<Membership_Membership>;
+  /**
+   * The id field matches the WP_Post-&gt;ID field.
+   * @deprecated Deprecated in favor of the databaseId field
+   */
+  membershipId: Scalars['Int']['output'];
+  /** The local modified time for a post. If a post was recently updated the modified field will change to match the corresponding time. */
+  modified: Maybe<Scalars['String']['output']>;
+  /** The GMT modified time for a post. If a post was recently updated the modified field will change to match the corresponding time in GMT. */
+  modifiedGmt: Maybe<Scalars['String']['output']>;
+  /**
+   * The parent of the content node.
+   * @deprecated This content type is not hierarchical and typically will not have a parent
+   */
+  parent: Maybe<MembershipToParentConnectionEdge>;
+  /** The password for the membership object. */
+  password: Maybe<Scalars['String']['output']>;
+  /** Connection between the Membership type and the Membership type */
+  preview: Maybe<MembershipToPreviewConnectionEdge>;
+  /** The database id of the preview node */
+  previewRevisionDatabaseId: Maybe<Scalars['Int']['output']>;
+  /** Whether the object is a node in the preview state */
+  previewRevisionId: Maybe<Scalars['ID']['output']>;
+  /** The uri slug for the post. This is equivalent to the WP_Post-&gt;post_name field and the post_name column in the database for the &quot;post_objects&quot; table. */
+  slug: Maybe<Scalars['String']['output']>;
+  /** The current status of the object */
+  status: Maybe<Scalars['String']['output']>;
+  /** The template assigned to the node */
+  template: Maybe<ContentTemplate>;
+  /** The title of the post. This is currently just the raw title. An amendment to support rendered title needs to be made. */
+  title: Maybe<Scalars['String']['output']>;
+  /** The unique resource identifier path */
+  uri: Maybe<Scalars['String']['output']>;
+};
+
+
+/** The Membership type */
+export type MembershipAncestorsArgs = {
+  after: InputMaybe<Scalars['String']['input']>;
+  before: InputMaybe<Scalars['String']['input']>;
+  first: InputMaybe<Scalars['Int']['input']>;
+  last: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+/** The Membership type */
+export type MembershipEnqueuedScriptsArgs = {
+  after: InputMaybe<Scalars['String']['input']>;
+  before: InputMaybe<Scalars['String']['input']>;
+  first: InputMaybe<Scalars['Int']['input']>;
+  last: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+/** The Membership type */
+export type MembershipEnqueuedStylesheetsArgs = {
+  after: InputMaybe<Scalars['String']['input']>;
+  before: InputMaybe<Scalars['String']['input']>;
+  first: InputMaybe<Scalars['Int']['input']>;
+  last: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+/** The Membership type */
+export type MembershipTitleArgs = {
+  format: InputMaybe<PostObjectFieldFormatEnum>;
+};
+
+/** Connection to Membership Nodes */
+export type MembershipConnection = {
+  /** A list of edges (relational context) between RootQuery and connected Membership Nodes */
+  edges: Array<MembershipConnectionEdge>;
+  /** A list of connected Membership Nodes */
+  nodes: Array<Membership>;
+  /** Information about pagination in a connection. */
+  pageInfo: MembershipConnectionPageInfo;
+};
+
+/** Edge between a Node and a connected Membership */
+export type MembershipConnectionEdge = {
+  /** Opaque reference to the nodes position in the connection. Value can be used with pagination args. */
+  cursor: Maybe<Scalars['String']['output']>;
+  /** The connected Membership Node */
+  node: Membership;
+};
+
+/** Page Info on the connected MembershipConnectionEdge */
+export type MembershipConnectionPageInfo = {
+  /** When paginating forwards, the cursor to continue. */
+  endCursor: Maybe<Scalars['String']['output']>;
+  /** When paginating forwards, are there more items? */
+  hasNextPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, are there more items? */
+  hasPreviousPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, the cursor to continue. */
+  startCursor: Maybe<Scalars['String']['output']>;
+};
+
+/** The Type of Identifier used to fetch a single resource. Default is ID. */
+export enum MembershipIdType {
+  /** Identify a resource by the Database ID. */
+  DatabaseId = 'DATABASE_ID',
+  /** Identify a resource by the (hashed) Global ID. */
+  Id = 'ID',
+  /** Identify a resource by the slug. Available to non-hierarchcial Types where the slug is a unique identifier. */
+  Slug = 'SLUG',
+  /** Identify a resource by the URI. */
+  Uri = 'URI'
+}
+
+/** Connection between the Membership type and the Membership type */
+export type MembershipToMembershipConnection = Connection & MembershipConnection & {
+  __typename?: 'MembershipToMembershipConnection';
+  /** Edges for the MembershipToMembershipConnection connection */
+  edges: Array<MembershipToMembershipConnectionEdge>;
+  /** The nodes of the connection, without the edges */
+  nodes: Array<Membership>;
+  /** Information about pagination in a connection. */
+  pageInfo: MembershipToMembershipConnectionPageInfo;
+};
+
+/** An edge in a connection */
+export type MembershipToMembershipConnectionEdge = Edge & MembershipConnectionEdge & {
+  __typename?: 'MembershipToMembershipConnectionEdge';
+  /**
+   * A cursor for use in pagination
+   * @deprecated This content type is not hierarchical and typically will not have ancestors
+   */
+  cursor: Maybe<Scalars['String']['output']>;
+  /**
+   * The item at the end of the edge
+   * @deprecated This content type is not hierarchical and typically will not have ancestors
+   */
+  node: Membership;
+};
+
+/** Page Info on the &quot;MembershipToMembershipConnection&quot; */
+export type MembershipToMembershipConnectionPageInfo = MembershipConnectionPageInfo & PageInfo & WpPageInfo & {
+  __typename?: 'MembershipToMembershipConnectionPageInfo';
+  /** When paginating forwards, the cursor to continue. */
+  endCursor: Maybe<Scalars['String']['output']>;
+  /** When paginating forwards, are there more items? */
+  hasNextPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, are there more items? */
+  hasPreviousPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, the cursor to continue. */
+  startCursor: Maybe<Scalars['String']['output']>;
+};
+
+/** Connection between the Membership type and the Membership type */
+export type MembershipToParentConnectionEdge = Edge & MembershipConnectionEdge & OneToOneConnection & {
+  __typename?: 'MembershipToParentConnectionEdge';
+  /** Opaque reference to the nodes position in the connection. Value can be used with pagination args. */
+  cursor: Maybe<Scalars['String']['output']>;
+  /**
+   * The node of the connection, without the edges
+   * @deprecated This content type is not hierarchical and typically will not have a parent
+   */
+  node: Membership;
+};
+
+/** Connection between the Membership type and the Membership type */
+export type MembershipToPreviewConnectionEdge = Edge & MembershipConnectionEdge & OneToOneConnection & {
+  __typename?: 'MembershipToPreviewConnectionEdge';
+  /** Opaque reference to the nodes position in the connection. Value can be used with pagination args. */
+  cursor: Maybe<Scalars['String']['output']>;
+  /** The node of the connection, without the edges */
+  node: Membership;
+};
+
+/** Field Group */
+export type Membership_Membership = AcfFieldGroup & {
+  __typename?: 'Membership_Membership';
+  enddate: Maybe<Scalars['String']['output']>;
+  familyprice: Maybe<Scalars['Float']['output']>;
+  /** The name of the ACF Field Group */
+  fieldGroupName: Maybe<Scalars['String']['output']>;
+  image: Maybe<MediaItem>;
+  regularprice: Maybe<Scalars['Float']['output']>;
+  startdate: Maybe<Scalars['String']['output']>;
+  youthprice: Maybe<Scalars['Float']['output']>;
+};
+
 /** Menus are the containers for navigation items. Menus can be assigned to menu locations, which are typically registered by the active theme. */
 export type Menu = DatabaseIdentifier & Node & {
   __typename?: 'Menu';
@@ -3922,8 +4500,14 @@ export type MenuItemLinkable = {
   databaseId: Scalars['Int']['output'];
   /** The globally unique ID for the object */
   id: Scalars['ID']['output'];
+  /** Whether the node is a Comment */
+  isComment: Scalars['Boolean']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
+  /** Whether the node represents the front page. */
+  isFrontPage: Scalars['Boolean']['output'];
+  /** Whether  the node represents the blog page. */
+  isPostsPage: Scalars['Boolean']['output'];
   /** Whether the node is a Term */
   isTermNode: Scalars['Boolean']['output'];
   /** The unique resource identifier path */
@@ -3947,7 +4531,7 @@ export enum MenuItemNodeIdTypeEnum {
 }
 
 /** Deprecated in favor of MenuItemLinkeable Interface */
-export type MenuItemObjectUnion = Awaygame | Awayguide | Category | Chronicle | NewsPost | Page | Post | SeasonChronicle | Tag;
+export type MenuItemObjectUnion = Awaygame | Awayguide | Category | Chronicle | Membership | NewsPost | Page | Post | SeasonChronicle | Tag;
 
 /** Connection between the MenuItem type and the Menu type */
 export type MenuItemToMenuConnectionEdge = Edge & MenuConnectionEdge & OneToOneConnection & {
@@ -4014,8 +4598,14 @@ export type MenuItemToMenuItemLinkableConnectionEdge = Edge & MenuItemLinkableCo
 
 /** Registered menu locations */
 export enum MenuLocationEnum {
+  /** Put the menu in the footer-menu location */
+  FooterMenu = 'FOOTER_MENU',
+  /** Put the menu in the footer-menu-tablet location */
+  FooterMenuTablet = 'FOOTER_MENU_TABLET',
   /** Put the menu in the handheld location */
   Handheld = 'HANDHELD',
+  /** Put the menu in the header-menu location */
+  HeaderMenu = 'HEADER_MENU',
   /** Put the menu in the primary location */
   Primary = 'PRIMARY',
   /** Put the menu in the secondary location */
@@ -4201,6 +4791,8 @@ export enum MimeTypeEnum {
   AudioXMsWma = 'AUDIO_X_MS_WMA',
   /** audio/x-realaudio mime type. */
   AudioXRealaudio = 'AUDIO_X_REALAUDIO',
+  /** image/avif mime type. */
+  ImageAvif = 'IMAGE_AVIF',
   /** image/bmp mime type. */
   ImageBmp = 'IMAGE_BMP',
   /** image/gif mime type. */
@@ -4266,6 +4858,11 @@ export enum MimeTypeEnum {
 /** The NewsPost type */
 export type NewsPost = ContentNode & DatabaseIdentifier & MenuItemLinkable & Node & NodeWithPageAttributes & NodeWithTemplate & Previewable & UniformResourceIdentifiable & {
   __typename?: 'NewsPost';
+  /**
+   * The ancestors of the content node.
+   * @deprecated This content type is not hierarchical and typically will not have ancestors
+   */
+  ancestors: Maybe<NewsPostToNewsPostConnection>;
   /** Connection between the ContentNode type and the ContentType type */
   contentType: Maybe<ContentNodeToContentTypeConnectionEdge>;
   /** The name of the Content Type the node belongs to */
@@ -4288,10 +4885,18 @@ export type NewsPost = ContentNode & DatabaseIdentifier & MenuItemLinkable & Nod
   enqueuedStylesheets: Maybe<ContentNodeToEnqueuedStylesheetConnection>;
   /** The global unique identifier for this post. This currently matches the value stored in WP_Post-&gt;guid and the guid column in the &quot;post_objects&quot; database table. */
   guid: Maybe<Scalars['String']['output']>;
+  /** Whether the news object is password protected. */
+  hasPassword: Maybe<Scalars['Boolean']['output']>;
   /** The globally unique identifier of the news object. */
   id: Scalars['ID']['output'];
+  /** Whether the node is a Comment */
+  isComment: Scalars['Boolean']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
+  /** Whether the node represents the front page. */
+  isFrontPage: Scalars['Boolean']['output'];
+  /** Whether  the node represents the blog page. */
+  isPostsPage: Scalars['Boolean']['output'];
   /** Whether the object is a node in the preview state */
   isPreview: Maybe<Scalars['Boolean']['output']>;
   /** Whether the object is restricted from the current viewer */
@@ -4315,6 +4920,13 @@ export type NewsPost = ContentNode & DatabaseIdentifier & MenuItemLinkable & Nod
    * @deprecated Deprecated in favor of the databaseId field
    */
   newsPostId: Scalars['Int']['output'];
+  /**
+   * The parent of the content node.
+   * @deprecated This content type is not hierarchical and typically will not have a parent
+   */
+  parent: Maybe<NewsPostToParentConnectionEdge>;
+  /** The password for the news object. */
+  password: Maybe<Scalars['String']['output']>;
   /** Connection between the NewsPost type and the NewsPost type */
   preview: Maybe<NewsPostToPreviewConnectionEdge>;
   /** The database id of the preview node */
@@ -4329,6 +4941,15 @@ export type NewsPost = ContentNode & DatabaseIdentifier & MenuItemLinkable & Nod
   template: Maybe<ContentTemplate>;
   /** The unique resource identifier path */
   uri: Maybe<Scalars['String']['output']>;
+};
+
+
+/** The NewsPost type */
+export type NewsPostAncestorsArgs = {
+  after: InputMaybe<Scalars['String']['input']>;
+  before: InputMaybe<Scalars['String']['input']>;
+  first: InputMaybe<Scalars['Int']['input']>;
+  last: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -4390,6 +5011,57 @@ export enum NewsPostIdType {
   /** Identify a resource by the URI. */
   Uri = 'URI'
 }
+
+/** Connection between the NewsPost type and the NewsPost type */
+export type NewsPostToNewsPostConnection = Connection & NewsPostConnection & {
+  __typename?: 'NewsPostToNewsPostConnection';
+  /** Edges for the NewsPostToNewsPostConnection connection */
+  edges: Array<NewsPostToNewsPostConnectionEdge>;
+  /** The nodes of the connection, without the edges */
+  nodes: Array<NewsPost>;
+  /** Information about pagination in a connection. */
+  pageInfo: NewsPostToNewsPostConnectionPageInfo;
+};
+
+/** An edge in a connection */
+export type NewsPostToNewsPostConnectionEdge = Edge & NewsPostConnectionEdge & {
+  __typename?: 'NewsPostToNewsPostConnectionEdge';
+  /**
+   * A cursor for use in pagination
+   * @deprecated This content type is not hierarchical and typically will not have ancestors
+   */
+  cursor: Maybe<Scalars['String']['output']>;
+  /**
+   * The item at the end of the edge
+   * @deprecated This content type is not hierarchical and typically will not have ancestors
+   */
+  node: NewsPost;
+};
+
+/** Page Info on the &quot;NewsPostToNewsPostConnection&quot; */
+export type NewsPostToNewsPostConnectionPageInfo = NewsPostConnectionPageInfo & PageInfo & WpPageInfo & {
+  __typename?: 'NewsPostToNewsPostConnectionPageInfo';
+  /** When paginating forwards, the cursor to continue. */
+  endCursor: Maybe<Scalars['String']['output']>;
+  /** When paginating forwards, are there more items? */
+  hasNextPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, are there more items? */
+  hasPreviousPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, the cursor to continue. */
+  startCursor: Maybe<Scalars['String']['output']>;
+};
+
+/** Connection between the NewsPost type and the NewsPost type */
+export type NewsPostToParentConnectionEdge = Edge & NewsPostConnectionEdge & OneToOneConnection & {
+  __typename?: 'NewsPostToParentConnectionEdge';
+  /** Opaque reference to the nodes position in the connection. Value can be used with pagination args. */
+  cursor: Maybe<Scalars['String']['output']>;
+  /**
+   * The node of the connection, without the edges
+   * @deprecated This content type is not hierarchical and typically will not have a parent
+   */
+  node: NewsPost;
+};
 
 /** Connection between the NewsPost type and the NewsPost type */
 export type NewsPostToPreviewConnectionEdge = Edge & NewsPostConnectionEdge & OneToOneConnection & {
@@ -4624,8 +5296,12 @@ export type Page = ContentNode & DatabaseIdentifier & HierarchicalContentNode & 
   featuredImageId: Maybe<Scalars['ID']['output']>;
   /** The global unique identifier for this post. This currently matches the value stored in WP_Post-&gt;guid and the guid column in the &quot;post_objects&quot; database table. */
   guid: Maybe<Scalars['String']['output']>;
+  /** Whether the page object is password protected. */
+  hasPassword: Maybe<Scalars['Boolean']['output']>;
   /** The globally unique identifier of the page object. */
   id: Scalars['ID']['output'];
+  /** Whether the node is a Comment */
+  isComment: Scalars['Boolean']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
   /** Whether this page is set to the static front page. */
@@ -4663,6 +5339,8 @@ export type Page = ContentNode & DatabaseIdentifier & HierarchicalContentNode & 
   parentDatabaseId: Maybe<Scalars['Int']['output']>;
   /** The globally unique identifier of the parent node. */
   parentId: Maybe<Scalars['ID']['output']>;
+  /** The password for the page object. */
+  password: Maybe<Scalars['String']['output']>;
   /** Connection between the Page type and the page type */
   preview: Maybe<PageToPreviewConnectionEdge>;
   /** The database id of the preview node */
@@ -5064,6 +5742,11 @@ export enum PluginStatusEnum {
 /** The post type */
 export type Post = ContentNode & DatabaseIdentifier & MenuItemLinkable & Node & NodeWithAuthor & NodeWithComments & NodeWithContentEditor & NodeWithExcerpt & NodeWithFeaturedImage & NodeWithRevisions & NodeWithTemplate & NodeWithTitle & NodeWithTrackbacks & Previewable & UniformResourceIdentifiable & {
   __typename?: 'Post';
+  /**
+   * The ancestors of the content node.
+   * @deprecated This content type is not hierarchical and typically will not have ancestors
+   */
+  ancestors: Maybe<PostToPostConnection>;
   /** Connection between the NodeWithAuthor type and the User type */
   author: Maybe<NodeWithAuthorToUserConnectionEdge>;
   /** The database identifier of the author of the node */
@@ -5110,10 +5793,18 @@ export type Post = ContentNode & DatabaseIdentifier & MenuItemLinkable & Node & 
   featuredImageId: Maybe<Scalars['ID']['output']>;
   /** The global unique identifier for this post. This currently matches the value stored in WP_Post-&gt;guid and the guid column in the &quot;post_objects&quot; database table. */
   guid: Maybe<Scalars['String']['output']>;
+  /** Whether the post object is password protected. */
+  hasPassword: Maybe<Scalars['Boolean']['output']>;
   /** The globally unique identifier of the post object. */
   id: Scalars['ID']['output'];
+  /** Whether the node is a Comment */
+  isComment: Scalars['Boolean']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
+  /** Whether the node represents the front page. */
+  isFrontPage: Scalars['Boolean']['output'];
+  /** Whether  the node represents the blog page. */
+  isPostsPage: Scalars['Boolean']['output'];
   /** Whether the object is a node in the preview state */
   isPreview: Maybe<Scalars['Boolean']['output']>;
   /** Whether the object is restricted from the current viewer */
@@ -5132,6 +5823,13 @@ export type Post = ContentNode & DatabaseIdentifier & MenuItemLinkable & Node & 
   modified: Maybe<Scalars['String']['output']>;
   /** The GMT modified time for a post. If a post was recently updated the modified field will change to match the corresponding time in GMT. */
   modifiedGmt: Maybe<Scalars['String']['output']>;
+  /**
+   * The parent of the content node.
+   * @deprecated This content type is not hierarchical and typically will not have a parent
+   */
+  parent: Maybe<PostToParentConnectionEdge>;
+  /** The password for the post object. */
+  password: Maybe<Scalars['String']['output']>;
   /** Whether the pings are open or closed for this particular post. */
   pingStatus: Maybe<Scalars['String']['output']>;
   /** URLs that have been pinged. */
@@ -5169,6 +5867,15 @@ export type Post = ContentNode & DatabaseIdentifier & MenuItemLinkable & Node & 
   toPing: Maybe<Array<Maybe<Scalars['String']['output']>>>;
   /** The unique resource identifier path */
   uri: Maybe<Scalars['String']['output']>;
+};
+
+
+/** The post type */
+export type PostAncestorsArgs = {
+  after: InputMaybe<Scalars['String']['input']>;
+  before: InputMaybe<Scalars['String']['input']>;
+  first: InputMaybe<Scalars['Int']['input']>;
+  last: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -5334,8 +6041,14 @@ export type PostFormat = DatabaseIdentifier & Node & TermNode & UniformResourceI
   enqueuedStylesheets: Maybe<TermNodeToEnqueuedStylesheetConnection>;
   /** The globally unique ID for the object */
   id: Scalars['ID']['output'];
+  /** Whether the node is a Comment */
+  isComment: Scalars['Boolean']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
+  /** Whether the node represents the front page. */
+  isFrontPage: Scalars['Boolean']['output'];
+  /** Whether  the node represents the blog page. */
+  isPostsPage: Scalars['Boolean']['output'];
   /** Whether the object is restricted from the current viewer */
   isRestricted: Maybe<Scalars['Boolean']['output']>;
   /** Whether the node is a Term */
@@ -5932,6 +6645,57 @@ export type PostToCommentConnectionWhereArgs = {
   userId: InputMaybe<Scalars['ID']['input']>;
 };
 
+/** Connection between the Post type and the post type */
+export type PostToParentConnectionEdge = Edge & OneToOneConnection & PostConnectionEdge & {
+  __typename?: 'PostToParentConnectionEdge';
+  /** Opaque reference to the nodes position in the connection. Value can be used with pagination args. */
+  cursor: Maybe<Scalars['String']['output']>;
+  /**
+   * The node of the connection, without the edges
+   * @deprecated This content type is not hierarchical and typically will not have a parent
+   */
+  node: Post;
+};
+
+/** Connection between the Post type and the post type */
+export type PostToPostConnection = Connection & PostConnection & {
+  __typename?: 'PostToPostConnection';
+  /** Edges for the PostToPostConnection connection */
+  edges: Array<PostToPostConnectionEdge>;
+  /** The nodes of the connection, without the edges */
+  nodes: Array<Post>;
+  /** Information about pagination in a connection. */
+  pageInfo: PostToPostConnectionPageInfo;
+};
+
+/** An edge in a connection */
+export type PostToPostConnectionEdge = Edge & PostConnectionEdge & {
+  __typename?: 'PostToPostConnectionEdge';
+  /**
+   * A cursor for use in pagination
+   * @deprecated This content type is not hierarchical and typically will not have ancestors
+   */
+  cursor: Maybe<Scalars['String']['output']>;
+  /**
+   * The item at the end of the edge
+   * @deprecated This content type is not hierarchical and typically will not have ancestors
+   */
+  node: Post;
+};
+
+/** Page Info on the &quot;PostToPostConnection&quot; */
+export type PostToPostConnectionPageInfo = PageInfo & PostConnectionPageInfo & WpPageInfo & {
+  __typename?: 'PostToPostConnectionPageInfo';
+  /** When paginating forwards, the cursor to continue. */
+  endCursor: Maybe<Scalars['String']['output']>;
+  /** When paginating forwards, are there more items? */
+  hasNextPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, are there more items? */
+  hasPreviousPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, the cursor to continue. */
+  startCursor: Maybe<Scalars['String']['output']>;
+};
+
 /** Connection between the Post type and the postFormat type */
 export type PostToPostFormatConnection = Connection & PostFormatConnection & {
   __typename?: 'PostToPostFormatConnection';
@@ -6467,6 +7231,8 @@ export type RootMutation = {
   createComment: Maybe<CreateCommentPayload>;
   /** The createMediaItem mutation */
   createMediaItem: Maybe<CreateMediaItemPayload>;
+  /** The createMembership mutation */
+  createMembership: Maybe<CreateMembershipPayload>;
   /** The createNewsPost mutation */
   createNewsPost: Maybe<CreateNewsPostPayload>;
   /** The createPage mutation */
@@ -6493,6 +7259,8 @@ export type RootMutation = {
   deleteComment: Maybe<DeleteCommentPayload>;
   /** The deleteMediaItem mutation */
   deleteMediaItem: Maybe<DeleteMediaItemPayload>;
+  /** The deleteMembership mutation */
+  deleteMembership: Maybe<DeleteMembershipPayload>;
   /** The deleteNewsPost mutation */
   deleteNewsPost: Maybe<DeleteNewsPostPayload>;
   /** The deletePage mutation */
@@ -6529,6 +7297,8 @@ export type RootMutation = {
   updateComment: Maybe<UpdateCommentPayload>;
   /** The updateMediaItem mutation */
   updateMediaItem: Maybe<UpdateMediaItemPayload>;
+  /** The updateMembership mutation */
+  updateMembership: Maybe<UpdateMembershipPayload>;
   /** The updateNewsPost mutation */
   updateNewsPost: Maybe<UpdateNewsPostPayload>;
   /** The updatePage mutation */
@@ -6581,6 +7351,12 @@ export type RootMutationCreateCommentArgs = {
 /** The root mutation */
 export type RootMutationCreateMediaItemArgs = {
   input: CreateMediaItemInput;
+};
+
+
+/** The root mutation */
+export type RootMutationCreateMembershipArgs = {
+  input: CreateMembershipInput;
 };
 
 
@@ -6659,6 +7435,12 @@ export type RootMutationDeleteCommentArgs = {
 /** The root mutation */
 export type RootMutationDeleteMediaItemArgs = {
   input: DeleteMediaItemInput;
+};
+
+
+/** The root mutation */
+export type RootMutationDeleteMembershipArgs = {
+  input: DeleteMembershipInput;
 };
 
 
@@ -6767,6 +7549,12 @@ export type RootMutationUpdateCommentArgs = {
 /** The root mutation */
 export type RootMutationUpdateMediaItemArgs = {
   input: UpdateMediaItemInput;
+};
+
+
+/** The root mutation */
+export type RootMutationUpdateMembershipArgs = {
+  input: UpdateMembershipInput;
 };
 
 
@@ -6882,6 +7670,15 @@ export type RootQuery = {
   mediaItemBy: Maybe<MediaItem>;
   /** Connection between the RootQuery type and the mediaItem type */
   mediaItems: Maybe<RootQueryToMediaItemConnection>;
+  /** An object of the Membership Type.  */
+  membership: Maybe<Membership>;
+  /**
+   * A Membership object
+   * @deprecated Deprecated in favor of using the single entry point for this type with ID and IDType fields. For example, instead of postBy( id: &quot;&quot; ), use post(id: &quot;&quot; idType: &quot;&quot;)
+   */
+  membershipBy: Maybe<Membership>;
+  /** Connection between the RootQuery type and the Membership type */
+  memberships: Maybe<RootQueryToMembershipConnection>;
   /** A WordPress navigation menu */
   menu: Maybe<Menu>;
   /** A WordPress navigation menu item */
@@ -7151,6 +7948,33 @@ export type RootQueryMediaItemsArgs = {
   first: InputMaybe<Scalars['Int']['input']>;
   last: InputMaybe<Scalars['Int']['input']>;
   where: InputMaybe<RootQueryToMediaItemConnectionWhereArgs>;
+};
+
+
+/** The root entry point into the Graph */
+export type RootQueryMembershipArgs = {
+  asPreview: InputMaybe<Scalars['Boolean']['input']>;
+  id: Scalars['ID']['input'];
+  idType: InputMaybe<MembershipIdType>;
+};
+
+
+/** The root entry point into the Graph */
+export type RootQueryMembershipByArgs = {
+  id: InputMaybe<Scalars['ID']['input']>;
+  membershipId: InputMaybe<Scalars['Int']['input']>;
+  slug: InputMaybe<Scalars['String']['input']>;
+  uri: InputMaybe<Scalars['String']['input']>;
+};
+
+
+/** The root entry point into the Graph */
+export type RootQueryMembershipsArgs = {
+  after: InputMaybe<Scalars['String']['input']>;
+  before: InputMaybe<Scalars['String']['input']>;
+  first: InputMaybe<Scalars['Int']['input']>;
+  last: InputMaybe<Scalars['Int']['input']>;
+  where: InputMaybe<RootQueryToMembershipConnectionWhereArgs>;
 };
 
 
@@ -8067,6 +8891,77 @@ export type RootQueryToMediaItemConnectionWhereArgs = {
   authorName: InputMaybe<Scalars['String']['input']>;
   /** Find objects NOT connected to author(s) in the array of author's userIds */
   authorNotIn: InputMaybe<Array<InputMaybe<Scalars['ID']['input']>>>;
+  /** Filter the connection based on dates */
+  dateQuery: InputMaybe<DateQueryInput>;
+  /** True for objects with passwords; False for objects without passwords; null for all objects with or without passwords */
+  hasPassword: InputMaybe<Scalars['Boolean']['input']>;
+  /** Specific database ID of the object */
+  id: InputMaybe<Scalars['Int']['input']>;
+  /** Array of IDs for the objects to retrieve */
+  in: InputMaybe<Array<InputMaybe<Scalars['ID']['input']>>>;
+  /** Get objects with a specific mimeType property */
+  mimeType: InputMaybe<MimeTypeEnum>;
+  /** Slug / post_name of the object */
+  name: InputMaybe<Scalars['String']['input']>;
+  /** Specify objects to retrieve. Use slugs */
+  nameIn: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+  /** Specify IDs NOT to retrieve. If this is used in the same query as "in", it will be ignored */
+  notIn: InputMaybe<Array<InputMaybe<Scalars['ID']['input']>>>;
+  /** What parameter to use to order the objects by. */
+  orderby: InputMaybe<Array<InputMaybe<PostObjectsConnectionOrderbyInput>>>;
+  /** Use ID to return only children. Use 0 to return only top-level items */
+  parent: InputMaybe<Scalars['ID']['input']>;
+  /** Specify objects whose parent is in an array */
+  parentIn: InputMaybe<Array<InputMaybe<Scalars['ID']['input']>>>;
+  /** Specify posts whose parent is not in an array */
+  parentNotIn: InputMaybe<Array<InputMaybe<Scalars['ID']['input']>>>;
+  /** Show posts with a specific password. */
+  password: InputMaybe<Scalars['String']['input']>;
+  /** Show Posts based on a keyword search */
+  search: InputMaybe<Scalars['String']['input']>;
+  /** Retrieve posts where post status is in an array. */
+  stati: InputMaybe<Array<InputMaybe<PostStatusEnum>>>;
+  /** Show posts with a specific status. */
+  status: InputMaybe<PostStatusEnum>;
+  /** Title of the object */
+  title: InputMaybe<Scalars['String']['input']>;
+};
+
+/** Connection between the RootQuery type and the Membership type */
+export type RootQueryToMembershipConnection = Connection & MembershipConnection & {
+  __typename?: 'RootQueryToMembershipConnection';
+  /** Edges for the RootQueryToMembershipConnection connection */
+  edges: Array<RootQueryToMembershipConnectionEdge>;
+  /** The nodes of the connection, without the edges */
+  nodes: Array<Membership>;
+  /** Information about pagination in a connection. */
+  pageInfo: RootQueryToMembershipConnectionPageInfo;
+};
+
+/** An edge in a connection */
+export type RootQueryToMembershipConnectionEdge = Edge & MembershipConnectionEdge & {
+  __typename?: 'RootQueryToMembershipConnectionEdge';
+  /** A cursor for use in pagination */
+  cursor: Maybe<Scalars['String']['output']>;
+  /** The item at the end of the edge */
+  node: Membership;
+};
+
+/** Page Info on the &quot;RootQueryToMembershipConnection&quot; */
+export type RootQueryToMembershipConnectionPageInfo = MembershipConnectionPageInfo & PageInfo & WpPageInfo & {
+  __typename?: 'RootQueryToMembershipConnectionPageInfo';
+  /** When paginating forwards, the cursor to continue. */
+  endCursor: Maybe<Scalars['String']['output']>;
+  /** When paginating forwards, are there more items? */
+  hasNextPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, are there more items? */
+  hasPreviousPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, the cursor to continue. */
+  startCursor: Maybe<Scalars['String']['output']>;
+};
+
+/** Arguments for filtering the RootQueryToMembershipConnection connection */
+export type RootQueryToMembershipConnectionWhereArgs = {
   /** Filter the connection based on dates */
   dateQuery: InputMaybe<DateQueryInput>;
   /** True for objects with passwords; False for objects without passwords; null for all objects with or without passwords */
@@ -9043,6 +9938,11 @@ export enum ScriptLoadingStrategyEnum {
 /** The SeasonChronicle type */
 export type SeasonChronicle = ContentNode & DatabaseIdentifier & MenuItemLinkable & Node & NodeWithFeaturedImage & NodeWithTemplate & Previewable & UniformResourceIdentifiable & {
   __typename?: 'SeasonChronicle';
+  /**
+   * The ancestors of the content node.
+   * @deprecated This content type is not hierarchical and typically will not have ancestors
+   */
+  ancestors: Maybe<SeasonChronicleToSeasonChronicleConnection>;
   /** Connection between the ContentNode type and the ContentType type */
   contentType: Maybe<ContentNodeToContentTypeConnectionEdge>;
   /** The name of the Content Type the node belongs to */
@@ -9071,10 +9971,18 @@ export type SeasonChronicle = ContentNode & DatabaseIdentifier & MenuItemLinkabl
   featuredImageId: Maybe<Scalars['ID']['output']>;
   /** The global unique identifier for this post. This currently matches the value stored in WP_Post-&gt;guid and the guid column in the &quot;post_objects&quot; database table. */
   guid: Maybe<Scalars['String']['output']>;
+  /** Whether the sasongforsasong object is password protected. */
+  hasPassword: Maybe<Scalars['Boolean']['output']>;
   /** The globally unique identifier of the sasongforsasong object. */
   id: Scalars['ID']['output'];
+  /** Whether the node is a Comment */
+  isComment: Scalars['Boolean']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
+  /** Whether the node represents the front page. */
+  isFrontPage: Scalars['Boolean']['output'];
+  /** Whether  the node represents the blog page. */
+  isPostsPage: Scalars['Boolean']['output'];
   /** Whether the object is a node in the preview state */
   isPreview: Maybe<Scalars['Boolean']['output']>;
   /** Whether the object is restricted from the current viewer */
@@ -9089,6 +9997,13 @@ export type SeasonChronicle = ContentNode & DatabaseIdentifier & MenuItemLinkabl
   modified: Maybe<Scalars['String']['output']>;
   /** The GMT modified time for a post. If a post was recently updated the modified field will change to match the corresponding time in GMT. */
   modifiedGmt: Maybe<Scalars['String']['output']>;
+  /**
+   * The parent of the content node.
+   * @deprecated This content type is not hierarchical and typically will not have a parent
+   */
+  parent: Maybe<SeasonChronicleToParentConnectionEdge>;
+  /** The password for the sasongforsasong object. */
+  password: Maybe<Scalars['String']['output']>;
   /** Connection between the SeasonChronicle type and the SeasonChronicle type */
   preview: Maybe<SeasonChronicleToPreviewConnectionEdge>;
   /** The database id of the preview node */
@@ -9110,6 +10025,15 @@ export type SeasonChronicle = ContentNode & DatabaseIdentifier & MenuItemLinkabl
   template: Maybe<ContentTemplate>;
   /** The unique resource identifier path */
   uri: Maybe<Scalars['String']['output']>;
+};
+
+
+/** The SeasonChronicle type */
+export type SeasonChronicleAncestorsArgs = {
+  after: InputMaybe<Scalars['String']['input']>;
+  before: InputMaybe<Scalars['String']['input']>;
+  first: InputMaybe<Scalars['Int']['input']>;
+  last: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -9173,12 +10097,63 @@ export enum SeasonChronicleIdType {
 }
 
 /** Connection between the SeasonChronicle type and the SeasonChronicle type */
+export type SeasonChronicleToParentConnectionEdge = Edge & OneToOneConnection & SeasonChronicleConnectionEdge & {
+  __typename?: 'SeasonChronicleToParentConnectionEdge';
+  /** Opaque reference to the nodes position in the connection. Value can be used with pagination args. */
+  cursor: Maybe<Scalars['String']['output']>;
+  /**
+   * The node of the connection, without the edges
+   * @deprecated This content type is not hierarchical and typically will not have a parent
+   */
+  node: SeasonChronicle;
+};
+
+/** Connection between the SeasonChronicle type and the SeasonChronicle type */
 export type SeasonChronicleToPreviewConnectionEdge = Edge & OneToOneConnection & SeasonChronicleConnectionEdge & {
   __typename?: 'SeasonChronicleToPreviewConnectionEdge';
   /** Opaque reference to the nodes position in the connection. Value can be used with pagination args. */
   cursor: Maybe<Scalars['String']['output']>;
   /** The node of the connection, without the edges */
   node: SeasonChronicle;
+};
+
+/** Connection between the SeasonChronicle type and the SeasonChronicle type */
+export type SeasonChronicleToSeasonChronicleConnection = Connection & SeasonChronicleConnection & {
+  __typename?: 'SeasonChronicleToSeasonChronicleConnection';
+  /** Edges for the SeasonChronicleToSeasonChronicleConnection connection */
+  edges: Array<SeasonChronicleToSeasonChronicleConnectionEdge>;
+  /** The nodes of the connection, without the edges */
+  nodes: Array<SeasonChronicle>;
+  /** Information about pagination in a connection. */
+  pageInfo: SeasonChronicleToSeasonChronicleConnectionPageInfo;
+};
+
+/** An edge in a connection */
+export type SeasonChronicleToSeasonChronicleConnectionEdge = Edge & SeasonChronicleConnectionEdge & {
+  __typename?: 'SeasonChronicleToSeasonChronicleConnectionEdge';
+  /**
+   * A cursor for use in pagination
+   * @deprecated This content type is not hierarchical and typically will not have ancestors
+   */
+  cursor: Maybe<Scalars['String']['output']>;
+  /**
+   * The item at the end of the edge
+   * @deprecated This content type is not hierarchical and typically will not have ancestors
+   */
+  node: SeasonChronicle;
+};
+
+/** Page Info on the &quot;SeasonChronicleToSeasonChronicleConnection&quot; */
+export type SeasonChronicleToSeasonChronicleConnectionPageInfo = PageInfo & SeasonChronicleConnectionPageInfo & WpPageInfo & {
+  __typename?: 'SeasonChronicleToSeasonChronicleConnectionPageInfo';
+  /** When paginating forwards, the cursor to continue. */
+  endCursor: Maybe<Scalars['String']['output']>;
+  /** When paginating forwards, are there more items? */
+  hasNextPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, are there more items? */
+  hasPreviousPage: Scalars['Boolean']['output'];
+  /** When paginating backwards, the cursor to continue. */
+  startCursor: Maybe<Scalars['String']['output']>;
 };
 
 /** Field Group */
@@ -9273,8 +10248,14 @@ export type Tag = DatabaseIdentifier & MenuItemLinkable & Node & TermNode & Unif
   enqueuedStylesheets: Maybe<TermNodeToEnqueuedStylesheetConnection>;
   /** The globally unique ID for the object */
   id: Scalars['ID']['output'];
+  /** Whether the node is a Comment */
+  isComment: Scalars['Boolean']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
+  /** Whether the node represents the front page. */
+  isFrontPage: Scalars['Boolean']['output'];
+  /** Whether  the node represents the blog page. */
+  isPostsPage: Scalars['Boolean']['output'];
   /** Whether the object is restricted from the current viewer */
   isRestricted: Maybe<Scalars['Boolean']['output']>;
   /** Whether the node is a Term */
@@ -9774,8 +10755,14 @@ export type TermNode = {
   enqueuedStylesheets: Maybe<TermNodeToEnqueuedStylesheetConnection>;
   /** The globally unique ID for the object */
   id: Scalars['ID']['output'];
+  /** Whether the node is a Comment */
+  isComment: Scalars['Boolean']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
+  /** Whether the node represents the front page. */
+  isFrontPage: Scalars['Boolean']['output'];
+  /** Whether  the node represents the blog page. */
+  isPostsPage: Scalars['Boolean']['output'];
   /** Whether the object is restricted from the current viewer */
   isRestricted: Maybe<Scalars['Boolean']['output']>;
   /** Whether the node is a Term */
@@ -10003,8 +10990,14 @@ export type ThemeConnectionPageInfo = {
 export type UniformResourceIdentifiable = {
   /** The globally unique ID for the object */
   id: Scalars['ID']['output'];
+  /** Whether the node is a Comment */
+  isComment: Scalars['Boolean']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
+  /** Whether the node represents the front page. */
+  isFrontPage: Scalars['Boolean']['output'];
+  /** Whether  the node represents the blog page. */
+  isPostsPage: Scalars['Boolean']['output'];
   /** Whether the node is a Term */
   isTermNode: Scalars['Boolean']['output'];
   /** The unique resource identifier path */
@@ -10211,6 +11204,37 @@ export type UpdateMediaItemPayload = {
   clientMutationId: Maybe<Scalars['String']['output']>;
   /** The MediaItem object mutation type. */
   mediaItem: Maybe<MediaItem>;
+};
+
+/** Input for the updateMembership mutation. */
+export type UpdateMembershipInput = {
+  /** This is an ID that can be passed to a mutation by the client to track the progress of mutations and catch possible duplicate mutation submissions. */
+  clientMutationId: InputMaybe<Scalars['String']['input']>;
+  /** The date of the object. Preferable to enter as year/month/day (e.g. 01/31/2017) as it will rearrange date as fit if it is not specified. Incomplete dates may have unintended results for example, "2017" as the input will use current date with timestamp 20:17  */
+  date: InputMaybe<Scalars['String']['input']>;
+  /** The ID of the Membership object */
+  id: Scalars['ID']['input'];
+  /** Override the edit lock when another user is editing the post */
+  ignoreEditLock: InputMaybe<Scalars['Boolean']['input']>;
+  /** A field used for ordering posts. This is typically used with nav menu items or for special ordering of hierarchical content types. */
+  menuOrder: InputMaybe<Scalars['Int']['input']>;
+  /** The password used to protect the content of the object */
+  password: InputMaybe<Scalars['String']['input']>;
+  /** The slug of the object */
+  slug: InputMaybe<Scalars['String']['input']>;
+  /** The status of the object */
+  status: InputMaybe<PostStatusEnum>;
+  /** The title of the object */
+  title: InputMaybe<Scalars['String']['input']>;
+};
+
+/** The payload for the updateMembership mutation. */
+export type UpdateMembershipPayload = {
+  __typename?: 'UpdateMembershipPayload';
+  /** If a &#039;clientMutationId&#039; input is provided to the mutation, it will be returned as output on the mutation. This ID can be used by the client to track the progress of mutations and catch possible duplicate mutation submissions. */
+  clientMutationId: Maybe<Scalars['String']['output']>;
+  /** The Post object mutation type. */
+  membership: Maybe<Membership>;
 };
 
 /** Input for the updateNewsPost mutation. */
@@ -10546,8 +11570,14 @@ export type User = Commenter & DatabaseIdentifier & Node & UniformResourceIdenti
   firstName: Maybe<Scalars['String']['output']>;
   /** The globally unique identifier for the user object. */
   id: Scalars['ID']['output'];
+  /** Whether the node is a Comment */
+  isComment: Scalars['Boolean']['output'];
   /** Whether the node is a Content Node */
   isContentNode: Scalars['Boolean']['output'];
+  /** Whether the node represents the front page. */
+  isFrontPage: Scalars['Boolean']['output'];
+  /** Whether  the node represents the blog page. */
+  isPostsPage: Scalars['Boolean']['output'];
   /** Whether the object is restricted from the current viewer */
   isRestricted: Maybe<Scalars['Boolean']['output']>;
   /** Whether the node is a Term */
@@ -11415,6 +12445,11 @@ export type GetChronicleQueryVariables = Exact<{
 
 export type GetChronicleQuery = { __typename?: 'RootQuery', chronicle: { __typename?: 'Chronicle', date: string, slug: string, chronicle: { __typename?: 'Chronicle_Chronicle', title: string, text: string } } };
 
+export type GetMembershipsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetMembershipsQuery = { __typename?: 'RootQuery', memberships: { __typename?: 'RootQueryToMembershipConnection', nodes: Array<{ __typename?: 'Membership', id: string, title: string, membership: { __typename?: 'Membership_Membership', startDate: string, endDate: string, familyPrice: number, regularPrice: number, youthPrice: number, image: { __typename?: 'MediaItem', sourceUrl: string, altText: string } } }> } };
+
 export type GetNewsQueryVariables = Exact<{
   limit?: InputMaybe<Scalars['Int']['input']>;
 }>;
@@ -11451,6 +12486,7 @@ export const GetAwayGuidesDocument = {"kind":"Document","definitions":[{"kind":"
 export const GetAwayGuideBySlugDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetAwayGuideBySlug"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"slug"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"awayguide"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"slug"}}},{"kind":"Argument","name":{"kind":"Name","value":"idType"},"value":{"kind":"EnumValue","value":"SLUG"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"date"}},{"kind":"Field","name":{"kind":"Name","value":"awayGuide"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"sport"}},{"kind":"Field","name":{"kind":"Name","value":"division"}},{"kind":"Field","name":{"kind":"Name","value":"farger"}},{"kind":"Field","name":{"kind":"Name","value":"avstand"}},{"kind":"Field","name":{"kind":"Name","value":"hemsida"}},{"kind":"Field","name":{"kind":"Name","value":"matcher"}},{"kind":"Field","name":{"kind":"Name","value":"meriter"}},{"kind":"Field","name":{"kind":"Name","value":"lag"}},{"kind":"Field","name":{"kind":"Name","value":"bildad"}},{"kind":"Field","name":{"kind":"Name","value":"logo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"sourceUrl"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"awayGuideContent"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"text"}}]}},{"kind":"Field","name":{"kind":"Name","value":"slug"}}]}}]}}]} as unknown as DocumentNode<GetAwayGuideBySlugQuery, GetAwayGuideBySlugQueryVariables>;
 export const GetChroniclesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetChronicles"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"chronicles"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"nodes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"date"}},{"kind":"Field","name":{"kind":"Name","value":"chronicle"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"text"}}]}},{"kind":"Field","name":{"kind":"Name","value":"slug"}}]}}]}}]}}]} as unknown as DocumentNode<GetChroniclesQuery, GetChroniclesQueryVariables>;
 export const GetChronicleDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetChronicle"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"slug"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"chronicle"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"slug"}}},{"kind":"Argument","name":{"kind":"Name","value":"idType"},"value":{"kind":"EnumValue","value":"SLUG"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"date"}},{"kind":"Field","name":{"kind":"Name","value":"chronicle"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"text"}}]}},{"kind":"Field","name":{"kind":"Name","value":"slug"}}]}}]}}]} as unknown as DocumentNode<GetChronicleQuery, GetChronicleQueryVariables>;
+export const GetMembershipsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetMemberships"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"memberships"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"nodes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"membership"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","alias":{"kind":"Name","value":"startDate"},"name":{"kind":"Name","value":"startdate"}},{"kind":"Field","alias":{"kind":"Name","value":"endDate"},"name":{"kind":"Name","value":"enddate"}},{"kind":"Field","alias":{"kind":"Name","value":"familyPrice"},"name":{"kind":"Name","value":"familyprice"}},{"kind":"Field","alias":{"kind":"Name","value":"regularPrice"},"name":{"kind":"Name","value":"regularprice"}},{"kind":"Field","alias":{"kind":"Name","value":"youthPrice"},"name":{"kind":"Name","value":"youthprice"}},{"kind":"Field","name":{"kind":"Name","value":"image"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"sourceUrl"}},{"kind":"Field","name":{"kind":"Name","value":"altText"}}]}}]}}]}}]}}]}}]} as unknown as DocumentNode<GetMembershipsQuery, GetMembershipsQueryVariables>;
 export const GetNewsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetNews"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"limit"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}},"defaultValue":{"kind":"IntValue","value":"100"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"newsPosts"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"Variable","name":{"kind":"Name","value":"limit"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"nodes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"date"}},{"kind":"Field","name":{"kind":"Name","value":"newsContent"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"text"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"author"}},{"kind":"Field","name":{"kind":"Name","value":"newsImg"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"sourceUrl"}},{"kind":"Field","name":{"kind":"Name","value":"altText"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"slug"}}]}}]}}]}}]} as unknown as DocumentNode<GetNewsQuery, GetNewsQueryVariables>;
 export const GetNewsBySlugDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetNewsBySlug"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"slug"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"newsPost"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"slug"}}},{"kind":"Argument","name":{"kind":"Name","value":"idType"},"value":{"kind":"EnumValue","value":"SLUG"}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"date"}},{"kind":"Field","name":{"kind":"Name","value":"newsContent"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"text"}},{"kind":"Field","name":{"kind":"Name","value":"title"}},{"kind":"Field","name":{"kind":"Name","value":"author"}},{"kind":"Field","name":{"kind":"Name","value":"newsImg"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"sourceUrl"}},{"kind":"Field","name":{"kind":"Name","value":"altText"}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"slug"}}]}}]}}]} as unknown as DocumentNode<GetNewsBySlugQuery, GetNewsBySlugQueryVariables>;
 export const GetSeasonChroncilesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetSeasonChronciles"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"after"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"seasonChronicles"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"100"}},{"kind":"Argument","name":{"kind":"Name","value":"after"},"value":{"kind":"Variable","name":{"kind":"Name","value":"after"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}},{"kind":"Field","name":{"kind":"Name","value":"nodes"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"seasonChronicleContent"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","alias":{"kind":"Name","value":"title"},"name":{"kind":"Name","value":"titel"}},{"kind":"Field","name":{"kind":"Name","value":"sport"}}]}}]}}]}}]}}]} as unknown as DocumentNode<GetSeasonChroncilesQuery, GetSeasonChroncilesQueryVariables>;
