@@ -3,7 +3,7 @@ import { createTRPCRouter, membershipProcedure } from "../trpc";
 
 export const memberPaymentRouter = createTRPCRouter({
   requestSwishPayment: membershipProcedure
-    .mutation(({ ctx, input }) => {
+    .mutation(() => {
       return {
         paymentId: '1234',
       };
@@ -94,7 +94,7 @@ export const memberPaymentRouter = createTRPCRouter({
     }),
   checkPaymentStatus: membershipProcedure
     .input(z.object({ paymentId: z.string() }))
-    .mutation(({ ctx, input }) => {
+    .mutation(() => {
       return "ok";
     }),
   // swishPaymentCallback: membershipProcedure

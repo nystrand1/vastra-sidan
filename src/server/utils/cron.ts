@@ -7,12 +7,9 @@ import {
 import { type inferAsyncReturnType } from "@trpc/server";
 import { parseISO } from "date-fns";
 import { env } from "~/env.mjs";
-import {
-  type Membership as WPMembership
-} from "~/types/wordpressTypes";
 import { type createTRPCContext } from "../api/trpc";
 import { captureException } from "@sentry/nextjs";
-import { GetMembershipsQuery, type GetAwayGamesQuery } from "~/types/wordpresstypes/graphql";
+import { type GetMembershipsQuery, type GetAwayGamesQuery } from "~/types/wordpresstypes/graphql";
 
 const apiKey = env.WORDPRESS_API_KEY;
 

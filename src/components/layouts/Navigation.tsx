@@ -5,7 +5,6 @@ import { useState } from "react";
 import { featureFlags } from "~/utils/featureFlags";
 import { Button } from "../atoms/Button/Button";
 import { ButtonLink } from "../atoms/ButtonLink/ButtonLink";
-import { env } from "~/env.mjs";
 
 interface UserMenuProps {
   className?: string

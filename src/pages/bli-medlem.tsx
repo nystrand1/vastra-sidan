@@ -15,7 +15,6 @@ import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 import { featureFlags } from "~/utils/featureFlags";
 import { delay } from "~/utils/helpers";
-import { pollPaymentStatus } from "~/utils/payment";
 import { memberSignupSchema } from "~/utils/zodSchemas";
 
 interface AdditionalMember {
@@ -35,8 +34,6 @@ export const MemberPage = () => {
   const [phone, setPhone] = useState("");
   const [additionalMembers, setAdditionalMembers] = useState<AdditionalMember>();
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const { mutateAsync: createPayment } = api.memberPayment.requestSwishPayment.useMutation();
-  const { mutateAsync: checkPaymentStatus } = api.memberPayment.checkPaymentStatus.useMutation();
   const { data: memberships } = api.public.getAvailableMemberships.useQuery();
   const [membershipId, setMembershipId] = useState(memberships?.regular?.id);
   const [membershipType, setMembershipType] = useState(memberships?.regular?.type);
@@ -65,7 +62,7 @@ export const MemberPage = () => {
 
   const selectedMembership = Object.values(memberships).find((x) => x?.id === membershipId);
 
-  const becomeMember = async (payload: Zod.infer<typeof memberSignupSchema>) => {
+  const becomeMember = async (_payload: Zod.infer<typeof memberSignupSchema>) => {
     await delay(1000);
     return {
       success: true

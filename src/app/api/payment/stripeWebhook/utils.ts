@@ -54,7 +54,7 @@ export const handleChargeUpdate = async (charge: Stripe.ChargeUpdatedEvent) => {
   }
   const payment = await prisma.stripePayment.findFirst({
     where: {
-      stripePaymentId: paymentIntentId.toString(),
+      stripePaymentId: typeof paymentIntentId === 'string' ? paymentIntentId : paymentIntentId.id,
       status: StripePaymentStatus.SUCCEEDED
     }
   });
@@ -62,7 +62,7 @@ export const handleChargeUpdate = async (charge: Stripe.ChargeUpdatedEvent) => {
     throw new Error("Payment not found");
   }
 
-  const strapiFee = await stripe.balanceTransactions.retrieve(transactionId.toString());
+  const strapiFee = await stripe.balanceTransactions.retrieve(typeof transactionId === 'string' ? transactionId : transactionId.id);
 
   if (strapiFee.fee) {
     await prisma.stripePayment.update({
@@ -87,7 +87,7 @@ export const handleRefund = async (refund: Stripe.ChargeRefundedEvent) => {
   }
   const payment = await prisma.stripePayment.findFirst({
     where: {
-      stripePaymentId: paymentIntentId.toString(),
+      stripePaymentId: typeof paymentIntentId === 'string' ? paymentIntentId : paymentIntentId.id,
       status: StripePaymentStatus.SUCCEEDED
     }
   });

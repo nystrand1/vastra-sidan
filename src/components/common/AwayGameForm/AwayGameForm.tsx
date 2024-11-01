@@ -52,7 +52,7 @@ export const AwayGameForm = () => {
       busId: firstAvailableBus?.id ?? '',
     }
     setPassengers([initialPassenger]);
-  }, [sessionData, firstAvailableBus])
+  }, [sessionData, firstAvailableBus, passengers.length]);
 
   if (!id) return null
   if (isLoading) return null;
