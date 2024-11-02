@@ -153,9 +153,9 @@ export const wpMembershipToMembership = (
   wpMembership: GetMembershipsQuery['memberships']['nodes'][number]
 ): MembershipPayload[] => {
   const prices = {
-    [MembershipType.FAMILY]: Number(wpMembership.membership.familyPrice),
-    [MembershipType.REGULAR]: Number(wpMembership.membership.regularPrice),
-    [MembershipType.YOUTH]: Number(wpMembership.membership.youthPrice)
+    [MembershipType.FAMILY]: Number(wpMembership.membership.familyPrice) * 100,
+    [MembershipType.REGULAR]: Number(wpMembership.membership.regularPrice) * 100,
+    [MembershipType.YOUTH]: Number(wpMembership.membership.youthPrice) * 100
   };
   const memberships: MembershipPayload[] = [
     MembershipType.FAMILY,

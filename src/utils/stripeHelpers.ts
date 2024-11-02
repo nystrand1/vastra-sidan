@@ -5,7 +5,7 @@ import { stripe } from "~/server/stripe";
 interface CreatePaymentIntentInput {
   amount: number;
   description: string;
-  payee: Participant
+  payee: Pick<Participant, "email" | "name">;
 }
 
 export const createPaymentIntent = async (data: CreatePaymentIntentInput) => {

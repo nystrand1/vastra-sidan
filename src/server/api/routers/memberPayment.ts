@@ -1,96 +1,101 @@
 import { z } from "zod";
 import { createTRPCRouter, membershipProcedure } from "../trpc";
+import { TRPCError } from "@trpc/server";
+import { StripePaymentStatus, StripeRefundStatus } from "@prisma/client";
+import { createPaymentIntent } from "~/utils/stripeHelpers";
+import { memberSignupSchema } from "~/utils/zodSchemas";
+import { captureException, captureMessage } from "@sentry/nextjs";
 
 export const memberPaymentRouter = createTRPCRouter({
-  requestSwishPayment: membershipProcedure
-    .mutation(() => {
-      return {
-        paymentId: '1234',
-      };
-      // const { membershipId, phone } = input;
+  requestPayment: membershipProcedure
+    .input(memberSignupSchema)
+    .mutation(async ({ input, ctx }) => {
+      const { membershipId } = input;
 
-      // const membership = await ctx.prisma.membership.findUnique({
-      //   where: {
-      //     id: membershipId
-      //   }
-      // });
+      const membership = await ctx.prisma.membership.findUnique({
+        where: {
+          id: membershipId
+        }
+      });
 
-      // if (!membership) {
-      //   throw new TRPCError({
-      //     code: "BAD_REQUEST",
-      //     message: "Invalid membership id"
-      //   });
-      // }
+      if (!membership) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid membership id"
+        });
+      }
 
-      // // Check if we have user(s) with this mail
-      // const user = await ctx.prisma.user.findUnique({
-      //   where: {
-      //     email: input.email
-      //   },
-      //   include: {
-      //     memberShips: {
-      //       include: {
-      //         swishPayments: {
-      //           where: {
-      //             status: SwishPaymentStatus.PAID
-      //           }
-      //         }
-      //       }
-      //     }
-      //   }
-      // });
+      // Check if we have user(s) with this mail
+      const user = await ctx.prisma.user.findUnique({
+        where: {
+          email: input.email
+        },
+        include: {
+          memberShips: {
+            include: {
+              stripePayments: {
+                where: {
+                  status: StripePaymentStatus.SUCCEEDED
+                }
+              }
+            },
+            where: {
+              stripeRefunds: {
+                none: {
+                  status: StripeRefundStatus.REFUNDED
+                }
+              }
+            }
+          }
+        }
+      });
 
-      // // Check if user already has a membership
-      // if (
-      //   user?.memberShips.find((x) => x.wordpressId === membership.wordpressId)
-      // ) {
-      //   throw new TRPCError({
-      //     code: "BAD_REQUEST",
-      //     message: "User already has this membership"
-      //   });
-      // }
+      // Check if user already has a membership
+      if (
+        user?.memberShips.find((x) => x.wordpressId === membership.wordpressId)
+      ) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "User already has this membership"
+        });
+      }
 
-      // const paymentIntentData = createPaymentIntentPayload({
-      //   message: `${membership.name}, ${
-      //     friendlyMembershipNames[membership.type]
-      //   }`,
-      //   amount: membership.price,
-      //   payerAlias: phone,
-      //   callbackEndPoint: "swishMemberCallback"
-      // });
+      try {
+        const customerName = `${input.firstName} ${input.lastName}`;
+        const paymentIntentData = await createPaymentIntent({
+          amount: membership.price,
+          payee: {
+            email: input.email,
+            name: `${input.firstName} ${input.lastName}`
+          },
+          description: `${membership.name} - ${customerName}`
+        });
 
-      // try {
-      //   const res = await createPaymentRequest(paymentIntentData);
-      //   const paymentRequestUrl = res.headers.location as string;
-      //   // ID is the last part of the URL
-      //   const paymentRequestId = paymentRequestUrl.split("/").pop() as string;
-      //   // Create payment request in our database
-      //   const paymentIntent = await ctx.prisma.swishPayment.create({
-      //     data: {
-      //       paymentRequestUrl,
-      //       paymentId: paymentRequestId,
-      //       payerAlias: phone,
-      //       payeeAlias: paymentIntentData.payeeAlias,
-      //       amount: membership.price,
-      //       message: paymentIntentData.message,
-      //       status: SwishPaymentStatus.CREATED,
-      //       memberShipId: membershipId,
-      //       userId: user?.id
-      //       // Connect to a user if they are logged in
-      //     }
-      //   });
-      //   return {
-      //     paymentId: paymentIntent.paymentId
-      //   };
-      // } catch (err) {
-      //   console.error("Error creating payment request");
-      //   const error = err as { response: { data: any } };
-      //   console.error(error);
-      //   console.error(error?.response?.data);
-      //   throw new TRPCError({
-      //     code: "INTERNAL_SERVER_ERROR"
-      //   });
-      // }
+        // Create payment request in our database
+        await ctx.prisma.stripePayment.create({
+          data: {
+            stripePaymentId: paymentIntentData.id,
+            amount: membership.price,
+            status: StripePaymentStatus.CREATED,
+            memberShipId: membershipId,
+            userId: user?.id
+          }
+        });
+        
+        return {
+          clientId: paymentIntentData.client_secret,
+        };
+      } catch (err) {
+        console.error("Error creating payment request");
+        const error = err as { response: { data: any } };
+        console.error(error);
+        console.error(error?.response?.data);
+        captureMessage("Error creating payment request");
+        captureException(err);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR"
+        });
+      }
     }),
   checkPaymentStatus: membershipProcedure
     .input(z.object({ paymentId: z.string() }))
