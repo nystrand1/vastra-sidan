@@ -1,10 +1,10 @@
-import { z } from "zod";
-import { createTRPCRouter, membershipProcedure } from "../trpc";
+import { StripePaymentStatus } from "@prisma/client";
+import { captureException, captureMessage } from "@sentry/nextjs";
 import { TRPCError } from "@trpc/server";
-import { StripePaymentStatus, StripeRefundStatus } from "@prisma/client";
+import { z } from "zod";
 import { createPaymentIntent } from "~/utils/stripeHelpers";
 import { memberSignupSchema } from "~/utils/zodSchemas";
-import { captureException, captureMessage } from "@sentry/nextjs";
+import { createTRPCRouter, membershipProcedure } from "../trpc";
 
 export const memberPaymentRouter = createTRPCRouter({
   requestPayment: membershipProcedure
@@ -25,38 +25,24 @@ export const memberPaymentRouter = createTRPCRouter({
         });
       }
 
-      // Check if we have user(s) with this mail
-      const user = await ctx.prisma.user.findUnique({
+      // Check if we have member(s) with this mail
+      const member = await ctx.prisma.member.findFirst({
         where: {
           email: input.email
         },
         include: {
-          memberShips: {
-            include: {
-              stripePayments: {
-                where: {
-                  status: StripePaymentStatus.SUCCEEDED
-                }
-              }
-            },
-            where: {
-              stripeRefunds: {
-                none: {
-                  status: StripeRefundStatus.REFUNDED
-                }
-              }
-            }
-          }
+          memberships: true
         }
       });
+      
 
-      // Check if user already has a membership
+      // Check if member already has this membership
       if (
-        user?.memberShips.find((x) => x.wordpressId === membership.wordpressId)
+        member?.memberships.find((x) => x.wordpressId === membership.wordpressId)
       ) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "User already has this membership"
+          message: "Member already has this membership"
         });
       }
 
@@ -77,8 +63,11 @@ export const memberPaymentRouter = createTRPCRouter({
             stripePaymentId: paymentIntentData.id,
             amount: membership.price,
             status: StripePaymentStatus.CREATED,
-            memberShipId: membershipId,
-            userId: user?.id
+            members: member ? {
+              connect: {
+                id: member.id
+              }
+            } : undefined,
           }
         });
         

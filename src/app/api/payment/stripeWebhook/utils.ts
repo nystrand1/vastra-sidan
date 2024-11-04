@@ -9,7 +9,8 @@ export const handleSuccessfulPayment = async (paymentIntent: Stripe.PaymentInten
       stripePaymentId: paymentIntent.data.object.id
     },
     include: {
-      participants: true
+      participants: true,
+      members: true,
     }
   });
   if (!originalPayment) {
@@ -23,7 +24,10 @@ export const handleSuccessfulPayment = async (paymentIntent: Stripe.PaymentInten
       status: StripePaymentStatus.SUCCEEDED,
       participants: {
         connect: originalPayment.participants.map(p => ({ id: p.id }))
-      }
+      },
+      members: {
+        connect: originalPayment.members.map(m => ({ id: m.id }))
+      },
     },
     include: {
       participants: {
@@ -31,7 +35,8 @@ export const handleSuccessfulPayment = async (paymentIntent: Stripe.PaymentInten
           event: true,
           bus: true
         }
-      }
+      },
+      members: true
     }
   });
 }
