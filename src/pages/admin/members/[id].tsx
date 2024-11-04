@@ -42,7 +42,6 @@ export default function AdminMemberPage() {
       <div className="flex flex-row gap-4 justify-center flex-wrap">
         <Card title={member.name} className="w-96">
             <p>{member.activeMembershipType}</p>
-            <p>Betalat: {member.datePaid}</p>
             {member.email && (
               <a href={`mailto:${member.email}`} className="underline">{member.email}</a>
             )}

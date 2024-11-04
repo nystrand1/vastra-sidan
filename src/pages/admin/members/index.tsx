@@ -51,7 +51,6 @@ export default function Admin() {
               link={`/admin/members/${member.id}`}
             >
               <p>{member.activeMembershipType}</p>
-              <p>Blev medlem {member.datePaid}</p>
               {member.email && (
                 <p>{member.email}</p>
               )}
