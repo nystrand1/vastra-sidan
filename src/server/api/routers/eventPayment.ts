@@ -186,7 +186,14 @@ export const eventPaymentRouter = createTRPCRouter({
         const description = `${event.name}. ${input.participants.length} resenärer`
           .slice(0, 50)
           .replaceAll("/", "-");
-        const stripeRes = await createPaymentIntent({ amount: cost, description, payee });
+        const stripeRes = await createPaymentIntent({ 
+          amount: cost, 
+          description, 
+          payee,
+          metadata: {
+            type: 'EVENT'
+          }
+         });
         
         // Create payment request in our database
         await ctx.prisma.stripePayment.create({

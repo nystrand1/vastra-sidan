@@ -6,6 +6,9 @@ interface CreatePaymentIntentInput {
   amount: number;
   description: string;
   payee: Pick<Participant, "email" | "name">;
+  metadata: Record<string, string> & {
+    type: 'MEMBERSHIP' | 'EVENT';
+  };
 }
 
 export const createPaymentIntent = async (data: CreatePaymentIntentInput) => {
@@ -33,6 +36,7 @@ export const createPaymentIntent = async (data: CreatePaymentIntentInput) => {
     currency: "sek",
     description,
     customer: existingCustomer.id,
+    metadata: data.metadata,
   });
 };
 

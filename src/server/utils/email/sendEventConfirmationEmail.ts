@@ -1,6 +1,6 @@
 import { env } from "~/env.mjs";
-import { type ParticipantWithBusAndEvent } from "../api/routers/eventPayment";
-import { resend } from "../resend";
+import { type ParticipantWithBusAndEvent } from "../../api/routers/eventPayment";
+import { resend } from "../../resend";
 import EventSignUp from "~/components/emails/EventSignUp";
 
 export const sendEventConfirmationEmail = async (

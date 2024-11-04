@@ -54,7 +54,10 @@ export const memberPaymentRouter = createTRPCRouter({
             email: input.email,
             name: `${input.firstName} ${input.lastName}`
           },
-          description: `${membership.name} - ${customerName}`
+          description: `${membership.name} - ${customerName}`,
+          metadata: {
+            type: 'MEMBERSHIP'
+          }
         });
 
         // Create payment request in our database
@@ -88,7 +91,20 @@ export const memberPaymentRouter = createTRPCRouter({
     }),
   checkPaymentStatus: membershipProcedure
     .input(z.object({ paymentId: z.string() }))
-    .mutation(() => {
+    .query(async ({ ctx, input }) => {
+      const payment = await ctx.prisma.stripePayment.findFirst({
+        where: {
+          stripePaymentId: input.paymentId,
+          status: StripePaymentStatus.SUCCEEDED
+        }
+      });
+      
+      if (!payment) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Payment not found"
+        });
+      }
       return "ok";
     }),
   // swishPaymentCallback: membershipProcedure
