@@ -5,7 +5,6 @@ import { useState } from "react";
 import { featureFlags } from "~/utils/featureFlags";
 import { Button } from "../atoms/Button/Button";
 import { ButtonLink } from "../atoms/ButtonLink/ButtonLink";
-import { env } from "~/env.mjs";
 
 interface UserMenuProps {
   className?: string
@@ -130,7 +129,7 @@ export const Navigation = () => {
               </li>
             )}
             <li className="divide-y divide-gray-100">
-              <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/blasvart-jul">Blåsvart jul</Link>
+              <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/nyheter/blasvart-jul">Blåsvart jul</Link>
             </li>
             <li className="divide-y divide-gray-100">
               <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/nyheter">Nyheter</Link>
