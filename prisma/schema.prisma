@@ -73,7 +73,7 @@ model Member {
   friendlyId              String
   firstName               String
   lastName                String
-  email                   String
+  email                   String        @unique
   phone                   String
   memberships             Membership[]
   familyMemberShipOwnerId String?
