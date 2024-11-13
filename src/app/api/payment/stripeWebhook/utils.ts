@@ -124,6 +124,30 @@ export const handleRefund = async (refund: Stripe.ChargeRefundedEvent) => {
           originalPaymentId: payment.id,        
         }
       });
+      const membershipId = refund.data.object.metadata.membershipId;
+      if (membershipId) {
+        const membersRelatedToRefund = await prisma.member.findMany({
+          where: {
+            stripePayments: {
+              some: {
+                id: payment.id,
+                status: StripePaymentStatus.SUCCEEDED
+              },            
+            },
+          }
+        });
+        // Remove the membership from the members
+        await prisma.membership.update({
+          where: {
+            id: membershipId
+          },
+          data: {
+            members: {
+              disconnect: membersRelatedToRefund.map(m => ({ id: m.id }))
+            }
+          }
+        });
+      }
     }
     if (status === 'failed') {
       await prisma.stripeRefund.create({

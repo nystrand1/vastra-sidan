@@ -83,11 +83,11 @@ export const memberPaymentRouter = createTRPCRouter({
             stripePaymentId: paymentIntentData.id,
             amount: membership.price,
             status: StripePaymentStatus.CREATED,
-            members: member ? {
+            members: {
               connect: {
                 id: member.id
               }
-            } : undefined,
+            }
           }
         });
         
