@@ -25,8 +25,8 @@ export const memberPaymentRouter = createTRPCRouter({
         });
       }
 
-      // Check if we have member(s) with this mail
-      const member = await ctx.prisma.member.findFirst({
+      // Check if we have members with this mail
+      let member = await ctx.prisma.member.findUnique({
         where: {
           email: input.email
         },
@@ -34,6 +34,22 @@ export const memberPaymentRouter = createTRPCRouter({
           memberships: true
         }
       });
+
+      // If member not found, create new member
+      if (!member) {
+        member = await ctx.prisma.member.create({
+          data: {
+            firstName: input.firstName,
+            lastName: input.lastName,
+            email: input.email,
+            phone: input.phone,
+            friendlyId: input.email
+          },
+          include: {
+            memberships: true
+          }
+        });
+      }
       
 
       // Check if member already has this membership
@@ -56,7 +72,8 @@ export const memberPaymentRouter = createTRPCRouter({
           },
           description: `${membership.name} - ${customerName}`,
           metadata: {
-            type: 'MEMBERSHIP'
+            type: 'MEMBERSHIP',
+            membershipId: membership.id,
           }
         });
 

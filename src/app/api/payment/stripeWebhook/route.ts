@@ -6,6 +6,7 @@ import { sendEventConfirmationEmail } from "~/server/utils/email/sendEventConfir
 import { handleChargeUpdate, handleFailedPayment, handleRefund, handleSuccessfulPayment } from "./utils";
 import { captureException } from "@sentry/nextjs";
 import { sendMemberConfirmationEmail } from "~/server/utils/email/sendMemberConfirmationEmail";
+import { attachMembershipToMembers } from "./attachMembershipToMembers";
 
 
 const endpointSecret = env.STRIPE_WEBHOOK_SECRET || "whsec_8691b2bf8e9dca6022c686d929fd5dc87acd4c888c46a9ea6902a157b19334b7";
@@ -20,6 +21,10 @@ const handleStripeEvent = async (event: Stripe.Event) => {
         await Promise.all(emailPromises);
       }
       if (event.data.object.metadata.type === 'MEMBERSHIP') {
+        await attachMembershipToMembers({
+          members,
+          membershipId: event.data.object.metadata.membershipId
+        });
         // send membership confirmation email
         const emailPromises = members.map(sendMemberConfirmationEmail);
         await Promise.all(emailPromises);
