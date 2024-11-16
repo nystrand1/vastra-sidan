@@ -3,7 +3,7 @@ import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import Accordion from "~/components/atoms/Accordion/Accordion";
 import { memberPerks } from "~/components/atoms/Accordion/accordionContent";
@@ -37,7 +37,7 @@ export const MemberPage = () => {
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
   const [lastName, setLastName] = useState(user?.lastName ?? "");
   const [phone, setPhone] = useState("");
-  const [additionalMembers] = useState<AdditionalMember>();
+  const [additionalMembers, setAdditionalMembers] = useState<AdditionalMember[]>();
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const { data: memberships } = api.public.getAvailableMemberships.useQuery();
   const [membershipId, setMembershipId] = useState(memberships?.regular?.id);
@@ -46,6 +46,12 @@ export const MemberPage = () => {
   const [modalOpen, setModalOpen] = useState(false);
 
   const { mutateAsync: createPaymentIntent, data } = api.memberPayment.requestPayment.useMutation();
+
+  useEffect(() => {
+    if (membershipType !== 'FAMILY') {
+      setAdditionalMembers(undefined);
+    }
+  }, [membershipType])
 
   if (!memberships || !memberships.regular || !memberships.family || !memberships.youth) {
     return <p className="text-center text-xl">Finns inga medlemskap för tillfället!</p>
@@ -90,20 +96,7 @@ export const MemberPage = () => {
     }
     try {
       setModalOpen(true);
-      const res = await createPaymentIntent(payload.data);
-      console.log('res', res);
-      console.log('clientId', data?.clientId);
-      // if (res?.success) {
-      //   formRef.current?.reset();
-      //   setFirstName("");
-      //   setLastName("");
-      //   setEmail("");
-      //   setPhone("");
-      //   setAcceptedTerms(false);
-      //   setAdditionalMembers(undefined);
-      //   await session.update({ isMember: true });
-      //   await router.push("/");
-      // }
+      await createPaymentIntent(payload.data);
     } catch (error) {
       console.log(error);
     }
@@ -183,6 +176,68 @@ export const MemberPage = () => {
                   setMembershipType(membership?.type);
                 }}
               />
+              {membershipType === 'FAMILY' && (
+                <div className="space-y-4">
+                {[...Array(4) as number[]].map((_, index) => (
+                  <div key={index} className="space-y-2">
+                    {additionalMembers?.[index] && (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <h3 className="text-lg font-semibold">Familjemedlem {index + 1}</h3>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newMembers = [...(additionalMembers ?? [])];
+                              newMembers.splice(index, 1);
+                              setAdditionalMembers(newMembers);
+                            }}
+                            className="text-red-500 hover:text-red-600"
+                          >
+                            Ta bort
+                          </button>
+                        </div>
+                        <InputField
+                          type="name"
+                          label="Förnamn"
+                          placeholder="Förnamn..."
+                          value={additionalMembers[index].firstName}
+                          onChange={(e) => {
+                            const newMembers = [...(additionalMembers ?? [])];
+                            newMembers[index] = { ...newMembers[index] as AdditionalMember, firstName: e.target.value };
+                            setAdditionalMembers(newMembers);
+                          }}
+                          required
+                        />
+                        <InputField
+                          type="name"
+                          label="Efternamn"
+                          placeholder="Efternamn..."
+                          value={additionalMembers[index].lastName}
+                          onChange={(e) => {
+                            const newMembers = [...(additionalMembers ?? [])];
+                            newMembers[index] = { ...newMembers[index] as AdditionalMember, lastName: e.target.value };
+                            setAdditionalMembers(newMembers);
+                          }}
+                          required
+                        />
+                        <InputField
+                          type="email"
+                          label="Email"
+                          placeholder="Email..."
+                          value={additionalMembers[index].email}
+                          onChange={(e) => {
+                            const newMembers = [...(additionalMembers ?? [])];
+                            newMembers[index] = { ...newMembers[index] as AdditionalMember, email: e.target.value };
+                            setAdditionalMembers(newMembers);
+                          }}
+                          required
+                        />
+                      </>
+                    )}
+                  </div>
+                ))}                
+              </div>
+              )}
               <Checkbox
                 id="terms"
                 label="Jag godkänner villkoren"
@@ -191,6 +246,19 @@ export const MemberPage = () => {
                 onChange={(e) => setAcceptedTerms(e.target.checked)}
                 required
               />
+              {(!additionalMembers || additionalMembers.length < 4) && (
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      const newMembers = [...(additionalMembers ?? [])];
+                      newMembers.push({ firstName: '', lastName: '', email: '', membershipType: 'FAMILY' });
+                      setAdditionalMembers(newMembers);
+                    }}
+                    className="w-full"
+                  >
+                    Lägg till familjemedlem
+                  </Button>
+                )}
               <Button
                 className="w-full"
                 type="submit"
