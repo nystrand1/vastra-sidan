@@ -1,10 +1,10 @@
-import { type MembershipType } from "@prisma/client";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import { type z } from "zod";
 import Accordion from "~/components/atoms/Accordion/Accordion";
 import { memberPerks } from "~/components/atoms/Accordion/accordionContent";
 import { Button } from "~/components/atoms/Button/Button";
@@ -19,12 +19,7 @@ import { createSSRHelper } from "~/utils/createSSRHelper";
 import { featureFlags } from "~/utils/featureFlags";
 import { memberSignupSchema } from "~/utils/zodSchemas";
 
-interface AdditionalMember {
-  firstName: string;
-  lastName: string;
-  email: string;
-  membershipType: MembershipType;
-}
+type AdditionalMember = NonNullable<z.infer<typeof memberSignupSchema>["additionalMembers"]>[number];
 
 const stripePromise = loadStripe(env.NEXT_PUBLIC_STRIPE_API_KEY);
 
@@ -99,6 +94,8 @@ export const MemberPage = () => {
       await createPaymentIntent(payload.data);
     } catch (error) {
       console.log(error);
+      const err = error as Error;
+      toast.error(err.message)
     }
   }
 
@@ -232,6 +229,17 @@ export const MemberPage = () => {
                           }}
                           required
                         />
+                        <InputField
+                          type="tel"
+                          label="Mobilnummer"
+                          placeholder="Mobil..."
+                          value={additionalMembers[index].phone}
+                          onChange={(e) => {
+                            const newMembers = [...(additionalMembers ?? [])];
+                            newMembers[index] = { ...newMembers[index] as AdditionalMember, phone: e.target.value };
+                            setAdditionalMembers(newMembers);
+                          }}
+                        />
                       </>
                     )}
                   </div>
@@ -246,12 +254,12 @@ export const MemberPage = () => {
                 onChange={(e) => setAcceptedTerms(e.target.checked)}
                 required
               />
-              {(!additionalMembers || additionalMembers.length < 4) && (
+              {membershipType === 'FAMILY' && (!additionalMembers || additionalMembers.length < 4) && (
                   <Button
                     type="button"
                     onClick={() => {
                       const newMembers = [...(additionalMembers ?? [])];
-                      newMembers.push({ firstName: '', lastName: '', email: '', membershipType: 'FAMILY' });
+                      newMembers.push({ firstName: '', lastName: '', email: '' });
                       setAdditionalMembers(newMembers);
                     }}
                     className="w-full"

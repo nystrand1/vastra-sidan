@@ -2,9 +2,11 @@ import { StripePaymentStatus } from "@prisma/client";
 import { captureException, captureMessage } from "@sentry/nextjs";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { findOrCreateMember } from "~/server/utils/member/findOrCreateMember";
 import { createPaymentIntent } from "~/utils/stripeHelpers";
 import { memberSignupSchema } from "~/utils/zodSchemas";
 import { createTRPCRouter, membershipProcedure } from "../trpc";
+import { findOrCreateFamilyMembers } from "~/server/utils/member/findOrCreateFamilyMembers";
 
 export const memberPaymentRouter = createTRPCRouter({
   requestPayment: membershipProcedure
@@ -21,44 +23,27 @@ export const memberPaymentRouter = createTRPCRouter({
       if (!membership) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Invalid membership id"
+          message: "Felaktigt medlemskap"
         });
       }
 
-      // Check if we have members with this mail
-      let member = await ctx.prisma.member.findUnique({
-        where: {
-          email: input.email
-        },
-        include: {
-          memberships: true
-        }
+      let members = [] as Awaited<ReturnType<typeof findOrCreateMember>>[];
+
+      if (membership.type === "FAMILY") {
+        members = await findOrCreateFamilyMembers(input);
+      } else {
+        const member = await findOrCreateMember(input)
+        members = [member];
+      }
+
+      const memberWithExistingMembership = members.find((member) => {
+        return member.memberships.find((x) => x.wordpressId === membership.wordpressId);
       });
-
-      // If member not found, create new member
-      if (!member) {
-        member = await ctx.prisma.member.create({
-          data: {
-            firstName: input.firstName,
-            lastName: input.lastName,
-            email: input.email,
-            phone: input.phone,
-            friendlyId: input.email
-          },
-          include: {
-            memberships: true
-          }
-        });
-      }
-      
-
       // Check if member already has this membership
-      if (
-        member?.memberships.find((x) => x.wordpressId === membership.wordpressId)
-      ) {
+      if (memberWithExistingMembership) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Member already has this membership"
+          message: "Du har redan detta medlemskap"
         });
       }
 
@@ -77,6 +62,8 @@ export const memberPaymentRouter = createTRPCRouter({
           }
         });
 
+        const [membershipOwner] = members;
+
         // Create payment request in our database
         await ctx.prisma.stripePayment.create({
           data: {
@@ -85,7 +72,7 @@ export const memberPaymentRouter = createTRPCRouter({
             status: StripePaymentStatus.CREATED,
             members: {
               connect: {
-                id: member.id
+                id: membershipOwner!.id
               }
             }
           }
@@ -124,144 +111,4 @@ export const memberPaymentRouter = createTRPCRouter({
       }
       return "ok";
     }),
-  // swishPaymentCallback: membershipProcedure
-  //   .input(swishCallbackPaymentSchema)
-  //   .mutation(async ({ input, ctx }) => {
-  //     // TODO: Protect this endpoint with a secret
-  //     console.info("SWISH PAYMENT CALLBACK", input);
-  //     const originalPayment = await ctx.prisma.swishPayment.findFirst({
-  //       where: {
-  //         paymentId: input.id,
-  //       },
-  //       include: {
-  //         memberShip: true,
-  //         user: true
-  //       }
-  //     });
-  //     console.log("originalPayment", originalPayment);
-  //     if (!originalPayment) {
-  //       throw new TRPCError({
-  //         code: "BAD_REQUEST",
-  //         message: "Payment not found"
-  //       });
-  //     }
-
-  //     if (!originalPayment.memberShip) {
-  //       throw new TRPCError({
-  //         code: "INTERNAL_SERVER_ERROR",
-  //         message: "Membership not found"
-  //       });
-  //     }
-
-  //     const newPayment = await ctx.prisma.swishPayment.create({
-  //       include: {
-  //         memberShip: true,
-  //         user: true
-  //       },
-  //       data: {
-  //         paymentId: input.id,
-  //         payerAlias: input.payerAlias,
-  //         payeeAlias: input.payeeAlias,
-  //         amount: input.amount,
-  //         message: input.message,
-  //         paymentReference: input.paymentReference,
-  //         paymentRequestUrl: originalPayment.paymentRequestUrl,
-  //         createdAt: new Date(input.dateCreated),
-  //         updatedAt: new Date(),
-  //         status: input.status,
-  //         errorCode: input.errorCode,
-  //         errorMessage: input.errorMessage,
-  //         userId: originalPayment.userId,
-  //         memberShipId: originalPayment.memberShipId
-  //       },
-  //     });
-
-  //     if (newPayment.status === SwishPaymentStatus.PAID) {
-  //       try {
-  //         if (newPayment.user && newPayment.memberShipId) {
-  //           await ctx.prisma.user.update({
-  //             where: {
-  //               id: newPayment.user.id
-  //             },
-  //             data: {
-  //               memberShips: {
-  //                 connect: {
-  //                   id: newPayment.memberShipId
-  //                 }
-  //               },
-  //               phone: input.payerAlias
-  //             }
-  //           });
-  //         }
-
-  //         if (!newPayment.user?.email) {
-  //           throw new TRPCError({
-  //             code: "INTERNAL_SERVER_ERROR",
-  //             message: "User email not found for payment id " + newPayment.id
-  //           })
-  //         }
-
-  //         // Send confirmation email
-  //         await resend.emails.send({
-  //           from: env.BOOKING_EMAIL,
-  //           to: env.USE_DEV_MODE === "true" ? "filip.nystrand@gmail.com" : newPayment.user.email,
-  //           subject: "Tack för att du blivit medlem i Västra Sidan",
-  //           react: MemberSignup({
-  //             membership: newPayment.memberShip || originalPayment.memberShip
-  //           })
-  //         });
-  //       } catch (error) {
-  //         console.error("Error sending confirmation email");
-  //         console.error(error);
-  //         // Don't return error to Swish
-  //       }
-  //     }
-
-  //     console.log("SWISH CALLBACK");
-  //     console.log("input", input);
-  //     return {
-  //       status: 200
-  //     };
-  //   }),
-  // swishRefundCallback: membershipProcedure
-  //   .input(swishCallbackRefundSchema)
-  //   .mutation(async ({ input, ctx }) => {
-  //     console.log("SWISH REFUND CALLBACK", input);
-  //     try {
-  //       const refundIntent = await ctx.prisma.swishRefund.findFirst({
-  //         where: {
-  //           refundId: input.id
-  //         }
-  //       });
-
-  //       if (!refundIntent) {
-  //         throw new TRPCError({
-  //           code: "BAD_REQUEST",
-  //           message: "Refund not found"
-  //         });
-  //       }
-
-  //       await ctx.prisma.swishRefund.create({
-  //         include: {
-  //           participant: true
-  //         },
-  //         data: {
-  //           refundId: input.id,
-  //           paymentId: refundIntent.paymentId,
-  //           payerAlias: input.payerAlias,
-  //           payeeAlias: input.payeeAlias || refundIntent.payeeAlias,
-  //           amount: input.amount,
-  //           message: input.message,
-  //           paymentReference: input.originalPaymentReference,
-  //           createdAt: new Date(input.dateCreated),
-  //           updatedAt: new Date(),
-  //           status: input.status
-  //         }
-  //       });
-  //     } catch (err) {
-  //       console.error(err);
-  //       throw err;
-  //     }
-  //     return "ok";
-  //   })
 });

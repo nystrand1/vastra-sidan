@@ -10,7 +10,7 @@ const ThanksPage = () => {
   if (!paymentId) {
     return null;
   }
-  
+
   if (isLoading) return (
     <div className="grid md:grid-cols-1 gap-4 md:items-stretch flex-wrap justify-center w-full md:6/12 lg:w-5/12 m-auto">
       <Card
@@ -43,7 +43,13 @@ const ThanksPage = () => {
         titleClassName="text-center !text-2xl"
         className="order-2 md:order-1"
       >
-        <div className="divide-y-2">          
+        <div className="divide-y-2">
+          <div className="py-2">
+            <p className="text-center">Vi har skickat ett bekräftelsemail till dig med mer information.</p>
+          </div>
+          <div className="py-2">
+            <p className="text-center">Vid frågor eller funderingar, kontakta oss på <a href="mailto:info@vastrasidan.se">info@vastrasidan.se</a></p>
+          </div>
         </div>
       </Card>
     </div>

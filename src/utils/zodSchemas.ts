@@ -89,20 +89,20 @@ export const loginSchema = z.object({
 
 export const memberSignupSchema = z
   .object({
-    firstName: z.string().min(1),
-    lastName: z.string().min(1),
+    firstName: z.string().min(1, { message: 'Ange förnamn' }),
+    lastName: z.string().min(1, { message: 'Ange efternamn' }),
     email: z.string().email({ message: "Felaktig email" }),
-    acceptedTerms: z.literal<boolean>(true),
+    acceptedTerms: z.literal<boolean>(true, { message: 'Du måste acceptera villkoren' }),
     membershipType: z.nativeEnum(MembershipType),
     membershipId: z.string().min(1),
-    phone: z.string().min(1),
+    phone: z.string().min(1, { message: 'Ange telefonnummer' }),
     additionalMembers: z
       .array(
         z.object({
-          firstName: z.string().min(1),
-          lastName: z.string().min(1),
+          firstName: z.string().min(1, { message: 'Ange förnamn' }),
+          lastName: z.string().min(1, { message: 'Ange efternamn' }),
+          phone: z.string().optional(),
           email: z.string().email({ message: "Felaktig email" }),
-          membershipType: z.nativeEnum(MembershipType)
         })
       )
       .optional()
@@ -113,7 +113,7 @@ export const memberSignupSchema = z
       return x.additionalMembers && x.additionalMembers.length > 0;
     }
     return true;
-  });
+  }, { message: 'Familjemedlemskap kräver minst en familjemedlem' });
 
 export const profileSchema = z.object({
   firstName: z.string().min(1, { message: "Förnamn måste vara minst 1 tecken" }),
