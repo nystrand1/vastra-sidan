@@ -10,7 +10,7 @@ export const sendEventConfirmationEmail = async (
     participant?.cancellationToken || ""
   }`;
   return await resend.emails.send({
-    from: env.BOOKING_EMAIL,
+    from: `Västra Sidan <${env.BOOKING_EMAIL}>`,
     to: env.USE_DEV_MODE === "true" ? "filip.nystrand@gmail.com" : participant.email,
     subject: `Anmälan till ${participant?.event?.name}`,
     react: EventSignUp({ participant, cancellationUrl })

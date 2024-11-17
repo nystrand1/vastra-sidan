@@ -2,8 +2,13 @@ import React, { type PropsWithChildren } from 'react';
 import Head from 'next/head';
 import Image from 'next/image';
 import { Navigation } from './Navigation';
+import { twMerge } from 'tailwind-merge';
 
-const Layout = ({ children } : PropsWithChildren) => {
+interface LayoutProps extends PropsWithChildren {
+  className?: string
+}
+
+const Layout = ({ children, className } : LayoutProps) => {
   return (
     <div className="bg-black text-white">
       <Head>
@@ -18,7 +23,7 @@ const Layout = ({ children } : PropsWithChildren) => {
       <div className="fixed w-screen h-screen bg-right hidden md:block">
         <Image style={{objectFit: 'cover'}} src="/static/background.webp" fill alt="Uppsala det är staden"/>
       </div>
-      <main className="flex min-h-screen flex-col items-center justify-center z-10 relative">
+      <main className={twMerge("flex min-h-screen flex-col items-center justify-center z-10 relative", className)}>
         <div className="container p-4 md:p-8 mt-16 md:mt-12">
           {children}
         </div>

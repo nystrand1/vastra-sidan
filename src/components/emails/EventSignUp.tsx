@@ -77,7 +77,7 @@ export const EventSignUp = ({
   } = event;
   return (
     <Tailwind>
-      <Html className="bg-slate-900">
+      <Html className="bg-slate-900 font-sans">
         <Head>
           <title>Anmälan till {eventName}</title>
         </Head>

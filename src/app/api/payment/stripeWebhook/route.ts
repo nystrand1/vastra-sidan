@@ -21,12 +21,12 @@ const handleStripeEvent = async (event: Stripe.Event) => {
         await Promise.all(emailPromises);
       }
       if (event.data.object.metadata.type === 'MEMBERSHIP') {
-        await attachMembershipToMembers({
+        const membership = await attachMembershipToMembers({
           members,
           membershipId: event.data.object.metadata.membershipId
         });
         // send membership confirmation email
-        const emailPromises = members.map(sendMemberConfirmationEmail);
+        const emailPromises = members.map((m) => sendMemberConfirmationEmail(m, membership));
         await Promise.all(emailPromises);
       }
       break;
