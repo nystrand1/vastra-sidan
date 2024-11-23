@@ -70,7 +70,7 @@ enum MembershipType {
 
 model Member {
   id                      String        @id @default(cuid())
-  friendlyId              String
+  memberToken             String        @unique @default(cuid())
   firstName               String
   lastName                String
   email                   String        @unique
@@ -84,6 +84,7 @@ model Member {
   
 
   @@index([familyMemberShipOwnerId])
+  @@index([memberToken])
 }
 
 model User {

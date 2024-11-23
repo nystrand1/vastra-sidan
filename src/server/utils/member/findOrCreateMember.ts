@@ -30,7 +30,6 @@ export async function findOrCreateMember(input: FindOrCreateMemberInput) {
   const newMember = await prisma.member.create({
     data: {
       ...membershipPayload,
-      friendlyId: membershipPayload.email
     },
     include: {
       memberships: true

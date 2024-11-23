@@ -20,7 +20,6 @@ export const findOrCreateFamilyMembers = async (input: CreateFamilyMembersInput)
     },
     create: {
       ...membershipOwnerPayload,
-      friendlyId: membershipOwnerPayload.email
     },
     update: {},
     include: {
@@ -36,7 +35,6 @@ export const findOrCreateFamilyMembers = async (input: CreateFamilyMembersInput)
       create: {
         ...member,
         phone: member.phone || membershipOwner.phone,
-        friendlyId: member.email,
         familyMemberShipOwnerId: membershipOwner.id
       },
       update: {},
