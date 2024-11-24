@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "../trpc";
+import { isBefore } from "date-fns";
+import { friendlyMembershipNames } from "~/server/utils/membership";
 
 export const memberRouter = createTRPCRouter({
   getMember: publicProcedure
@@ -13,12 +15,30 @@ export const memberRouter = createTRPCRouter({
           memberships: true
         }
       });
-      console.log(member);
       if (!member) {
         return null;
       }
 
-      return member;
+      const fullName = `${member.firstName} ${member.lastName}`;
+      const activeMemberships = member.memberships.filter((m) => isBefore(new Date(), m.endDate));
+      const expiredMemberships = member.memberships.filter((m) => !isBefore(new Date(), m.endDate));
+      return {
+        name: fullName,
+        activeMemberships: activeMemberships.map((m) => ({
+          id: m.id,
+          name: m.name,
+          imageUrl: m.imageUrl,
+          type: friendlyMembershipNames[m.type],
+          expiresAt: m.endDate,
+        })),
+        expiredMemberships: expiredMemberships.map((m) => ({
+          id: m.id,
+          name: m.name,
+          imageUrl: m.imageUrl,
+          type: friendlyMembershipNames[m.type],
+          expiresAt: m.endDate,
+        })),
+      };
     }),
 
 });
