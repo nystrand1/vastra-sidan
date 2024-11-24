@@ -48,6 +48,7 @@ export const memberPaymentRouter = createTRPCRouter({
       }
 
       try {
+        const [membershipOwner] = members;
         const customerName = `${input.firstName} ${input.lastName}`;
         const paymentIntentData = await createPaymentIntent({
           amount: membership.price,
@@ -59,10 +60,10 @@ export const memberPaymentRouter = createTRPCRouter({
           metadata: {
             type: 'MEMBERSHIP',
             membershipId: membership.id,
+            membershipOwnerId: membershipOwner?.id || ''
           }
         });
 
-        const [membershipOwner] = members;
 
         // Create payment request in our database
         await ctx.prisma.stripePayment.create({
@@ -71,9 +72,7 @@ export const memberPaymentRouter = createTRPCRouter({
             amount: membership.price,
             status: StripePaymentStatus.CREATED,
             members: {
-              connect: {
-                id: membershipOwner!.id
-              }
+              connect: members.map((member) => ({ id: member.id }))
             }
           }
         });
