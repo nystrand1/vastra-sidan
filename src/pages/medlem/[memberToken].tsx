@@ -2,6 +2,7 @@ import { type InferGetStaticPropsType, type GetStaticPropsContext } from "next"
 import Image from "next/image";
 import { twMerge } from "tailwind-merge";
 import Card from "~/components/atoms/CardLink/CardLink";
+import MemberCard from "~/components/common/MemberCard/MemberCard";
 import { api } from "~/utils/api"
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
 
@@ -31,6 +32,9 @@ export const MemberPage = ({ memberToken }: InferGetStaticPropsType<typeof getSt
 
   return (
     <div>
+      <div className="w-[600px] h-[600px] m-auto">
+        <MemberCard />
+      </div>
       <p className="text-3xl text-center md:mb-10 w-full">{data.name}</p>
       <div className={twMerge("grid gap-10 justify-center grid-cols-1", hasExpiredMemberships ? 'md:grid-cols-2' : 'md:grid-cols-none')}>
         <div className="md:flex flex-col justify-self-end space-y-2">
