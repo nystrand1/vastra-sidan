@@ -32,7 +32,7 @@ export const MemberPage = ({ memberToken }: InferGetStaticPropsType<typeof getSt
 
   return (
     <div>
-      <div className="w-[600px] h-[600px] m-auto">
+      <div className="w-screen h-96 md:w-[600px] md:h-[600px] m-auto">
         <MemberCard />
       </div>
       <p className="text-3xl text-center md:mb-10 w-full">{data.name}</p>
