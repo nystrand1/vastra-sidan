@@ -32,11 +32,11 @@ export const MemberPage = ({ memberToken }: InferGetStaticPropsType<typeof getSt
 
   return (
     <div>
-      <div className="w-screen h-96 md:w-[600px] md:h-[600px] m-auto">
+      <div className="absolute inset-0 w-screen h-96 md:w-screen md:h-[100vh] m-auto">
         <MemberCard />
       </div>
-      <p className="text-3xl text-center md:mb-10 w-full">{data.name}</p>
-      <div className={twMerge("grid gap-10 justify-center grid-cols-1", hasExpiredMemberships ? 'md:grid-cols-2' : 'md:grid-cols-none')}>
+      <p className="hidden text-3xl text-center md:mb-10 w-full">{data.name}</p>
+      <div className={twMerge("grid hidden gap-10 justify-center grid-cols-1", hasExpiredMemberships ? 'md:grid-cols-2' : 'md:grid-cols-none')}>
         <div className="md:flex flex-col justify-self-end space-y-2">
           <h2 className="text-2xl text-center">Aktiva medlemskap</h2>
           {data.activeMemberships.map((membership) => (

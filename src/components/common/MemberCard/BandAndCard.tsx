@@ -1,4 +1,4 @@
-import { useGLTF, useTexture } from '@react-three/drei'
+import { Center, Text3D, useGLTF, useTexture } from '@react-three/drei'
 import { extend, useFrame, useThree } from '@react-three/fiber'
 import { BallCollider, CuboidCollider, type RapierRigidBody, RigidBody, useRopeJoint, useSphericalJoint } from '@react-three/rapier'
 import { MeshLineGeometry, MeshLineMaterial } from 'meshline'
@@ -7,6 +7,7 @@ import { type RefObject, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 
 import { type MaterialNode, type Object3DNode } from '@react-three/fiber'
+import RoundedPlane from './RoundedPlane'
 
 declare module '@react-three/fiber' {
   interface ThreeElements {
@@ -22,7 +23,19 @@ useTexture.preload('/static/membercard_2021.jpg');
 
 type ExtendedRigidBody = RapierRigidBody & { lerped?: THREE.Vector3 }
 
-export default function Band({ maxSpeed = 50, minSpeed = 10 }) {
+interface BandAndCardProps {
+  maxSpeed?: number
+  minSpeed?: number
+  name?: string
+  memberType?: string
+}
+
+export default function BandAndCard({ 
+  maxSpeed = 50, 
+  minSpeed = 10,
+  name = "Filip Nystrand",
+  memberType = "Familjemedlemskap"
+} : BandAndCardProps) {
   const band = useRef() as RefObject<THREE.Mesh & { geometry: { setPoints: (points: THREE.Vector3[]) => void } }>;
   const fixed = useRef() as RefObject<ExtendedRigidBody>;
   const j1 = useRef() as RefObject<ExtendedRigidBody>;
@@ -41,7 +54,7 @@ export default function Band({ maxSpeed = 50, minSpeed = 10 }) {
   const [curve] = useState(() => new THREE.CatmullRomCurve3([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()]))
   const [dragged, drag] = useState<boolean | THREE.Vector3>(false)
   const [hovered, hover] = useState(false)
-  const repeat = new THREE.Vector2(-3, 1);
+  const repeat = new THREE.Vector2(-4, 1);
   const resolution = new THREE.Vector2(width, height);
 
   useRopeJoint(fixed, j1, [[0, 0, 0], [0, 0, 0], 1.2]) // prettier-ignore
@@ -87,6 +100,10 @@ export default function Band({ maxSpeed = 50, minSpeed = 10 }) {
   curve.curveType = 'chordal'
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping
 
+  const planeWidth = name.length * 0.13
+  const textXPos = -0.8/14 * name.length
+  const cardXPos = 0.04 * (planeWidth);
+
   return (
     <>
       <group position={[0, 4, 0]}>
@@ -104,7 +121,8 @@ export default function Band({ maxSpeed = 50, minSpeed = 10 }) {
           <CuboidCollider args={[0.8, 1.125, 0.01]} />
           <group
             scale={2.25}
-            position={[0, -1.2, -0.05]}
+            position={[0, -1.2, 0]}
+            rotation={[0, 0, 0]}
             onPointerOver={() => hover(true)}
             onPointerOut={() => hover(false)}
             onPointerUp={(e) => {
@@ -117,6 +135,35 @@ export default function Band({ maxSpeed = 50, minSpeed = 10 }) {
               event.setPointerCapture(e.pointerId);
               drag(new THREE.Vector3().copy(e.point).sub(vec.copy(card.current!.translation())));
             }}>
+              <Center left attach="material" bottom position={[cardXPos, 0.12, 0.007]} scale={0.2}>
+                <Text3D
+                  bevelEnabled={false}
+                  bevelSize={0}
+                  font="/static/Roboto_Regular.json"
+                  height={0}
+                  scale={0.1}                  
+                  position={[textXPos, 0.2, 0.05]}
+                  rotation={[0, 0, 0]}>
+                  {name}
+                </Text3D>
+                  <Text3D
+                  bevelEnabled={false}
+                  bevelSize={0}
+                  font="/static/Roboto_Regular.json"
+                  height={0}
+                  scale={0.08}                  
+                  position={[textXPos, 0, 0.05]}
+                  rotation={[0, 0, 0]}>
+                  {memberType}
+                  </Text3D>                 
+                  <RoundedPlane 
+                    width={planeWidth} 
+                    height={0.55} 
+                    radius={0.1} 
+                    y={0.12}
+                    x={0}
+                  />                                    
+              </Center>
             <group position={[0, 0.5, 0]}>
               <mesh rotation={[0, 0, 0]}>
                 <planeGeometry args={[0.7, 1 / 1]} />
