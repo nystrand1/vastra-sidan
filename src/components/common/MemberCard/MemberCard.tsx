@@ -1,11 +1,17 @@
 import { Canvas } from "@react-three/fiber";
 import { Physics } from "@react-three/rapier";
-import BandAndCard from "./BandAndCard";
+
 import { type inferRouterOutputs } from "@trpc/server";
 import { type AppRouter } from "~/server/api/root";
 import { useTexture } from "@react-three/drei";
+import dynamic from "next/dynamic";
 
 type ActiveMembership = NonNullable<inferRouterOutputs<AppRouter>['member']['getMember']>['activeMemberships'][number]
+
+const BandAndCard = dynamic(() => import('~/components/common/MemberCard/BandAndCard'), {
+  ssr: false,
+  loading: () => <div className="flex justify-center">Laddar...</div>
+});
 
 interface MemberCardProps extends ActiveMembership {
   flipped: boolean

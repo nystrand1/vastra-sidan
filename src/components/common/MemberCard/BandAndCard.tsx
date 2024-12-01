@@ -51,7 +51,7 @@ export default function BandAndCard({
   const rot = new THREE.Vector3(0, 0, 0);
   const dir = new THREE.Vector3(0, 0, 0);
   const segmentProps = { type: 'dynamic', canSleep: true, angularDamping: 2, linearDamping: 2 }
-  const { nodes, materials } = useGLTF('https://assets.vercel.com/image/upload/contentful/image/e5382hct74si/5huRVDzcoDwnbgrKUo1Lzs/53b6dd7d6b4ffcdbd338fa60265949e1/tag.glb')
+  const { nodes, materials } = useGLTF('/static/membercard_tag.glb');
   const texture = useTexture('/static/membercard_band.jpg');
   const cardTexture = useTexture(imageUrl);
   const cardBackTexture = useTexture('/static/membercard_back.jpg');
