@@ -1,12 +1,16 @@
 import { type GetStaticPropsContext, type InferGetStaticPropsType } from "next";
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import { Button } from "~/components/atoms/Button/Button";
 import { ButtonLink } from "~/components/atoms/ButtonLink/ButtonLink";
-import MemberCard from "~/components/common/MemberCard/MemberCard";
+import _MemberCard from "~/components/common/MemberCard/MemberCard";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 
 
+export const MemberCard = dynamic(() => Promise.resolve(_MemberCard), {
+  ssr: false
+});
 
 export const MemberPage = ({ memberToken }: InferGetStaticPropsType<typeof getStaticProps>) => {
   const { data, isLoading } = api.member.getMember.useQuery({ memberToken });
