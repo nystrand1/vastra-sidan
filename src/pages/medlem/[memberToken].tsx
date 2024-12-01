@@ -3,14 +3,14 @@ import dynamic from "next/dynamic";
 import { useState } from "react";
 import { Button } from "~/components/atoms/Button/Button";
 import { ButtonLink } from "~/components/atoms/ButtonLink/ButtonLink";
-import _MemberCard from "~/components/common/MemberCard/MemberCard";
 import { env } from "~/env.mjs";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 
 
-export const MemberCard = dynamic(() => Promise.resolve(_MemberCard), {
-  ssr: false
+export const MemberCard = dynamic(() => import('~/components/common/MemberCard/MemberCard'), {
+  ssr: false,
+  loading: () => <div className="flex justify-center">Laddar...</div>
 });
 
 export const MemberPage = ({ memberToken }: InferGetStaticPropsType<typeof getStaticProps>) => {
