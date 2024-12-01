@@ -63,7 +63,7 @@ widenClientFileUpload: true,
 
 // Automatically annotate React components to show their full name in breadcrumbs and session replay
 reactComponentAnnotation: {
-enabled: true,
+  enabled: false,  
 },
 
 // Uncomment to route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
