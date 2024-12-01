@@ -5,7 +5,7 @@ interface Column {
 
 interface Row {
   id: number;
-  [key: string]: string | number;
+  [key: string]: any;
 }
 
 interface TableProps {

@@ -55,9 +55,10 @@ model Membership {
   startDate      DateTime
   endDate        DateTime
   users          User[]
+  stripePayments StripePayment[]
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
-  members        Member[]
+  stripeRefunds  StripeRefund[]
 
   @@index([wordpressId])
 }
@@ -66,25 +67,6 @@ enum MembershipType {
   FAMILY
   YOUTH
   REGULAR
-}
-
-model Member {
-  id                      String        @id @default(cuid())
-  memberToken             String        @unique @default(cuid())
-  firstName               String
-  lastName                String
-  email                   String        @unique
-  phone                   String
-  memberships             Membership[]
-  familyMemberShipOwnerId String?
-  familyMemberShipOwner   Member?       @relation("FamilyMembers", fields: [familyMemberShipOwnerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  familyMembers           Member[]      @relation("FamilyMembers")
-  stripePayments          StripePayment[]
-  stripeRefunds           StripeRefund[]
-  
-
-  @@index([familyMemberShipOwnerId])
-  @@index([memberToken])
 }
 
 model User {
@@ -182,14 +164,16 @@ model StripePayment {
   stripePaymentId String
   amount          Float
   netAmount       Float               @default(0) 
-  members         Member[]
   participants    Participant[]
+  memberShipId    String?
+  memberShip      Membership?         @relation(fields: [memberShipId], references: [id])
   userId          String?
   user            User?               @relation(fields: [userId], references: [id])
   status          StripePaymentStatus
   stripeRefunds   StripeRefund[]
 
   @@index([stripePaymentId])
+  @@index([memberShipId])
   @@index([userId])
 }
 
@@ -204,25 +188,27 @@ enum StripePaymentStatus {
 }
 
 model StripeRefund {
-  id                String             @id @default(cuid())
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  stripeRefundId    String
-  amount            Float
-  status            StripeRefundStatus
-  errorMessage      String?
-  errorCode         String?
-  participantId     String?
-  participant       Participant?       @relation(fields: [participantId], references: [id])
-  members           Member[]
-  userId            String?
-  user              User?              @relation(fields: [userId], references: [id])
-  originalPaymentId String
-  originalPayment   StripePayment      @relation(fields: [originalPaymentId], references: [id])
+  id                 String             @id @default(cuid())
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  stripeRefundId     String
+  amount             Float
+  status             StripeRefundStatus
+  errorMessage       String?
+  errorCode          String?
+  participantId      String?
+  participant        Participant?       @relation(fields: [participantId], references: [id])
+  memberShipId       String?
+  memberShip         Membership?        @relation(fields: [memberShipId], references: [id])
+  userId             String?
+  user               User?              @relation(fields: [userId], references: [id])
+  originalPaymentId  String
+  originalPayment    StripePayment      @relation(fields: [originalPaymentId], references: [id])
 
   @@index([id])
   @@index([participantId])
   @@index([originalPaymentId])
+  @@index([memberShipId])
   @@index([userId])
 }
 

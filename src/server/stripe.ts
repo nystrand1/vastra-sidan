@@ -9,7 +9,7 @@ export const stripe =
   globalForStripe.stripe ??
   new Stripe(env.STRIPE_API_KEY, {
     typescript: true,
-    apiVersion: '2024-09-30.acacia'
+    apiVersion: '2024-04-10'
   });
 
 if (env.NODE_ENV !== "production") globalForStripe.stripe = stripe;

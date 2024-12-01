@@ -35,7 +35,12 @@ export type User = Prisma.UserGetPayload<{
     email: true,
     memberShips: {
       select: {
-        type: true,        
+        type: true,
+        stripePayments: {
+          select: {
+            createdAt: true
+          }
+        }
       }
     }
   },
@@ -89,6 +94,7 @@ const adminUserFormatter = (user: User) => ({
   name: `${user.firstName} ${user.lastName}`,
   id: user.id,
   activeMembershipType: user.memberShips[0] ? friendlyMembershipNames[user.memberShips[0].type] : "Inget medlemskap",
+  datePaid: user.memberShips[0]?.stripePayments[0] ? formatSwedishTime(user.memberShips[0].stripePayments[0].createdAt, "yyyy-MM-dd HH:mm") : "Inget medlemskap",
   phone: user.phone,
   email: user.email,
 });
@@ -162,7 +168,12 @@ export const adminRouter = createTRPCRouter({
           email: true,
           memberShips: {
             select: {
-              type: true,              
+              type: true,
+              stripePayments: {
+                select: {
+                  createdAt: true
+                }
+              }
             }
           }
         },
@@ -171,7 +182,12 @@ export const adminRouter = createTRPCRouter({
             some: {
               endDate: {
                 gte: new Date()
-              },              
+              },
+              stripePayments: {
+                some: {
+                  status: "SUCCEEDED"
+                }
+              }
             }
           }
         }
@@ -197,7 +213,12 @@ export const adminRouter = createTRPCRouter({
           },
           memberShips: {
             select: {
-              type: true,              
+              type: true,
+              stripePayments: {
+                select: {
+                  createdAt: true
+                }
+              }
             }
           }
         },
