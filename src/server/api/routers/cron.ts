@@ -3,6 +3,8 @@ import { isBefore, subDays, subMilliseconds } from "date-fns";
 import { getTimezoneOffset } from "date-fns-tz";
 import { createTRPCRouter, cronProcedure } from "~/server/api/trpc";
 import {
+  PATHS,
+  RESOURCES,
   awayGameMapper,
   awayGameToEvent,
   makeRequest,
@@ -11,7 +13,8 @@ import {
   upsertMembership,
   wpMembershipToMembership
 } from "~/server/utils/cron";
-import { GetAwayGamesDocument, GetMembershipsDocument } from "~/types/wordpresstypes/graphql";
+import { type Membership } from "~/types/wordpressTypes";
+import { GetAwayGamesDocument } from "~/types/wordpresstypes/graphql";
 
 interface SiriusGame {
   place: string;
@@ -77,10 +80,11 @@ export const cronRouter = createTRPCRouter({
   }),
   syncMemberships: cronProcedure.mutation(async ({ ctx }) => {
     console.info("Syncing memberships");
-    const { data } = await ctx.apolloClient.query({
-      query: GetMembershipsDocument
-    })
-    const memberships = data.memberships.nodes.flatMap(wpMembershipToMembership);
+    const res = await makeRequest<Membership[]>(
+      PATHS.wpURL + RESOURCES.membership,
+      "GET"
+    );
+    const memberships = res.flatMap(wpMembershipToMembership);
     await Promise.all(
       memberships.map((membership) => upsertMembership(membership, ctx))
     );

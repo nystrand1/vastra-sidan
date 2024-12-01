@@ -7,7 +7,7 @@ interface SelectFieldProps extends React.InputHTMLAttributes<HTMLSelectElement> 
   onChange?: (event: React.ChangeEvent<HTMLSelectElement>) => void;
 }
 
-export const SelectField = ({ id, label, options, name, labelProps, onChange, className, ...props } : SelectFieldProps) => {
+export const SelectField = ({ id, label, options, name, labelProps, placeholder, onChange, className, ...props } : SelectFieldProps) => {
   return (
     <div>
       <label

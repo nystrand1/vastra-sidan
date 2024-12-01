@@ -11,7 +11,6 @@ const config = {
       files: ["*.ts", "*.tsx"],
       rules: {
         "@typescript-eslint/no-misused-promises": "off",
-        '@typescript-eslint/no-explicit-any': 'warn',
       },
       parserOptions: {
         project: path.join(__dirname, "tsconfig.json"),
@@ -33,7 +32,6 @@ const config = {
       },
     ],
     "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
-
   },
 };
 

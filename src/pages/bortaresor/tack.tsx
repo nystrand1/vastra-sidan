@@ -7,10 +7,6 @@ import { api } from "~/utils/api";
 const ThanksPage = () => {
   const { payment_intent: paymentId } = useRouter().query as { payment_intent: string };
   const { data, isLoading } = api.eventPayment.getBooking.useQuery({ paymentId: paymentId || '' }, { enabled: !!paymentId})
-
-  if (!paymentId) {
-    return null;
-  }
   
   if (isLoading) return (
     <div className="grid md:grid-cols-1 gap-4 md:items-stretch flex-wrap justify-center w-full md:6/12 lg:w-5/12 m-auto">

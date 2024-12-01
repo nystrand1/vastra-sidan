@@ -9,8 +9,7 @@ export const handleSuccessfulPayment = async (paymentIntent: Stripe.PaymentInten
       stripePaymentId: paymentIntent.data.object.id
     },
     include: {
-      participants: true,
-      members: true,
+      participants: true
     }
   });
   if (!originalPayment) {
@@ -24,10 +23,7 @@ export const handleSuccessfulPayment = async (paymentIntent: Stripe.PaymentInten
       status: StripePaymentStatus.SUCCEEDED,
       participants: {
         connect: originalPayment.participants.map(p => ({ id: p.id }))
-      },
-      members: {
-        connect: originalPayment.members.map(m => ({ id: m.id }))
-      },
+      }
     },
     include: {
       participants: {
@@ -35,8 +31,7 @@ export const handleSuccessfulPayment = async (paymentIntent: Stripe.PaymentInten
           event: true,
           bus: true
         }
-      },
-      members: true
+      }
     }
   });
 }
@@ -59,7 +54,7 @@ export const handleChargeUpdate = async (charge: Stripe.ChargeUpdatedEvent) => {
   }
   const payment = await prisma.stripePayment.findFirst({
     where: {
-      stripePaymentId: typeof paymentIntentId === 'string' ? paymentIntentId : paymentIntentId.id,
+      stripePaymentId: paymentIntentId.toString(),
       status: StripePaymentStatus.SUCCEEDED
     }
   });
@@ -67,7 +62,7 @@ export const handleChargeUpdate = async (charge: Stripe.ChargeUpdatedEvent) => {
     throw new Error("Payment not found");
   }
 
-  const strapiFee = await stripe.balanceTransactions.retrieve(typeof transactionId === 'string' ? transactionId : transactionId.id);
+  const strapiFee = await stripe.balanceTransactions.retrieve(transactionId.toString());
 
   if (strapiFee.fee) {
     await prisma.stripePayment.update({
@@ -92,7 +87,7 @@ export const handleRefund = async (refund: Stripe.ChargeRefundedEvent) => {
   }
   const payment = await prisma.stripePayment.findFirst({
     where: {
-      stripePaymentId: typeof paymentIntentId === 'string' ? paymentIntentId : paymentIntentId.id,
+      stripePaymentId: paymentIntentId.toString(),
       status: StripePaymentStatus.SUCCEEDED
     }
   });
@@ -124,30 +119,6 @@ export const handleRefund = async (refund: Stripe.ChargeRefundedEvent) => {
           originalPaymentId: payment.id,        
         }
       });
-      const membershipId = refund.data.object.metadata.membershipId;
-      if (membershipId) {
-        const membersRelatedToRefund = await prisma.member.findMany({
-          where: {
-            stripePayments: {
-              some: {
-                id: payment.id,
-                status: StripePaymentStatus.SUCCEEDED
-              },            
-            },
-          }
-        });
-        // Remove the membership from the members
-        await prisma.membership.update({
-          where: {
-            id: membershipId
-          },
-          data: {
-            members: {
-              disconnect: membersRelatedToRefund.map(m => ({ id: m.id }))
-            }
-          }
-        });
-      }
     }
     if (status === 'failed') {
       await prisma.stripeRefund.create({
