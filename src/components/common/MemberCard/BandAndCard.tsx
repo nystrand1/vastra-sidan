@@ -17,7 +17,7 @@ declare module '@react-three/fiber' {
 }
 
 extend({ MeshLineGeometry, MeshLineMaterial })
-useGLTF.preload('https://assets.vercel.com/image/upload/contentful/image/e5382hct74si/5huRVDzcoDwnbgrKUo1Lzs/53b6dd7d6b4ffcdbd338fa60265949e1/tag.glb')
+useGLTF.preload('/static/membercard_tag.glb');
 useTexture.preload('/static/membercard_band.jpg');
 useTexture.preload('/static/membercard_back.jpg');
 
@@ -51,7 +51,7 @@ export default function BandAndCard({
   const rot = new THREE.Vector3(0, 0, 0);
   const dir = new THREE.Vector3(0, 0, 0);
   const segmentProps = { type: 'dynamic', canSleep: true, angularDamping: 2, linearDamping: 2 }
-  const { nodes, materials } = useGLTF('https://assets.vercel.com/image/upload/contentful/image/e5382hct74si/5huRVDzcoDwnbgrKUo1Lzs/53b6dd7d6b4ffcdbd338fa60265949e1/tag.glb')
+  const { nodes, materials } = useGLTF('/static/membercard_tag.glb');
   const texture = useTexture('/static/membercard_band.jpg');
   const cardTexture = useTexture(imageUrl);
   const cardBackTexture = useTexture('/static/membercard_back.jpg');
@@ -117,7 +117,7 @@ export default function BandAndCard({
 
   return (
     <>
-      <group position={[0, 4, 0]}>
+      <group position={[0, 4, 0]} dispose={null}>
         <RigidBody ref={fixed} {...segmentProps} type="fixed" />
         <RigidBody position={[0.5, 0, 0]} ref={j1} {...segmentProps} type="dynamic">
           <BallCollider args={[0.1]} />
@@ -131,6 +131,7 @@ export default function BandAndCard({
         <RigidBody position={[2, 0, 0]} ref={card} {...segmentProps} type={dragged ? 'kinematicPosition' : 'dynamic'}>
           <CuboidCollider args={[0.8, 1.125, 0.01]} />
           <group
+            dispose={null}  
             scale={2.25}
             position={[0, -1.2, 0]}
             rotation={[0, flipped ? Math.PI : 0, 0]}
@@ -146,12 +147,12 @@ export default function BandAndCard({
               event.setPointerCapture(e.pointerId);
               drag(new THREE.Vector3().copy(e.point).sub(vec.copy(card.current!.translation())));
             }}>
-            <group position={[0, 0.5, 0]} rotation={[0, 0, 0]}>
-              <mesh rotation={[0, 0, 0]}>
+            <group dispose={null} position={[0, 0.5, 0]} rotation={[0, 0, 0]}>
+              <mesh rotation={[0, 0, 0]} dispose={null}>
                 <planeGeometry args={[0.7, 1 / 1]} />
                 <meshBasicMaterial map={cardTexture} side={THREE.FrontSide} />
               </mesh>
-              <mesh rotation={[0, 0, 0]} material={materials.metal}>
+              <mesh rotation={[0, 0, 0]} material={materials.metal} dispose={null}>
                 <planeGeometry args={[0.7, 1 / 1]} />
                 <meshStandardMaterial map={cardBackTexture} side={THREE.BackSide} />
                 <Center scale={0.5} position={[0.5, -0.05, 0]}>
@@ -176,12 +177,12 @@ export default function BandAndCard({
                 </Center>
               </mesh>
             </group>
-            <mesh geometry={'geometry' in nodes.clip! ? nodes.clip.geometry as THREE.BufferGeometry<THREE.NormalBufferAttributes> : undefined} material={materials.metal} material-roughness={0.3} />
-            <mesh geometry={'geometry' in nodes.clamp! ? nodes.clamp.geometry as THREE.BufferGeometry<THREE.NormalBufferAttributes> : undefined} material={materials.metal} />
+            <mesh dispose={null} geometry={'geometry' in nodes.clip! ? nodes.clip.geometry as THREE.BufferGeometry<THREE.NormalBufferAttributes> : undefined} material={materials.metal} material-roughness={0.3} />
+            <mesh dispose={null} geometry={'geometry' in nodes.clamp! ? nodes.clamp.geometry as THREE.BufferGeometry<THREE.NormalBufferAttributes> : undefined} material={materials.metal} />
           </group>
         </RigidBody>
       </group>
-      <mesh ref={band}>
+      <mesh ref={band} dispose={null}>
         <meshLineGeometry />
         <meshLineMaterial color="white" depthTest={false} resolution={resolution} useMap={1} map={texture} repeat={repeat} lineWidth={1} />
       </mesh>
