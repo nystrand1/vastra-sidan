@@ -1,66 +1,53 @@
-import { type InferGetStaticPropsType, type GetStaticPropsContext } from "next"
-import Image from "next/image";
-import { twMerge } from "tailwind-merge";
-import Card from "~/components/atoms/CardLink/CardLink";
+import { type GetStaticPropsContext, type InferGetStaticPropsType } from "next";
+import { useState } from "react";
+import { Button } from "~/components/atoms/Button/Button";
+import { ButtonLink } from "~/components/atoms/ButtonLink/ButtonLink";
 import MemberCard from "~/components/common/MemberCard/MemberCard";
-import { api } from "~/utils/api"
-import { formatSwedishTime } from "~/utils/formatSwedishTime";
+import { api } from "~/utils/api";
+import { createSSRHelper } from "~/utils/createSSRHelper";
 
 
 
 export const MemberPage = ({ memberToken }: InferGetStaticPropsType<typeof getStaticProps>) => {
   const { data, isLoading } = api.member.getMember.useQuery({ memberToken });
-
+  const [flipped, setFlipped] = useState(false);
   if (isLoading) {
-    return <div>Laddar...</div>
+    return <div className="flex justify-center">Laddar...</div>
   }
 
   if (!data) {
-    return <div>Medlemmen hittades inte</div>
+    return <div className="flex justify-center">Medlemmen hittades inte</div>
   }
 
   const hasActiveMemberships = data.activeMemberships.length > 0;
   const hasExpiredMemberships = data.expiredMemberships.length > 0;
 
+  const activeMembership = data.activeMemberships[0];
+
   if (!hasActiveMemberships && !hasExpiredMemberships) {
     return (
-      <div>
+      <div className="flex justify-center">
         <p>Du har inget medlemskap</p>
+      </div>
+    )
+  }
+
+  if (!activeMembership) {
+    return (
+      <div>
+        <p>Du har inget aktivt medlemskap</p>
+        <ButtonLink href="/bli-medlem">Bli medlemskap</ButtonLink>
       </div>
     )
   }
 
   return (
     <div>
-      <div className="absolute inset-0 w-screen h-96 md:w-screen md:h-[100vh] m-auto">
-        <MemberCard />
-      </div>
-      <p className="hidden text-3xl text-center md:mb-10 w-full">{data.name}</p>
-      <div className={twMerge("grid hidden gap-10 justify-center grid-cols-1", hasExpiredMemberships ? 'md:grid-cols-2' : 'md:grid-cols-none')}>
-        <div className="md:flex flex-col justify-self-end space-y-2">
-          <h2 className="text-2xl text-center">Aktiva medlemskap</h2>
-          {data.activeMemberships.map((membership) => (
-            <Card className="md:w-fit" key={membership.id}>
-              <p>{membership.name}</p>
-              <p>{membership.type}</p>
-              <p>Giltigt till {formatSwedishTime(membership.expiresAt, 'dd MMMM yyyy')}</p>
-              <Image src={membership.imageUrl} width={100} height={100} alt={membership.name} />
-            </Card>
-          ))}
-        </div>
-        {data.expiredMemberships.length > 0 && (
-          <div className="flex flex-col justify-self-start space-y-2">
-            <h2 className="text-2xl text-center">Tidigare medlemskap</h2>
-            {data.expiredMemberships.map((membership) => (
-              <Card className="w-fit" key={membership.id}>
-                <p>{membership.name}</p>
-                <p>{membership.type}</p>
-                <p>Giltigt till {formatSwedishTime(membership.expiresAt, 'dd MMMM yyyy')}</p>
-                <Image src={membership.imageUrl} width={100} height={100} alt={membership.name} />
-              </Card>
-            ))}
-          </div>
-        )}
+      <div className="absolute inset-0 w-screen -mt-10 md:mt-0 h-[100vh] md:w-screen md:h-[100vh] m-auto overflow-hidden flex justify-center items-center flex-col">
+        <MemberCard memberName={data.name} flipped={flipped} {...activeMembership} />
+        <Button className="text-center m-auto bottom-6 absolute w-32" onClick={() => setFlipped(!flipped)}>
+          {flipped ? 'Vänd tillbaka' : 'Vänd'}
+        </Button>
       </div>
     </div>
   )
@@ -75,20 +62,30 @@ export const getStaticPaths = () => {
   }
 }
 
-export const getStaticProps = (context: GetStaticPropsContext) => {
+export const getStaticProps = async (context: GetStaticPropsContext) => {
   const { memberToken } = context.params as { memberToken: string };
-
+  
   if (!memberToken) {
     return {
       notFound: true,
     }
   }
+  
+  const ssg = await createSSRHelper();
 
+  const member = await ssg.member.getMember.fetch({ memberToken });
 
+  if (!member) {
+    return {
+      notFound: true,
+    }
+  }
 
   return {
     props: {
-      memberToken
+      memberToken,
+      trpcState: ssg.dehydrate(),
     },
+    revalidate: 3600,
   }
 }

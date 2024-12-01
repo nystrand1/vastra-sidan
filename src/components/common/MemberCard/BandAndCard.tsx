@@ -1,4 +1,4 @@
-import { Center, Text3D, useGLTF, useTexture } from '@react-three/drei'
+import { Center, Html, useGLTF, useTexture } from '@react-three/drei'
 import { extend, useFrame, useThree } from '@react-three/fiber'
 import { BallCollider, CuboidCollider, type RapierRigidBody, RigidBody, useRopeJoint, useSphericalJoint } from '@react-three/rapier'
 import { MeshLineGeometry, MeshLineMaterial } from 'meshline'
@@ -7,7 +7,7 @@ import { type RefObject, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 
 import { type MaterialNode, type Object3DNode } from '@react-three/fiber'
-import RoundedPlane from './RoundedPlane'
+import { twMerge } from 'tailwind-merge'
 
 declare module '@react-three/fiber' {
   interface ThreeElements {
@@ -19,7 +19,7 @@ declare module '@react-three/fiber' {
 extend({ MeshLineGeometry, MeshLineMaterial })
 useGLTF.preload('https://assets.vercel.com/image/upload/contentful/image/e5382hct74si/5huRVDzcoDwnbgrKUo1Lzs/53b6dd7d6b4ffcdbd338fa60265949e1/tag.glb')
 useTexture.preload('/static/membercard_band.jpg');
-useTexture.preload('/static/membercard_2021.jpg');
+useTexture.preload('/static/membercard_back.jpg');
 
 type ExtendedRigidBody = RapierRigidBody & { lerped?: THREE.Vector3 }
 
@@ -28,28 +28,33 @@ interface BandAndCardProps {
   minSpeed?: number
   name?: string
   memberType?: string
+  flipped?: boolean,
+  imageUrl?: string
 }
 
-export default function BandAndCard({ 
-  maxSpeed = 50, 
+export default function BandAndCard({
+  maxSpeed = 50,
   minSpeed = 10,
   name = "Filip Nystrand",
-  memberType = "Familjemedlemskap"
-} : BandAndCardProps) {
+  memberType = "Familjemedlemskap",
+  imageUrl = "/static/membercard_2021.jpg",
+  flipped = true,
+}: BandAndCardProps) {
   const band = useRef() as RefObject<THREE.Mesh & { geometry: { setPoints: (points: THREE.Vector3[]) => void } }>;
   const fixed = useRef() as RefObject<ExtendedRigidBody>;
   const j1 = useRef() as RefObject<ExtendedRigidBody>;
   const j2 = useRef() as RefObject<ExtendedRigidBody>;
   const j3 = useRef() as RefObject<ExtendedRigidBody>;
   const card = useRef() as RefObject<ExtendedRigidBody>;
-  const vec = new THREE.Vector3();
-  const ang = new THREE.Vector3();
-  const rot = new THREE.Vector3();
-  const dir = new THREE.Vector3();
+  const vec = new THREE.Vector3(0, 0, 0);
+  const ang = new THREE.Vector3(0, 0, 0);
+  const rot = new THREE.Vector3(0, 0, 0);
+  const dir = new THREE.Vector3(0, 0, 0);
   const segmentProps = { type: 'dynamic', canSleep: true, angularDamping: 2, linearDamping: 2 }
   const { nodes, materials } = useGLTF('https://assets.vercel.com/image/upload/contentful/image/e5382hct74si/5huRVDzcoDwnbgrKUo1Lzs/53b6dd7d6b4ffcdbd338fa60265949e1/tag.glb')
   const texture = useTexture('/static/membercard_band.jpg');
-  const cardTexture = useTexture('/static/membercard_2021.jpg');
+  const cardTexture = useTexture(imageUrl);
+  const cardBackTexture = useTexture('/static/membercard_back.jpg');
   const { width, height } = useThree((state) => state.size)
   const [curve] = useState(() => new THREE.CatmullRomCurve3([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()]))
   const [dragged, drag] = useState<boolean | THREE.Vector3>(false)
@@ -68,6 +73,15 @@ export default function BandAndCard({
       return () => void (document.body.style.cursor = 'auto')
     }
   }, [hovered, dragged])
+
+  useEffect(() => {
+    if (card.current) {
+      card.current.setRotation(
+        { x: 0, y: flipped ? Math.PI : 2 * Math.PI, z: 0, w: 0 },
+        true
+      );
+    }
+  }, [card, flipped])
 
   useFrame((state, delta) => {
     if (typeof dragged === 'object') {
@@ -93,16 +107,13 @@ export default function BandAndCard({
       // Tilt it back towards the screen
       ang.copy(card.current!.angvel())
       rot.copy(card.current!.rotation())
-      card.current!.setAngvel({ x: ang.x, y: ang.y - rot.y * 0.25, z: ang.z }, false)
+      const settleYFactor = ang.y - rot.y * 0.25
+      card.current!.setAngvel({ x: ang.x, y: settleYFactor, z: ang.z }, false)
     }
   })
 
   curve.curveType = 'chordal'
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping
-
-  const planeWidth = name.length * 0.13
-  const textXPos = -0.8/14 * name.length
-  const cardXPos = 0.04 * (planeWidth);
 
   return (
     <>
@@ -122,7 +133,7 @@ export default function BandAndCard({
           <group
             scale={2.25}
             position={[0, -1.2, 0]}
-            rotation={[0, 0, 0]}
+            rotation={[0, flipped ? Math.PI : 0, 0]}
             onPointerOver={() => hover(true)}
             onPointerOut={() => hover(false)}
             onPointerUp={(e) => {
@@ -135,45 +146,36 @@ export default function BandAndCard({
               event.setPointerCapture(e.pointerId);
               drag(new THREE.Vector3().copy(e.point).sub(vec.copy(card.current!.translation())));
             }}>
-              <Center left attach="material" bottom position={[cardXPos, 0.12, 0.007]} scale={0.2}>
-                <Text3D
-                  bevelEnabled={false}
-                  bevelSize={0}
-                  font="/static/Roboto_Regular.json"
-                  height={0}
-                  scale={0.1}                  
-                  position={[textXPos, 0.2, 0.05]}
-                  rotation={[0, 0, 0]}>
-                  {name}
-                </Text3D>
-                  <Text3D
-                  bevelEnabled={false}
-                  bevelSize={0}
-                  font="/static/Roboto_Regular.json"
-                  height={0}
-                  scale={0.08}                  
-                  position={[textXPos, 0, 0.05]}
-                  rotation={[0, 0, 0]}>
-                  {memberType}
-                  </Text3D>                 
-                  <RoundedPlane 
-                    width={planeWidth} 
-                    height={0.55} 
-                    radius={0.1} 
-                    y={0.12}
-                    x={0}
-                  />                                    
-              </Center>
-            <group position={[0, 0.5, 0]}>
+            <group position={[0, 0.5, 0]} rotation={[0, 0, 0]}>
               <mesh rotation={[0, 0, 0]}>
                 <planeGeometry args={[0.7, 1 / 1]} />
-                <meshBasicMaterial map={cardTexture} side={THREE.FrontSide}  />
+                <meshBasicMaterial map={cardTexture} side={THREE.FrontSide} />
               </mesh>
-              <mesh rotation={[0, 0, 0]}>
-                <planeGeometry args={[0.7, 1 / 1]}  />
-                <meshBasicMaterial map={cardTexture} side={THREE.BackSide}  />
+              <mesh rotation={[0, 0, 0]} material={materials.metal}>
+                <planeGeometry args={[0.7, 1 / 1]} />
+                <meshStandardMaterial map={cardBackTexture} side={THREE.BackSide} />
+                <Center scale={0.5} position={[0.5, -0.05, 0]}>
+                  <Html
+                    center
+                    transform
+                    className={twMerge('text-white text-right whitespace-nowrap flex w-36 m-auto transition-opacity opacity-0 delay-300', flipped ? 'opacity-100' : '')}
+                    scale={0.2}
+                    position={[-0.785, -0.35, 0]}
+                    rotation={[0, Math.PI, 0]}>
+                    {name}
+                  </Html>
+                  <Html
+                    center
+                    transform
+                    className={twMerge('text-white text-right whitespace-nowrap flex w-36 m-auto transition-opacity opacity-0 delay-300', flipped ? 'opacity-100' : '')}
+                    scale={0.15}
+                    position={[-0.7, -0.5, 0]}
+                    rotation={[0, Math.PI, 0]}>
+                    {memberType}
+                  </Html>
+                </Center>
               </mesh>
-            </group>            
+            </group>
             <mesh geometry={'geometry' in nodes.clip! ? nodes.clip.geometry as THREE.BufferGeometry<THREE.NormalBufferAttributes> : undefined} material={materials.metal} material-roughness={0.3} />
             <mesh geometry={'geometry' in nodes.clamp! ? nodes.clamp.geometry as THREE.BufferGeometry<THREE.NormalBufferAttributes> : undefined} material={materials.metal} />
           </group>
