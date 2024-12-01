@@ -7,12 +7,9 @@ import {
 import { type inferAsyncReturnType } from "@trpc/server";
 import { parseISO } from "date-fns";
 import { env } from "~/env.mjs";
-import {
-  type Membership as WPMembership
-} from "~/types/wordpressTypes";
 import { type createTRPCContext } from "../api/trpc";
 import { captureException } from "@sentry/nextjs";
-import { type GetAwayGamesQuery } from "~/types/wordpresstypes/graphql";
+import { type GetMembershipsQuery, type GetAwayGamesQuery } from "~/types/wordpresstypes/graphql";
 
 const apiKey = env.WORDPRESS_API_KEY;
 
@@ -153,12 +150,12 @@ export const upsertBus = async (
 };
 
 export const wpMembershipToMembership = (
-  wpMembership: WPMembership
+  wpMembership: GetMembershipsQuery['memberships']['nodes'][number]
 ): MembershipPayload[] => {
   const prices = {
-    [MembershipType.FAMILY]: Number(wpMembership.acf.familyPrice),
-    [MembershipType.REGULAR]: Number(wpMembership.acf.regularPrice),
-    [MembershipType.YOUTH]: Number(wpMembership.acf.youthPrice)
+    [MembershipType.FAMILY]: Number(wpMembership.membership.familyPrice) * 100,
+    [MembershipType.REGULAR]: Number(wpMembership.membership.regularPrice) * 100,
+    [MembershipType.YOUTH]: Number(wpMembership.membership.youthPrice) * 100
   };
   const memberships: MembershipPayload[] = [
     MembershipType.FAMILY,
@@ -166,12 +163,12 @@ export const wpMembershipToMembership = (
     MembershipType.YOUTH
   ].map((membershipType) => ({
     wordpressId: wpMembership.id.toString(),
-    name: wpMembership.title.rendered,
-    imageUrl: wpMembership.acf.image.url,
+    name: wpMembership.title,
+    imageUrl: wpMembership.membership.image.sourceUrl,
     type: membershipType,
     price: prices[membershipType],
-    startDate: parseISO(wpMembership.acf.startDate),
-    endDate: parseISO(wpMembership.acf.endDate),
+    startDate: parseISO(wpMembership.membership.startDate),
+    endDate: parseISO(wpMembership.membership.endDate),
     updatedAt: new Date()
   }));
 

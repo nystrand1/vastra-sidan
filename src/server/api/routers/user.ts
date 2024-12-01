@@ -1,4 +1,4 @@
-import { Role, StripePaymentStatus, StripeRefundStatus, type Membership, type Prisma } from "@prisma/client";
+import { Role, StripePaymentStatus, StripeRefundStatus, type Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { Resend } from "resend";
 import { z } from "zod";
@@ -10,30 +10,12 @@ import {
   userProcedure
 } from "~/server/api/trpc";
 import { sha256 } from "~/server/auth";
-import { friendlyMembershipNames } from "~/server/utils/membership";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { profileSchema, signupSchema } from "~/utils/zodSchemas";
-
-const membershipFormatter = (membership: Membership) => ({
-  id: membership.id,
-  name: membership.name,
-  imageUrl: membership.imageUrl,
-  type: friendlyMembershipNames[membership.type]
-});
-
 
 
 type UserData = Prisma.UserGetPayload<{
   include: {
-    memberShips: {
-      where: {
-        stripePayments: {
-          some: {
-            status: "SUCCEEDED"
-          }
-        }
-      }
-    },
     eventParticipations: {
       select: {
         cancellationToken: true,
@@ -139,15 +121,7 @@ export const userRouter = createTRPCRouter({
         email: ctx.session.user.email
       },
       include: {
-        memberShips: {
-          where: {
-            stripePayments: {
-              some: {
-                status: StripePaymentStatus.SUCCEEDED
-              }
-            }
-          }
-        },
+
         eventParticipations: {
           select: {
             cancellationToken: true,
@@ -194,7 +168,6 @@ export const userRouter = createTRPCRouter({
     });
 
     return {
-      memberShips: user?.memberShips.map(membershipFormatter),
       upcomingEvents: user?.eventParticipations
         .filter((x) => x.event.date > new Date())
         .map(eventFormatter),

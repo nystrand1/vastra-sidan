@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { env } from "~/env.mjs";
 import { stripe } from "~/server/stripe";
-import { sendEventConfirmationEmail } from "~/server/utils/email";
+import { sendEventConfirmationEmail } from "~/server/utils/email/sendEventConfirmationEmail";
 import { handleChargeUpdate, handleFailedPayment, handleRefund, handleSuccessfulPayment } from "./utils";
 import { captureException } from "@sentry/nextjs";
+import { sendMemberConfirmationEmail } from "~/server/utils/email/sendMemberConfirmationEmail";
+import { attachMembershipToMembers } from "./attachMembershipToMembers";
 
 
 const endpointSecret = env.STRIPE_WEBHOOK_SECRET || "whsec_8691b2bf8e9dca6022c686d929fd5dc87acd4c888c46a9ea6902a157b19334b7";
@@ -13,9 +15,20 @@ const endpointSecret = env.STRIPE_WEBHOOK_SECRET || "whsec_8691b2bf8e9dca6022c68
 const handleStripeEvent = async (event: Stripe.Event) => {
   switch (event.type) {
     case 'payment_intent.succeeded':
-      const { participants } = await handleSuccessfulPayment(event);
-      const emailPromises = participants.map(sendEventConfirmationEmail);
-      await Promise.all(emailPromises);
+      const { participants, members } = await handleSuccessfulPayment(event);
+      if (event.data.object.metadata.type === 'EVENT') {
+        const emailPromises = participants.map(sendEventConfirmationEmail);
+        await Promise.all(emailPromises);
+      }
+      if (event.data.object.metadata.type === 'MEMBERSHIP') {
+        const membership = await attachMembershipToMembers({
+          members,
+          membershipId: event.data.object.metadata.membershipId
+        });
+        // send membership confirmation email
+        const emailPromises = members.map((m) => sendMemberConfirmationEmail(m, membership));
+        await Promise.all(emailPromises);
+      }
       break;
     case 'payment_intent.payment_failed':
       await handleFailedPayment(event);

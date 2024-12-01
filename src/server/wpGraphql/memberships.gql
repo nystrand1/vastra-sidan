@@ -1,0 +1,19 @@
+query GetMemberships {
+  memberships {
+    nodes {
+      id
+      title
+      membership {
+        startDate: startdate
+        endDate: enddate
+        familyPrice: familyprice
+        regularPrice: regularprice
+        youthPrice: youthprice
+        image {
+          sourceUrl
+          altText
+        }
+      }
+    }
+  }
+}

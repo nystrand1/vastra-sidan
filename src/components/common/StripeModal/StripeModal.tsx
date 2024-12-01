@@ -10,29 +10,32 @@ interface StripeModalProps {
   isOpen: boolean;
   onClose: () => void;
   clientSecret?: string;
+  isMemberSignup?: boolean;
 }
 
 
 
-export const StripeModal = ({ isOpen, onClose, clientSecret } : StripeModalProps) => {
+export const StripeModal = ({ isOpen, onClose, clientSecret, isMemberSignup } : StripeModalProps) => {
   const stripe = useStripe();
-
+  
   const elements = useElements();
+  console.log('StripeModal', clientSecret, stripe, elements);
   const [isLoading, setIsLoading] = useState(false);
   const [stripeReady, setStripeReady] = useState(false);
   if (!clientSecret || !stripe || !elements) return null;
-
   const onSubmit = async () => {
     if (!stripe || !elements) {
+      console.log("Stripe or elements not loaded");
       captureMessage("Stripe or elements not loaded");
       return;
     }
     setIsLoading(true);
     const toastId = toast.loading('Laddar...');
+    const returnUrl = isMemberSignup ? env.NEXT_PUBLIC_WEBSITE_URL + '/bli-medlem/tack' : env.NEXT_PUBLIC_WEBSITE_URL + '/bortaresor/tack';
     const result = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: env.NEXT_PUBLIC_WEBSITE_URL + '/bortaresor/tack',
+        return_url: returnUrl,
         payment_method_data: {
           billing_details: {
             address: {
@@ -52,23 +55,24 @@ export const StripeModal = ({ isOpen, onClose, clientSecret } : StripeModalProps
       toast.success('Klart!', { id: toastId });
     }
   };
-
+  console.log('StripeModal ready');
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
     >
       <PaymentElement 
-      onReady={() => setStripeReady(true)}
-      options={{
-        fields: {
-          billingDetails: {
-              address: {
-                  country: 'never',
-              }
+        onReady={() => setStripeReady(true)}
+        options={{
+          fields: {
+            billingDetails: {
+                address: {
+                    country: 'never',
+                }
+            }
           }
-      }
-      }} />
+        }} 
+      />
       <Button disabled={!stripe || isLoading || !stripeReady} className="w-full mt-3" onClick={onSubmit}>Betala</Button>
     </Modal>
   )
