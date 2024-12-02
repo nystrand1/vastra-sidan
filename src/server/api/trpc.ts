@@ -192,15 +192,6 @@ const cronOnly = t.middleware(({ ctx, next }) => {
 
 export const cronProcedure = t.procedure.use(cronOnly);
 
-const swishOnly = t.middleware(({ ctx, next }) => {
-  // Check Swish IP addresses
-  return next({
-    ctx: ctx
-  });
-});
-
-export const swishProcedure = t.procedure.use(swishOnly);
-
 export const userOnly = t.middleware(({ ctx, next }) => {
   if (!ctx.session || !ctx.session.user) {
     throw new TRPCError({ code: "UNAUTHORIZED" });

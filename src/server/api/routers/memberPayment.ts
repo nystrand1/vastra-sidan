@@ -99,6 +99,9 @@ export const memberPaymentRouter = createTRPCRouter({
         where: {
           stripePaymentId: input.paymentId,
           status: StripePaymentStatus.SUCCEEDED
+        },
+        include: {
+          members: true
         }
       });
       
@@ -107,7 +110,20 @@ export const memberPaymentRouter = createTRPCRouter({
           code: "BAD_REQUEST",
           message: "Payment not found"
         });
+      }    
+
+      if (payment.members.length === 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No members found for payment"
+        });
       }
-      return "ok";
+
+      // Find the member that is the owner of the membership
+      const member = payment.members.find((x) => x.familyMemberShipOwnerId === null);
+
+      return {
+        id: member?.memberToken || '',
+      };
     }),
 });

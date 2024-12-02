@@ -1,4 +1,5 @@
 import { useRouter } from "next/router";
+import { ButtonLink } from "~/components/atoms/ButtonLink/ButtonLink";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { api } from "~/utils/api";
 
@@ -51,6 +52,9 @@ const ThanksPage = () => {
             <p className="text-center">Vid frågor eller funderingar, kontakta oss på <a href="mailto:info@vastrasidan.se">info@vastrasidan.se</a></p>
           </div>
         </div>
+        <ButtonLink href={`/medlem/${data.id}`}>
+          Visa medlemskort
+        </ButtonLink>
       </Card>
     </div>
   )

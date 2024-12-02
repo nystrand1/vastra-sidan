@@ -27,7 +27,6 @@ export const env = createEnv({
     CANCELLATION_URL: z.string().min(1),
     MEMBERSHIP_URL: z.string().min(1),
     API_URL: z.string().min(1),
-    SWISH_MERCHANT_BASEURL: z.string().url(),
     BOOKING_EMAIL: z.string().email(),
     STRIPE_API_KEY: z.string().min(1),
     STRIPE_WEBHOOK_SECRET: (
@@ -79,7 +78,6 @@ export const env = createEnv({
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     CANCELLATION_URL: process.env.CANCELLATION_URL,
     MEMBERSHIP_URL: process.env.MEMBERSHIP_URL,
-    SWISH_MERCHANT_BASEURL: process.env.SWISH_MERCHANT_BASEURL,
     API_URL: process.env.API_URL,
     BOOKING_EMAIL: process.env.BOOKING_EMAIL,
     STRIPE_API_KEY: process.env.STRIPE_API_KEY,
