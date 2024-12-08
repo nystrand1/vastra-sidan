@@ -16,7 +16,7 @@ export const MemberCard = dynamic(() => import('~/components/common/MemberCard/M
 export const MemberPage = ({ memberToken }: InferGetStaticPropsType<typeof getStaticProps>) => {
   const { data, isLoading } = api.member.getMember.useQuery({ memberToken }, { enabled: !!memberToken });
   const [flipped, setFlipped] = useState(false);
-  if (isLoading) {
+  if (!data && !isLoading) {
     return <div className="flex justify-center">Laddar...</div>
   }
 

@@ -1,7 +1,6 @@
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { useSession } from "next-auth/react";
-import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { type z } from "zod";
@@ -112,12 +111,8 @@ export const MemberPage = () => {
       </Elements>
       )}
       <div className="flex flex-col m-auto items-center justify-center w-full md:w-96">
-        {selectedMembership?.imageUrl && (
-          <div className="flex flex-col items-center mb-4">
-            <div className="w-32 h-48 md:w-32 md:h-66 relative">
-              <Image src={selectedMembership.imageUrl} fill style={{ objectFit: 'cover' }} alt="medlemskapskort" />
-            </div>
-          </div>
+        {selectedMembership?.name && (
+          <h1 className="text-3xl mb-4">{selectedMembership.name}</h1>
         )}
         <Accordion items={[memberPerks]} className="mb-4 w-full"/>
         <form className="w-full flex flex-col items-center justify-center" ref={formRef}>

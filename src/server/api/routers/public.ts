@@ -94,6 +94,10 @@ export const publicRouter = createTRPCRouter({
         id: true,
         imageUrl: true,
         price: true,
+        name: true,
+      },
+      orderBy: {
+        endDate: 'desc'
       }
     });
     return {
