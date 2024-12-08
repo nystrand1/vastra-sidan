@@ -1,9 +1,12 @@
+import { type inferRouterOutputs } from "@trpc/server";
 import { type GetStaticPropsContext, type InferGetStaticPropsType } from "next";
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "~/components/atoms/Button/Button";
 import { ButtonLink } from "~/components/atoms/ButtonLink/ButtonLink";
+import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { env } from "~/env.mjs";
+import { type AppRouter } from "~/server/api/root";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 
@@ -13,9 +16,20 @@ export const MemberCard = dynamic(() => import('~/components/common/MemberCard/M
   loading: () => <div className="flex justify-center">Laddar...</div>
 });
 
+type ActiveMembership = NonNullable<inferRouterOutputs<AppRouter>['member']['getMember']>['activeMemberships'][0]
+
 export const MemberPage = ({ memberToken }: InferGetStaticPropsType<typeof getStaticProps>) => {
   const { data, isLoading } = api.member.getMember.useQuery({ memberToken }, { enabled: !!memberToken });
   const [flipped, setFlipped] = useState(false);
+  const [activeMembership, setActiveMembership] = useState<ActiveMembership>();
+
+  useEffect(() => {
+    if (data?.activeMemberships.length) {
+      const activeMembership = data.activeMemberships[0];
+      setActiveMembership(activeMembership);
+    }
+  }, [data]);
+
   if (!data && !isLoading) {
     return <div className="flex justify-center">Laddar...</div>
   }
@@ -27,7 +41,6 @@ export const MemberPage = ({ memberToken }: InferGetStaticPropsType<typeof getSt
   const hasActiveMemberships = data.activeMemberships.length > 0;
   const hasExpiredMemberships = data.expiredMemberships.length > 0;
 
-  const activeMembership = data.activeMemberships[0];
 
   if (!hasActiveMemberships && !hasExpiredMemberships) {
     return (
@@ -46,6 +59,7 @@ export const MemberPage = ({ memberToken }: InferGetStaticPropsType<typeof getSt
     )
   }
 
+
   return (
     <div>
       <div className="absolute inset-0 w-screen -mt-10 md:mt-0 h-[100vh] md:w-screen md:h-[100vh] m-auto overflow-hidden flex justify-center items-center flex-col">
@@ -55,9 +69,30 @@ export const MemberPage = ({ memberToken }: InferGetStaticPropsType<typeof getSt
           flipped={flipped}
           imageUrl={`${env.NEXT_PUBLIC_WEBSITE_URL}/_next/image?url=${encodeURIComponent(activeMembership.imageUrl)}&w=640&q=75`}
         />
-        <Button className="text-center m-auto bottom-6 absolute w-32" onClick={() => setFlipped(!flipped)}>
-          {flipped ? 'Vänd tillbaka' : 'Vänd'}
-        </Button>
+        <div className="m-auto bottom-0 absolute w-52 md:w-64">
+          <Button className="text-center w-full" onClick={() => setFlipped(!flipped)}>
+            {flipped ? 'Vänd tillbaka' : 'Vänd'}
+          </Button>
+          {data.activeMemberships.length > 1 && (
+            <div>
+              <SelectField 
+                label=""
+                defaultValue={activeMembership.id}
+                onChange={((e) => {
+                  const membership = data.activeMemberships.find((x) => x.id === e.target.value);
+                  if (membership) {
+                    setActiveMembership(membership);
+                  }
+                })}
+                options={data.activeMemberships.map((x) => ({
+                  value: x.id,
+                  label: x.name,
+                }))}>
+                {activeMembership.name}
+              </SelectField>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
