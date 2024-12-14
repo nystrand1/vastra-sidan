@@ -70,6 +70,7 @@ export const Navigation = () => {
           {featureFlags.ENABLE_AWAYGAMES && (
             <Link className="hover:text-gray-200" href="/bortaresor">Bortaresor</Link>
           )}
+          <Link className="hover:text-gray-200" href="/nyheter/blasvart-jul">Blåsvart jul</Link>
           <Link className="hover:text-gray-200" href="/nyheter">Nyheter</Link>
           <Link className="hover:text-gray-200" href="/bortaguiden">Bortaguiden</Link>
           <Link className="hover:text-gray-200" href="/kronikor">Krönikor</Link>
@@ -127,6 +128,9 @@ export const Navigation = () => {
                 <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/bortaresor">Bortaresor</Link>
               </li>
             )}
+            <li className="divide-y divide-gray-100">
+              <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/nyheter/blasvart-jul">Blåsvart jul</Link>
+            </li>
             <li className="divide-y divide-gray-100">
               <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/nyheter">Nyheter</Link>
             </li>
