@@ -46,6 +46,7 @@ export const cronRouter = createTRPCRouter({
     const { data: gqlRes } = await ctx.apolloClient.query({
       query: GetAwayGamesDocument,
     })
+    console.info("Fetched events from WP", JSON.stringify(gqlRes, null, 2));
     const awayGames = gqlRes.awayGames.nodes
       // uncomment to filter out games that is older than a week
       .filter(({ awayGame }) => isBefore(subDays(new Date(), 7), new Date(awayGame.date)))

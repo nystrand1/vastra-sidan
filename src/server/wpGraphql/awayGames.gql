@@ -1,5 +1,5 @@
 query GetAwayGames {
-  awayGames: awaygames(where: { stati: [PUBLISH, PRIVATE]}) {
+  awayGames: awaygames(where: { stati: [PUBLISH, PRIVATE, DRAFT]}) {
     nodes {
       id: databaseId
       status
