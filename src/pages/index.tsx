@@ -9,6 +9,7 @@ import { Wysiwyg } from "~/components/atoms/Wysiwyg/Wysiwyg";
 import { api } from "~/utils/api";
 import { PATHS } from "~/utils/constants";
 import { createSSRHelper } from "~/utils/createSSRHelper";
+import { featureFlags } from "~/utils/featureFlags";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
 
 export default function Home() {
@@ -23,6 +24,13 @@ export default function Home() {
   const seoDescription = "Välkommen till Västra Sidan. Vi är en supporterförening till IK Sirius som arbetar för att skapa en bättre upplevelse för blåsvarta supportrar."
 
   const upcomingEventExpired = upcomingEvent ? isAfter(new Date(), upcomingEvent.date) : false;
+
+  const memberLink = featureFlags.ENABLE_MEMBERSHIPS ? {
+    href: "/bli-medlem",
+  } : {
+    href: "https://apply.cardskipper.se/pxvo",
+    target: "_blank"
+  };
 
   return (
     <>
@@ -55,7 +63,7 @@ export default function Home() {
             <p className="text-4xl">{member.count}</p>
             <p className="text-sm text-gray-500">Mål 2024, 1000 medlemmar</p>
             <p className="text-sm text-gray-500">Senast uppdaterad: {formatSwedishTime(member.updatedAt, "yyyy-MM-dd HH:mm", { locale: sv })}</p>
-            <ButtonLink href="https://apply.cardskipper.se/pxvo" target="_blank" className="w-full">Bli medlem</ButtonLink>
+            <ButtonLink {...memberLink} className="w-full">Bli medlem</ButtonLink>
           </Card>
           {upcomingGame && (
             <Card

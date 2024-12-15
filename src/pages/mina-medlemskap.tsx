@@ -34,7 +34,7 @@ export default ProfilePage;
 
 
 export const getStaticProps = () => {
-  if (!featureFlags.ENABLE_MEMBERSHIPS) {
+  if (!featureFlags.ENABLE_LOGIN || !featureFlags.ENABLE_MEMBERSHIPS) {
     return {
       notFound: true,
     }
