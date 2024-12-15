@@ -26,6 +26,9 @@ const createApolloClient = () => new ApolloClient({
   ssrMode: true,
   cache: new InMemoryCache(),
   defaultOptions,
+  headers: {
+    authorization: `Basic ${Buffer.from(`admin:${env.WORDPRESS_API_KEY}`).toString('base64')}`,
+  }
 });
 
 export const apolloClient = createApolloClient();
