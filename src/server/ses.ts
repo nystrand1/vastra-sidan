@@ -12,7 +12,7 @@ export const ses =
     credentials: {
       accessKeyId: env.AWS_CLIENT_ID,
       secretAccessKey: env.AWS_CLIENT_SECRET,
-    }
+    },
   })
 
 if (env.NODE_ENV !== "production") globalForSES.ses = ses;
