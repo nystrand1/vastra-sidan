@@ -13,7 +13,7 @@ export const sendEventConfirmationEmail = async (
     participant?.cancellationToken || ""
   }`;
 
-  if (env.ENABLE_SES_EMAILS) {
+  if (env.ENABLE_AWS_SES_EMAILS) {
     return await ses.sendEmail({
       Source: `Västra Sidan <${env.BOOKING_EMAIL}>`,
       Destination: {

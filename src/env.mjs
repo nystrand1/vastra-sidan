@@ -10,7 +10,7 @@ export const env = createEnv({
     AWS_CLIENT_ID: z.string().min(1),
     AWS_CLIENT_SECRET: z.string().min(1),
     DATABASE_URL: z.string().url(),
-    ENABLE_SES_EMAILS: z.literal("true").or(z.literal("false")).default("false").transform((val) => val === "true"),
+    ENABLE_AWS_SES_EMAILS: z.literal("true").or(z.literal("false")).default("false").transform((val) => val === "true"),
     NODE_ENV: z.enum(["development", "test", "production"]),
     NEXTAUTH_SECRET:
       process.env.NODE_ENV === "production"
@@ -92,7 +92,7 @@ export const env = createEnv({
     CARDSKIPPER_PASSWORD: process.env.CARDSKIPPER_PASSWORD,
     CARDSKIPPER_ORG_NUMBER: process.env.CARDSKIPPER_ORG_NUMBER,
     WEBSITE_URL: process.env.WEBSITE_URL,
-    ENABLE_SES_EMAILS: process.env.ENABLE_SES_EMAILS,
+    ENABLE_AWS_SES_EMAILS: process.env.ENABLE_AWS_SES_EMAILS,
     NEXT_PUBLIC_ENABLE_MEMBERSHIPS: process.env.NEXT_PUBLIC_ENABLE_MEMBERSHIPS,
     NEXT_PUBLIC_ENABLE_LOGIN: process.env.NEXT_PUBLIC_ENABLE_LOGIN,
     NEXT_PUBLIC_ENABLE_AWAYGAMES: process.env.NEXT_PUBLIC_ENABLE_AWAYGAMES,

@@ -9,6 +9,7 @@ export const sendMemberConfirmationEmail = async (
   member: Member,
   membership: Membership
 ) => {
+  console.log("Sending member confirmation email");
   const memberUrl = `${env.MEMBERSHIP_URL}/${member.id}`;
   const formattedMember = {
     name: `${member.firstName} ${member.lastName}`,
@@ -16,9 +17,10 @@ export const sendMemberConfirmationEmail = async (
     phone: member.phone,
   }
 
-  if (env.ENABLE_SES_EMAILS) {
-    return await ses.sendEmail({
-      Source: `Västra Sidan <${env.BOOKING_EMAIL}>`,
+  if (env.ENABLE_AWS_SES_EMAILS) {
+    console.log("Sending mail using AWS SES");
+    const res = await ses.sendEmail({
+      Source: `Vastra Sidan <${env.BOOKING_EMAIL}>`,
       Destination: {
         ToAddresses: [
           env.USE_DEV_MODE === "true" ? "filip.nystrand@gmail.com" : member.email
@@ -41,7 +43,9 @@ export const sendMemberConfirmationEmail = async (
           },
         },
       }
-    })
+    });
+    console.log('res', JSON.stringify(res, null, 2));
+    return;
   }
 
   return await resend.emails.send({
