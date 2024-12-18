@@ -3,6 +3,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { api } from "~/utils/api";
+import { formatSwedishTime } from "~/utils/formatSwedishTime";
 
 export default function AdminMemberPage() {
   const { data: sessionData } = useSession();
@@ -21,7 +22,7 @@ export default function AdminMemberPage() {
       <div className="flex flex-row gap-4 justify-center flex-wrap">
         <Card title={member.name} className="w-96">
             <p>{member.activeMembership.type}</p>
-            <p>{member.activeMembership.becameMemberAt.toDateString()}</p>
+              <p>Blev medlem: {formatSwedishTime(member.activeMembership.becameMemberAt, 'yyyy-MM-dd HH:mm')}</p>
             {member.email && (
               <a href={`mailto:${member.email}`} className="underline">{member.email}</a>
             )}

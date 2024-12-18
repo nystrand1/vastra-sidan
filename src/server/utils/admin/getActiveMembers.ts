@@ -1,12 +1,18 @@
 import { prisma } from "~/server/db"
 import { friendlyMembershipNames } from "../membership";
+import { StripePaymentStatus } from "@prisma/client";
 
 export type ActiveMember = Awaited<ReturnType<typeof getActiveMembers>>[number];
 
 export const adminMemberFormatter = (member: ActiveMember) => {
   const [activeMembership] = member.memberships;
+  const [stripePayment] = member.stripePayments;
   if (!activeMembership) {
     throw new Error("Member has no active membership");
+  }
+
+  if (!stripePayment) {
+    throw new Error("Member has no active payment");
   }
   return {
     id: member.id,
@@ -16,7 +22,7 @@ export const adminMemberFormatter = (member: ActiveMember) => {
     activeMembership: {
       name: activeMembership.name,
       type: friendlyMembershipNames[activeMembership.type],
-      becameMemberAt: activeMembership.createdAt,
+      becameMemberAt: stripePayment.createdAt,
       startDate: activeMembership.startDate,
       endDate: activeMembership.endDate,
     },
@@ -29,6 +35,14 @@ export const getActiveMembers = async () => {
   const res = await prisma.member.findMany({
     include: {
       memberships: true,
+      stripePayments: {
+        where: {
+          status: StripePaymentStatus.SUCCEEDED,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
     },
     where: {
       memberships: {

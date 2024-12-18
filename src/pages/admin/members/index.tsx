@@ -5,13 +5,15 @@ import Card from "~/components/atoms/CardLink/CardLink";
 import { InputField } from "~/components/atoms/InputField/InputField";
 import { api } from "~/utils/api";
 import Fuse from 'fuse.js';
+import { formatSwedishTime } from "~/utils/formatSwedishTime";
 
 const fuseOptions = {
 	shouldSort: true,
 	minMatchCharLength: 3,
 	keys: [
 		"name",
-		"activeMembershipType",
+		"activeMembership.name",
+    "activeMembership.type",
     "id",
     "email",
 	]
@@ -43,7 +45,8 @@ export default function Admin() {
           onChange={(e) => setSearch(e.target.value)}
           label="Sök"
         />
-        <div className="h-96 space-y-4 overflow-auto">
+        <div className="text-center">{filteredMembers.length} st</div>
+        <div className="space-y-4 overflow-auto">
           {filteredMembers?.map((member, index) => (
             <Card 
               title={member.name}
@@ -52,7 +55,7 @@ export default function Admin() {
             >
               <p>{member.activeMembership.name}</p>
               <p>{member.activeMembership.type}</p>
-              <p>{member.activeMembership.becameMemberAt.toISOString()}</p>
+              <p>Blev medlem: {formatSwedishTime(member.activeMembership.becameMemberAt, 'yyyy-MM-dd HH:mm')}</p>
               {member.email && (
                 <p>{member.email}</p>
               )}
