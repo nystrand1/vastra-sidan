@@ -35,7 +35,7 @@ export default function Admin() {
 
   return (
     <div className="flex flex-col justify-center align-middle gap-4">
-      <h2 className="text-center text-xl">Medlemmar 2023</h2>
+      <h2 className="text-center text-xl">Medlemmar 2025</h2>
       <div className="space-y-4 w-full md:w-96 m-auto">
         <InputField 
           type="text"
@@ -50,7 +50,9 @@ export default function Admin() {
               key={`${index}-${member.id}`}
               link={`/admin/members/${member.id}`}
             >
-              <p>{member.activeMembershipType}</p>
+              <p>{member.activeMembership.name}</p>
+              <p>{member.activeMembership.type}</p>
+              <p>{member.activeMembership.becameMemberAt.toISOString()}</p>
               {member.email && (
                 <p>{member.email}</p>
               )}
