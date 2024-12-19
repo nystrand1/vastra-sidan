@@ -10,8 +10,8 @@ import { env } from "~/env.mjs";
 import { participantSchema } from "~/utils/zodSchemas";
 import { api } from "../../../utils/api";
 import { Button } from "../../atoms/Button/Button";
-import { StripeModal } from "../StripeModal/StripeModal";
 import { PassengerForm, getPassengerPrice, type IPassenger, type PassengerWithIndex } from "./PassengerForm";
+import { StripeWidget } from "../StripeWidget/StripeWidget";
 
 const formToParticipant = (form: Record<string, IPassenger>) => {
   return Object.values(form).map((input) => {
@@ -112,7 +112,7 @@ export const AwayGameForm = () => {
     <>
     {clientSecret && (
       <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'night' }, locale: 'sv' }}>
-        <StripeModal 
+        <StripeWidget 
           isOpen={modalOpen} 
           onClose={() => setModalOpen(false)} 
           clientSecret={clientSecret} 

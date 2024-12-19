@@ -11,7 +11,7 @@ import Card from "~/components/atoms/CardLink/CardLink";
 import Checkbox from "~/components/atoms/Checkbox/Checkbox";
 import { InputField } from "~/components/atoms/InputField/InputField";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
-import { StripeModal } from "~/components/common/StripeModal/StripeModal";
+import { StripeWidget } from "~/components/common/StripeWidget/StripeWidget";
 import { env } from "~/env.mjs";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
@@ -36,7 +36,7 @@ export const MemberPage = () => {
   const { data: memberships } = api.public.getAvailableMemberships.useQuery();
   const [membershipId, setMembershipId] = useState(memberships?.regular?.id);
   const [membershipType, setMembershipType] = useState(memberships?.regular?.type);
-
+  const [disabled, setDisabled] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
   const { mutateAsync: createPaymentIntent, data } = api.memberPayment.requestPayment.useMutation();
@@ -72,6 +72,7 @@ export const MemberPage = () => {
   const selectedMembership = Object.values(memberships).find((x) => x?.id === membershipId);
 
   const handleSignup = async () => {
+    setDisabled(true);
     const signUpPayload = {
       firstName,
       lastName,
@@ -86,6 +87,7 @@ export const MemberPage = () => {
     const payload = memberSignupSchema.safeParse(signUpPayload);
     if (!payload.success) {
       payload.error.issues.map((x) => toast.error(x.message))
+      setDisabled(false);
       return;
     }
     try {
@@ -94,21 +96,25 @@ export const MemberPage = () => {
     } catch (error) {
       console.log(error);
       const err = error as Error;
-      toast.error(err.message)
+      toast.error(err.message)      
+      setDisabled(false);
     }
   }
 
   return (
     <>
-      {data?.clientId && (
-      <Elements stripe={stripePromise} options={{ clientSecret: data.clientId, appearance: { theme: 'night' }, locale: 'sv' }}>
-        <StripeModal
-          isOpen={modalOpen} 
-          onClose={() => setModalOpen(false)} 
-          clientSecret={data.clientId} 
-          isMemberSignup
-        />
-      </Elements>
+      {data?.clientId && modalOpen && (
+        <Elements stripe={stripePromise} options={{ clientSecret: data.clientId, appearance: { theme: 'night' }, locale: 'sv' }}>
+          <StripeWidget
+            isOpen={modalOpen} 
+            onClose={() => {
+              setModalOpen(false);
+              setDisabled(false);
+            }} 
+            clientSecret={data.clientId} 
+            isMemberSignup
+          />
+        </Elements>
       )}
       <div className="flex flex-col m-auto items-center justify-center w-full md:w-96">
         {selectedMembership?.name && (
@@ -269,7 +275,7 @@ export const MemberPage = () => {
                   e.preventDefault();
                   void handleSignup();
                 }}
-                disabled={!acceptedTerms}
+                disabled={!acceptedTerms || disabled}
               >
                 Bli Medlem
               </Button>
