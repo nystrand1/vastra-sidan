@@ -9,9 +9,9 @@ import { toast } from "react-hot-toast";
 import { env } from "~/env.mjs";
 import { participantSchema } from "~/utils/zodSchemas";
 import { api } from "../../../utils/api";
-import { Button } from "../../atoms/Button/Button";
 import { PassengerForm, getPassengerPrice, type IPassenger, type PassengerWithIndex } from "./PassengerForm";
 import { StripeWidget } from "../StripeWidget/StripeWidget";
+import { Button } from "~/components/ui/button";
 
 const formToParticipant = (form: Record<string, IPassenger>) => {
   return Object.values(form).map((input) => {
@@ -152,7 +152,6 @@ export const AwayGameForm = () => {
           })}
           <div className="flex flex-col space-y-2">
             <Button
-              type="button"
               onClick={() => {
                 setPassengers((prev) => [...prev, { index: prev.length, busId: firstAvailableBus?.id, }])
               }}

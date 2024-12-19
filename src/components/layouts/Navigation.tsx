@@ -3,8 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { featureFlags } from "~/utils/featureFlags";
-import { Button } from "../atoms/Button/Button";
-import { ButtonLink } from "../atoms/ButtonLink/ButtonLink";
+import { Button } from "../ui/button";
 
 interface UserMenuProps {
   className?: string
@@ -83,15 +82,19 @@ export const Navigation = () => {
         </div>
         <div className="flex items-center md:order-2">
           {!sessionData?.user.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
-            <ButtonLink className="!mb-0 mr-3 hidden md:block" href="/bli-medlem">
-              <p>Bli medlem</p>
-            </ButtonLink>
+            <Button className="!mb-0 mr-3 hidden md:block">
+              <Link href="/bli-medlem">
+                <p>Bli medlem</p>
+              </Link>
+            </Button>
           )}
           {!sessionData?.user && featureFlags.ENABLE_LOGIN && (
             <>
-              <ButtonLink className="!mb-0 hidden md:block mr-3" href="/skapakonto">
-                <p>Skapa konto</p>
-              </ButtonLink>
+              <Button className="!mb-0 hidden md:block mr-3">
+                <Link href="/skapakonto">
+                  <p>Skapa konto</p>
+                </Link>
+              </Button>
               <Button className="!mb-0 mr-3" onClick={async (e) => {
                 e.preventDefault();
                 await signIn();

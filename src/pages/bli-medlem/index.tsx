@@ -6,12 +6,12 @@ import toast from "react-hot-toast";
 import { type z } from "zod";
 import Accordion from "~/components/atoms/Accordion/Accordion";
 import { memberPerks } from "~/components/atoms/Accordion/accordionContent";
-import { Button } from "~/components/atoms/Button/Button";
 import Card from "~/components/atoms/CardLink/CardLink";
 import Checkbox from "~/components/atoms/Checkbox/Checkbox";
 import { InputField } from "~/components/atoms/InputField/InputField";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { StripeWidget } from "~/components/common/StripeWidget/StripeWidget";
+import { Button } from "~/components/ui/button";
 import { env } from "~/env.mjs";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
@@ -257,7 +257,6 @@ export const MemberPage = () => {
               />
               {membershipType === 'FAMILY' && (!additionalMembers || additionalMembers.length < 4) && (
                   <Button
-                    type="button"
                     onClick={() => {
                       const newMembers = [...(additionalMembers ?? [])];
                       newMembers.push({ firstName: '', lastName: '', email: '' });

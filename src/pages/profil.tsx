@@ -2,7 +2,7 @@ import { useSession } from "next-auth/react";
 import Card from "~/components/atoms/CardLink/CardLink";
 import LoginPage from "./loggain";
 import { InputField } from "~/components/atoms/InputField/InputField";
-import { Button } from "~/components/atoms/Button/Button";
+import { Button } from "~/components/ui/button";
 import { useEffect, useState } from "react";
 import { profileSchema } from "~/utils/zodSchemas";
 import toast from "react-hot-toast";

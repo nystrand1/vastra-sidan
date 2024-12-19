@@ -2,7 +2,7 @@ import { isAfter } from "date-fns";
 import Head from "next/head";
 import Card from "~/atoms/CardLink/CardLink";
 import { Progressbar } from "~/atoms/Progressbar/Progressbar";
-import { Button } from "~/components/atoms/Button/Button";
+import { Button } from "~/components/ui/button";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { api } from "~/utils/api";
 import { PATHS } from "~/utils/constants";

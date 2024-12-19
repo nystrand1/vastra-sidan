@@ -2,7 +2,7 @@ import { type inferRouterOutputs } from "@trpc/server";
 import { type GetStaticPropsContext, type InferGetStaticPropsType } from "next";
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import { Button } from "~/components/atoms/Button/Button";
+import { Button } from "~/components/ui/button";
 import { ButtonLink } from "~/components/atoms/ButtonLink/ButtonLink";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { env } from "~/env.mjs";

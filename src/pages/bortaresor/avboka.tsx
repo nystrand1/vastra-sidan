@@ -4,7 +4,7 @@ import { type GetServerSidePropsContext } from "next";
 import { useRouter } from "next/router";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
-import { Button } from "~/components/atoms/Button/Button";
+import { Button } from "~/components/ui/button";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { type AppRouter } from "~/server/api/root";
