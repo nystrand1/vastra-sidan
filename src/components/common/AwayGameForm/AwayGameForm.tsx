@@ -124,7 +124,7 @@ export const AwayGameForm = () => {
         await handleSubmit(event);
         setIsSubmitting(false);
       }} ref={formRef} className="w-full md:w-96">
-        <div className="w-full grid gap-8">
+        <div className="w-full grid gap-4">
           {passengers.map((passenger) => {
             return (
               <div key={passenger.index}>
@@ -150,8 +150,8 @@ export const AwayGameForm = () => {
               </div>
             )
           })}
-          <div className="flex flex-col space-y-2">
-            <Button
+          <div className="flex flex-col space-y-4">
+            <Button              
               onClick={() => {
                 setPassengers((prev) => [...prev, { index: prev.length, busId: firstAvailableBus?.id, }])
               }}

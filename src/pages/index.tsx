@@ -3,9 +3,8 @@ import { sv } from "date-fns/locale/sv";
 import Head from "next/head";
 import Card from "~/atoms/CardLink/CardLink";
 import { Progressbar } from "~/atoms/Progressbar/Progressbar";
-import { Button } from "~/components/ui/button";
-import { ButtonLink } from "~/components/atoms/ButtonLink/ButtonLink";
 import { Wysiwyg } from "~/components/atoms/Wysiwyg/Wysiwyg";
+import { Button } from "~/components/ui/button";
 import { api } from "~/utils/api";
 import { PATHS } from "~/utils/constants";
 import { createSSRHelper } from "~/utils/createSSRHelper";
@@ -47,40 +46,38 @@ export default function Home() {
           {latestNewsPost && (
             <Card
               title="Senaste nytt"
-              className="h-fit"
+              href={`/nyheter/${latestNewsPost.slug}`}
             >
               <p className="text-2xl font-semibold">{latestNewsPost.title}</p>
               <p className="text-gray-400">{latestNewsPost.date}</p>
               <Wysiwyg content={latestNewsPost.excerpt} />
-              <ButtonLink href={`/nyheter/${latestNewsPost.slug}`}>Läs mer</ButtonLink>
+              <Button>Läs mer</Button>
             </Card>
           )}
           <Card
             title="Antal medlemmar"
-            className={`w-full first-letter:space-y-0`}
-            contentClassName="flex flex-col justify-between h-full"
+            {...memberLink}
           >
             <p className="text-4xl">{member.count}</p>
             <p className="text-sm text-gray-500">Mål 2024, 1000 medlemmar</p>
             <p className="text-sm text-gray-500">Senast uppdaterad: {formatSwedishTime(member.updatedAt, "yyyy-MM-dd HH:mm", { locale: sv })}</p>
-            <ButtonLink {...memberLink} className="w-full">Bli medlem</ButtonLink>
+            <Button>Bli medlem</Button>
           </Card>
           {upcomingGame && (
             <Card
               title={`${upcomingGame.homeTeam} - ${upcomingGame.awayTeam}`}
-              className={`w-full first-letter:space-y-0 col-start-1`}
-              contentClassName="flex flex-col justify-between h-full"
+              href={upcomingGame.ticketLink}
             >
               <p className="text-md">{formatSwedishTime(upcomingGame.date, "dd MMMM yyyy HH:mm", { locale: sv, timeZone: 'Europe' })}, {upcomingGame.location}</p>
               <p className="text-4xl">{upcomingGame.ticketsSold} biljetter sålda</p>
               <p className="text-sm text-gray-500">Senast uppdaterad: {formatSwedishTime(upcomingGame.updatedAt, "yyyy-MM-dd HH:mm", { locale: sv })}</p>
-              <ButtonLink href={upcomingGame.ticketLink}>Köp biljett</ButtonLink>
+              <Button>Köp biljett</Button>
             </Card>
           )}
           {upcomingEvent && (
             <Card
               title="Nästa bortaresa"
-              link={`${PATHS.awayGames}${upcomingEvent.id}`}
+              href={`${PATHS.awayGames}${upcomingEvent.id}`}
             >
               <div className="space-y-1">
                 <p className="text-lg font-semibold">{upcomingEvent.name}</p>

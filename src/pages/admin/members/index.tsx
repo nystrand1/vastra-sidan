@@ -51,7 +51,7 @@ export default function Admin() {
             <Card 
               title={member.name}
               key={`${index}-${member.id}`}
-              link={`/admin/members/${member.id}`}
+              href={`/admin/members/${member.id}`}
             >
               <p>{member.activeMembership.name}</p>
               <p>{member.activeMembership.type}</p>

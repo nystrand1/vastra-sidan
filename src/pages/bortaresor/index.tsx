@@ -39,7 +39,7 @@ export default function AwaygamesPage() {
                 <div key={game.id} className={`col-span-12 md:col-span-6 xl:col-span-4 w-full ${centerClass}`}>
                 <Card
                   title={game.name}
-                  link={`${PATHS.awayGames}${game.id}`}
+                  href={`${PATHS.awayGames}${game.id}`}
                 >
                   <div className="space-y-1">
                     <p className="text-md font-semibold">Bussen avgår {formatSwedishTime(game.date, "HH:mm")}</p>

@@ -11,7 +11,7 @@ type Events = inferRouterOutputs<AppRouter>['admin']['getEvents']['pastEvents' |
 export const EventGrid = ({ events }: { events: Events }) => {
   return events && events.map((event) => (
     <div key={event.id} className="col-span-12 md:col-span-4">
-      <Card link={`/admin/events/${event.id}`} title={event.name}>
+      <Card href={`/admin/events/${event.id}`} title={event.name}>
         {event.buses && event.buses.map((bus) => (
           <Progressbar
             key={bus.id}

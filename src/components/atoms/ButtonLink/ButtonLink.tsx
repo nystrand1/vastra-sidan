@@ -8,8 +8,8 @@ interface ButtonLinkProps extends ButtonProps {
 
 export const ButtonLink = ({ children, href, target, ...props }: ButtonLinkProps) => {
   return (
-    <Button {...props}>
-      <Link href={href} target={target}>
+    <Button {...props} asChild>
+      <Link href={href} target={target} className="w-full h-full">
         {children}
       </Link>
     </Button>
