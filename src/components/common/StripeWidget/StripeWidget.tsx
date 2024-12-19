@@ -2,11 +2,11 @@ import { captureException, captureMessage } from "@sentry/nextjs";
 import { PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { Button } from "~/components/atoms/Button/Button";
-import Modal from "~/components/atoms/Modal/Modal";
 import { env } from "~/env.mjs";
+import DialogDrawer from "../DialogDrawer/DialogDrawer";
+import { Button } from "~/components/ui/button";
 
-interface StripeModalProps {
+interface StripeWidgetProps {
   isOpen: boolean;
   onClose: () => void;
   clientSecret?: string;
@@ -15,11 +15,11 @@ interface StripeModalProps {
 
 
 
-export const StripeModal = ({ isOpen, onClose, clientSecret, isMemberSignup } : StripeModalProps) => {
+export const StripeWidget = ({ isOpen, onClose, clientSecret, isMemberSignup } : StripeWidgetProps) => {
   const stripe = useStripe();
   
   const elements = useElements();
-  console.log('StripeModal', clientSecret, stripe, elements);
+
   const [isLoading, setIsLoading] = useState(false);
   const [stripeReady, setStripeReady] = useState(false);
   if (!clientSecret || !stripe || !elements) return null;
@@ -55,12 +55,9 @@ export const StripeModal = ({ isOpen, onClose, clientSecret, isMemberSignup } : 
       toast.success('Klart!', { id: toastId });
     }
   };
-  console.log('StripeModal ready');
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-    >
+
+  const content = (
+    <>
       <PaymentElement 
         onReady={() => setStripeReady(true)}
         options={{
@@ -74,6 +71,17 @@ export const StripeModal = ({ isOpen, onClose, clientSecret, isMemberSignup } : 
         }} 
       />
       <Button disabled={!stripe || isLoading || !stripeReady} className="w-full mt-3" onClick={onSubmit}>Betala</Button>
-    </Modal>
+      <Button variant="outline" className="w-full mt-3" onClick={onClose}>Avbryt</Button>
+    </>
+  )
+
+  return (
+    <DialogDrawer
+      content={content}
+      trigger={<></>}
+      open={isOpen}
+      setOpen={onClose}
+      disableOutsideClick
+    /> 
   )
 }
