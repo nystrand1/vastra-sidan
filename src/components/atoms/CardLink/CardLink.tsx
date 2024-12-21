@@ -33,7 +33,7 @@ const CardLink = ({ title, href, target, className, children, contentClassName, 
 
   if (href) {
     return (
-      <Link href={href} target={target}>
+      <Link className="block" href={href} target={target}>
         {card}
       </Link>
     )
