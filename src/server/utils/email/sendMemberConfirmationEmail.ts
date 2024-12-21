@@ -9,7 +9,7 @@ export const sendMemberConfirmationEmail = async (
   member: Member,
   membership: Membership
 ) => {
-  const memberUrl = `${env.MEMBERSHIP_URL}/${member.id}`;
+  const memberUrl = `${env.MEMBERSHIP_URL}/${member.memberToken}`;
   const formattedMember = {
     name: `${member.firstName} ${member.lastName}`,
     email: member.email,

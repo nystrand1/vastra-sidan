@@ -49,6 +49,9 @@ export const MemberSignup = ({
               <Text>
                 Om du har några frågor eller funderingar är du välkommen att kontakta oss på info@vastrasidan.se
               </Text>
+              <Text>
+                Du kan med fördel bokmärka länken nedan för att snabbt komma åt ditt medlemskap.
+              </Text>
             </Container>
             <Section>
               <Text className='text-2xl'>
