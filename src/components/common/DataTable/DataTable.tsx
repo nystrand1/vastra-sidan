@@ -25,12 +25,14 @@ import {
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
-  data: TData[]
+  data: TData[],
+  onRowClick?: (memberId: string) => void
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  onRowClick,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(
@@ -48,12 +50,15 @@ export function DataTable<TData, TValue>({
     state: {
       sorting,
       columnFilters,
+      columnVisibility: {
+        id: false,
+      }
     },
   })
 
   return (
     <div>
-      <div className="flex items-center py-4 px-2 space-x-4">
+      <div className="flex items-center py-4 space-x-4">
         <InputField
           label="Sök på email"
           placeholder="Sök på email"
@@ -115,6 +120,12 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  onClick={() => {
+                    const memberId = row.getValue('id')
+                    if (onRowClick && typeof memberId === 'string') {
+                      onRowClick(memberId)
+                    }
+                  }}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

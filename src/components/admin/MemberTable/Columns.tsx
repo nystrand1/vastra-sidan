@@ -10,6 +10,10 @@ export type Member = Awaited<ReturnType<typeof adminMemberFormatter>>;
  
 export const columns: ColumnDef<Member>[] = [
   {
+    accessorKey: 'id',
+    enableHiding: true,
+  },
+  {
     accessorKey: "name",
     header: ({ column }) => {
       return (
