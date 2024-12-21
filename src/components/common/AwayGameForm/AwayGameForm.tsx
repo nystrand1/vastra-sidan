@@ -58,6 +58,10 @@ export const AwayGameForm = () => {
   if (isLoading) return null;
   if (!awayGame) return null;
 
+  const totalPrice = passengers.reduce((acc, { member, youth }) => {
+    return acc + getPassengerPrice(!!member, !!youth, awayGame);
+  }, 0);
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -116,6 +120,8 @@ export const AwayGameForm = () => {
           isOpen={modalOpen} 
           onClose={() => setModalOpen(false)} 
           clientSecret={clientSecret} 
+          title={awayGame ? `${awayGame.name}: ${totalPrice} kr` : 'Betalning för bortaresa'}
+          subTitle={`${passengers.length} passagerare`}
         />
       </Elements>
     )}
@@ -159,9 +165,7 @@ export const AwayGameForm = () => {
                 Lägg till passagerare
               </Button>
             <Button disabled={isSubmitting || modalOpen} type="submit">Anmäl</Button>
-              <p className="text-center">Summa: {passengers.reduce((acc, { member, youth }) => {
-                return acc + getPassengerPrice(!!member, !!youth, awayGame);
-              }, 0)} kr</p>
+              <p className="text-center">Summa: {totalPrice} kr</p>
           </div>
         </div>
     </form>

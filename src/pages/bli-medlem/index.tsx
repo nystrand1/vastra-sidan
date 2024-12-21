@@ -13,6 +13,7 @@ import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { StripeWidget } from "~/components/common/StripeWidget/StripeWidget";
 import { Button } from "~/components/ui/button";
 import { env } from "~/env.mjs";
+import { friendlyMembershipNames } from "~/server/utils/membership";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 import { featureFlags } from "~/utils/featureFlags";
@@ -112,6 +113,7 @@ export const MemberPage = () => {
               setDisabled(false);
             }} 
             clientSecret={data.clientId} 
+            title={selectedMembership ? `${friendlyMembershipNames[selectedMembership.type]} - ${selectedMembership?.price / 100} kr` : 'Medlemskap'}
             isMemberSignup
           />
         </Elements>

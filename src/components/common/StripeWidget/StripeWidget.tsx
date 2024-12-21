@@ -11,11 +11,13 @@ interface StripeWidgetProps {
   onClose: () => void;
   clientSecret?: string;
   isMemberSignup?: boolean;
+  title?: string;
+  subTitle?: string;
 }
 
 
 
-export const StripeWidget = ({ isOpen, onClose, clientSecret, isMemberSignup } : StripeWidgetProps) => {
+export const StripeWidget = ({ title, subTitle, isOpen, onClose, clientSecret, isMemberSignup } : StripeWidgetProps) => {
   const stripe = useStripe();
   
   const elements = useElements();
@@ -58,6 +60,12 @@ export const StripeWidget = ({ isOpen, onClose, clientSecret, isMemberSignup } :
 
   const content = (
     <>
+      {title && (
+        <p className="text-xl">{title}</p>
+      )}
+      {subTitle && (
+        <p className="text-lg">{subTitle}</p>
+      )}
       <PaymentElement 
         onReady={() => setStripeReady(true)}
         options={{

@@ -24,7 +24,7 @@ const UserMenu = ({ className }: UserMenuProps) => {
         )}
       </div>
       <ul className="divide-ybg-gray-700 divide-gray-600 shadow rounded-b-lg" aria-labelledby="user-menu-button">
-        {featureFlags.ENABLE_MEMBERSHIPS && (
+        {featureFlags.ENABLE_MEMBERSHIPS && featureFlags.ENABLE_LOGIN && (
           <li>
             <Link href="/mina-medlemskap" className="block px-4 py-2 text-sm hover:bg-gray-600 text-gray-200 hover:text-white">Mina medlemskap</Link>
           </li>
