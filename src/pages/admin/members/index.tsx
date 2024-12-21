@@ -1,25 +1,15 @@
 import { Role } from "@prisma/client";
 import { useSession } from "next-auth/react";
-import { useState } from "react";
-import Card from "~/components/atoms/CardLink/CardLink";
-import { InputField } from "~/components/atoms/InputField/InputField";
+import { useRouter } from "next/router";
+import { columns } from "~/components/admin/MemberTable/Columns";
+import { DataTable } from "~/components/common/DataTable/DataTable";
+import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { api } from "~/utils/api";
-import Fuse from 'fuse.js';
 
-const fuseOptions = {
-	shouldSort: true,
-	minMatchCharLength: 3,
-	keys: [
-		"name",
-		"activeMembershipType",
-    "id",
-    "email",
-	]
-};
 
 export default function Admin() {
   const { data: sessionData } = useSession();
-  const [search, setSearch] = useState("");
+  const router = useRouter();
   const { data: members } = api.admin.getActiveMembers.useQuery(
     undefined,
     { enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN }
@@ -27,38 +17,19 @@ export default function Admin() {
 
   if (!members) {
     return <p className="text-center">Laddar...</p>
+
   }
-
-  const fuse = new Fuse(members, fuseOptions);
-
-  const filteredMembers = search.length > 2 ? fuse.search(search).map((result) => result.item) : members;
-
+  
   return (
     <div className="flex flex-col justify-center align-middle gap-4">
-      <h2 className="text-center text-xl">Medlemmar 2023</h2>
-      <div className="space-y-4 w-full md:w-96 m-auto">
-        <InputField 
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          label="Sök"
-        />
-        <div className="h-96 space-y-4 overflow-auto">
-          {filteredMembers?.map((member, index) => (
-            <Card 
-              title={member.name}
-              key={`${index}-${member.id}`}
-              link={`/admin/members/${member.id}`}
-            >
-              <p>{member.activeMembershipType}</p>
-              <p>Blev medlem {member.datePaid}</p>
-              {member.email && (
-                <p>{member.email}</p>
-              )}
-            </Card>
-          ))}
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <p className="text-3xl">Medlemsregister</p>
+        </CardHeader>
+        <CardContent>
+          <DataTable data={members} columns={columns} onRowClick={(id) => router.push(`/admin/members/${id}`)} />
+        </CardContent>
+      </Card>
     </div>
   )
 }

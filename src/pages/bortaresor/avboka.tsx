@@ -4,7 +4,7 @@ import { type GetServerSidePropsContext } from "next";
 import { useRouter } from "next/router";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
-import { Button } from "~/components/atoms/Button/Button";
+import { Button } from "~/components/ui/button";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { type AppRouter } from "~/server/api/root";
@@ -31,8 +31,8 @@ export const ParticipantInfo = ({
   }: Participant ) => {
   const query = useRouter().query;
   const { refetch: refetchParticipant } = api.eventPayment.getManagableBooking.useQuery({ token: query.token as string});
-  const { mutateAsync: cancelBooking, isLoading: isCancelling } = api.eventPayment.cancelBooking.useMutation();
-  const { mutateAsync: changeBus, isLoading: isChangingBus } = api.eventPayment.changeBus.useMutation();
+  const { mutateAsync: cancelBooking, isPending: isCancelling } = api.eventPayment.cancelBooking.useMutation();
+  const { mutateAsync: changeBus, isPending: isChangingBus } = api.eventPayment.changeBus.useMutation();
   const { mutateAsync: checkRefundStatus } = api.eventPayment.checkRefundStatus.useMutation();
 
   const [selectedBus, setSelectedBus] = useState(busId);

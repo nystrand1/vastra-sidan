@@ -1,39 +1,45 @@
 import Link from 'next/link';
 import { type PropsWithChildren } from "react";
+import { twMerge } from 'tailwind-merge';
+import { Card, CardContent, CardHeader } from '~/components/ui/card'
 
-interface CardProps extends PropsWithChildren {
+interface CardLinkProps extends PropsWithChildren {
   title?: string;
-  link?: string;
+  href?: string;
+  target?: string;
   className?: string;
   contentClassName?: string;
   titleClassName?: string;
   titleAsH1?: boolean;
 }
 
-const Card = ({ title, link, className, children, contentClassName, titleClassName, titleAsH1 }: CardProps) => {
-  const content = (
-    <div className={`flex flex-col justify-between space-y-4 ${contentClassName || ''}`}>
-      {title && (
-        titleAsH1 ? (
-            <h1 className={`text-xl font-semibold ${titleClassName || ''}`}>{title}</h1>
-          ) : (
-            <h2 className={`text-xl font-semibold ${titleClassName || ''}`}>{title}</h2>
-          )
-      )}
-      {children}
-    </div>
+const CardLink = ({ title, href, target, className, children, contentClassName, titleClassName, titleAsH1 }: CardLinkProps) => {
+  const card = (
+    <Card className={`overflow-hidden ${href ? 'cursor-pointer' : ''} ${className || ''}`}>
+      <CardHeader>
+        {title && (
+          titleAsH1 ? (
+              <h1 className={`text-xl font-semibold ${titleClassName || ''}`}>{title}</h1>
+            ) : (
+              <h2 className={`text-xl font-semibold ${titleClassName || ''}`}>{title}</h2>
+            )
+        )}
+      </CardHeader>
+      <CardContent className={twMerge("[&_button]:w-full space-y-4", contentClassName)}>
+        {children}
+      </CardContent>
+    </Card>
   )
-  return (
-    <div className={`bg-slate-800 text-slate-50 rounded-lg shadow-md p-4 overflow-hidden ${link ? 'cursor-pointer' : ''} ${className || ''}`}>
-      {link ? (
-        <Link href={link}>
-          {content}
-        </Link>
-      ) : (
-        content
-      )}
-    </div>
-  );
+
+  if (href) {
+    return (
+      <Link className="block" href={href} target={target}>
+        {card}
+      </Link>
+    )
+  }
+
+  return card;
 };
 
-export default Card;
+export default CardLink;

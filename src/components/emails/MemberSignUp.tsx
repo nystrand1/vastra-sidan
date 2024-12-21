@@ -1,47 +1,83 @@
-import { type Prisma } from '@prisma/client';
-import { Container, Head, Hr, Img, Section, Tailwind, Text } from "@react-email/components";
+import { MembershipType } from "@prisma/client";
+import { Button, Container, Head, Hr, Img, Section, Tailwind, Text } from "@react-email/components";
 import { Html } from '@react-email/html';
-import { friendlyMembershipNames } from '~/server/utils/membership';
 
 interface MemberSignupProps {
-  membership: Prisma.MembershipGetPayload<{
-    select: {
-      imageUrl: true;
-      type: true;
-      name: true;
-    }
-  }>
+  member: {
+    name: string,
+    email: string,
+    phone?: string,
+  },
+  membershipType: MembershipType,
+  memberUrl: string,
+  memberImageUrl: string,
 }
 
-const mockMembership: MemberSignupProps['membership'] = {
-  imageUrl: 'https://cmsdev.vastrasidan.se/wp-content/uploads/2021/03/Medlemskort-2021.png',
-  type: 'REGULAR',
-  name: 'Medlemskap'
+const mockMembership: MemberSignupProps = {
+  member: {
+    name: "Filip Nystrand",
+    email: "filip.nystrand@gmail.com",
+    phone: "0303000000",
+  },
+  membershipType: MembershipType.REGULAR,
+  memberUrl: "https://example.com",
+  memberImageUrl: "https://cmsdev.vastrasidan.se/wp-content/uploads/2021/03/Medlemskort-2021.png"
 }
 
 export const MemberSignup = ({
-  membership = mockMembership,
+  member = mockMembership.member,
+  memberImageUrl = mockMembership.memberImageUrl,
+  memberUrl = mockMembership.memberUrl,
 }: MemberSignupProps) => {
   return (
     <Tailwind>
-      <Html className="bg-slate-900">
+      <Html className="bg-slate-900 font-sans">
         <Head>
           <title>Tack för att du blivit medlem!</title>
         </Head>
         <Section className="bg-slate-900 p-4">
-          <Img src={membership.imageUrl} className="m-auto" style={{ maxHeight: 400 }} />
+          <Img src={memberImageUrl} className="m-auto" style={{ maxHeight: 400 }} />
         </Section>
         <Section className="bg-slate-800 p-4 text-white">
           <Container>
             <Text className="text-5xl text-center">Tack att du blivit medlem i Västra Sidan</Text>
             <Hr />
             <Container>
-              <Text className="text-lg">Medlemskap: {membership.name}, {friendlyMembershipNames[membership.type]}</Text>
               <Text>
                 Nu kan du njuta av alla medlemsförmåner som Västra Sidan har att erbjuda! Som t.ex rabatterade priser på Terassen i samband med matcher, samt billigare bussresor till bortamatcher.
               </Text>
+              <Text>
+                Om du har några frågor eller funderingar är du välkommen att kontakta oss på info@vastrasidan.se
+              </Text>
+              <Text>
+                Du kan med fördel bokmärka länken nedan för att snabbt komma åt ditt medlemskap.
+              </Text>
             </Container>
+            <Section>
+              <Text className='text-2xl'>
+                Dina uppgifter
+              </Text>
+              <Text>
+                {member.name}
+              </Text>
+              {member.email && (
+                <Text>
+                  {member.email}
+                </Text>
+              )}
+              {member.phone && (
+                <Text>
+                  {member.phone}
+                </Text>
+              )}
+            </Section>
             <Hr />
+            <Button
+              href={memberUrl}
+              className="bg-blue-500 hover:bg-blue-700 font-bold py-2 px-4 rounded text-white"
+            >
+              Visa medlemskap
+            </Button>
           </Container>
         </Section>
       </Html>

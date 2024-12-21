@@ -3,8 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { featureFlags } from "~/utils/featureFlags";
-import { Button } from "../atoms/Button/Button";
-import { ButtonLink } from "../atoms/ButtonLink/ButtonLink";
+import { Button } from "../ui/button";
 
 interface UserMenuProps {
   className?: string
@@ -25,7 +24,7 @@ const UserMenu = ({ className }: UserMenuProps) => {
         )}
       </div>
       <ul className="divide-ybg-gray-700 divide-gray-600 shadow rounded-b-lg" aria-labelledby="user-menu-button">
-        {featureFlags.ENABLE_MEMBERSHIPS && (
+        {featureFlags.ENABLE_MEMBERSHIPS && featureFlags.ENABLE_LOGIN && (
           <li>
             <Link href="/mina-medlemskap" className="block px-4 py-2 text-sm hover:bg-gray-600 text-gray-200 hover:text-white">Mina medlemskap</Link>
           </li>
@@ -66,11 +65,12 @@ export const Navigation = () => {
           <span className="self-center text-xl font-semibold whitespace-nowrap text-white">Västra Sidan</span>
         </Link>
         <div className="hidden md:flex flex-1 ml-10 flex-row space-x-4">
-          <Link className="hover:text-gray-200" href="https://apply.cardskipper.se/pxvo" target="_blank">Bli medlem</Link>
+          {!featureFlags.ENABLE_MEMBERSHIPS && (
+            <Link className="hover:text-gray-200" href="https://apply.cardskipper.se/pxvo" target="_blank">Bli medlem</Link>
+          )}
           {featureFlags.ENABLE_AWAYGAMES && (
             <Link className="hover:text-gray-200" href="/bortaresor">Bortaresor</Link>
           )}
-          <Link className="hover:text-gray-200" href="/nyheter/blasvart-jul">Blåsvart jul</Link>
           <Link className="hover:text-gray-200" href="/nyheter">Nyheter</Link>
           <Link className="hover:text-gray-200" href="/bortaguiden">Bortaguiden</Link>
           <Link className="hover:text-gray-200" href="/kronikor">Krönikor</Link>
@@ -81,15 +81,19 @@ export const Navigation = () => {
         </div>
         <div className="flex items-center md:order-2">
           {!sessionData?.user.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
-            <ButtonLink className="!mb-0 mr-3 hidden md:block" href="/bli-medlem">
-              <p>Bli medlem</p>
-            </ButtonLink>
+            <Button className="!mb-0 mr-3 hidden md:block">
+              <Link href="/bli-medlem">
+                <p>Bli medlem</p>
+              </Link>
+            </Button>
           )}
           {!sessionData?.user && featureFlags.ENABLE_LOGIN && (
             <>
-              <ButtonLink className="!mb-0 hidden md:block mr-3" href="/skapakonto">
-                <p>Skapa konto</p>
-              </ButtonLink>
+              <Button className="!mb-0 hidden md:block mr-3">
+                <Link href="/skapakonto">
+                  <p>Skapa konto</p>
+                </Link>
+              </Button>
               <Button className="!mb-0 mr-3" onClick={async (e) => {
                 e.preventDefault();
                 await signIn();
@@ -120,17 +124,16 @@ export const Navigation = () => {
         </div>
         <div className={`items-center justify-between w-full md:hidden md:w-auto md:order-1 ${open ? '' : 'hidden'}`} id="navbar-user">
           <ul onClick={() => setOpen(false)} className="divide-y flex flex-col font-medium mt-4 border rounded-lg bg-gray-800 border-gray-700">
-            <li className="divide-y divide-gray-100">
-              <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="https://apply.cardskipper.se/pxvo" target="_blank">Bli Medlem</Link>
-            </li>
+            {!featureFlags.ENABLE_MEMBERSHIPS && (
+              <li className="divide-y divide-gray-100">
+                <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="https://apply.cardskipper.se/pxvo" target="_blank">Bli Medlem</Link>
+              </li>
+            )}
             {featureFlags.ENABLE_AWAYGAMES && (
               <li className="divide-y divide-gray-100">
                 <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/bortaresor">Bortaresor</Link>
               </li>
             )}
-            <li className="divide-y divide-gray-100">
-              <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/nyheter/blasvart-jul">Blåsvart jul</Link>
-            </li>
             <li className="divide-y divide-gray-100">
               <Link className="block py-4 pl-3 pr-4 rounded md:p-0 text-white" href="/nyheter">Nyheter</Link>
             </li>

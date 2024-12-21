@@ -9,9 +9,9 @@ import { toast } from "react-hot-toast";
 import { env } from "~/env.mjs";
 import { participantSchema } from "~/utils/zodSchemas";
 import { api } from "../../../utils/api";
-import { Button } from "../../atoms/Button/Button";
-import { StripeModal } from "../StripeModal/StripeModal";
 import { PassengerForm, getPassengerPrice, type IPassenger, type PassengerWithIndex } from "./PassengerForm";
+import { StripeWidget } from "../StripeWidget/StripeWidget";
+import { Button } from "~/components/ui/button";
 
 const formToParticipant = (form: Record<string, IPassenger>) => {
   return Object.values(form).map((input) => {
@@ -52,11 +52,15 @@ export const AwayGameForm = () => {
       busId: firstAvailableBus?.id ?? '',
     }
     setPassengers([initialPassenger]);
-  }, [sessionData, firstAvailableBus])
+  }, [sessionData, firstAvailableBus, passengers.length]);
 
   if (!id) return null
   if (isLoading) return null;
   if (!awayGame) return null;
+
+  const totalPrice = passengers.reduce((acc, { member, youth }) => {
+    return acc + getPassengerPrice(!!member, !!youth, awayGame);
+  }, 0);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -112,10 +116,12 @@ export const AwayGameForm = () => {
     <>
     {clientSecret && (
       <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'night' }, locale: 'sv' }}>
-        <StripeModal 
+        <StripeWidget 
           isOpen={modalOpen} 
           onClose={() => setModalOpen(false)} 
           clientSecret={clientSecret} 
+          title={awayGame ? `${awayGame.name}: ${totalPrice} kr` : 'Betalning för bortaresa'}
+          subTitle={`${passengers.length} passagerare`}
         />
       </Elements>
     )}
@@ -124,7 +130,7 @@ export const AwayGameForm = () => {
         await handleSubmit(event);
         setIsSubmitting(false);
       }} ref={formRef} className="w-full md:w-96">
-        <div className="w-full grid gap-8">
+        <div className="w-full grid gap-4">
           {passengers.map((passenger) => {
             return (
               <div key={passenger.index}>
@@ -150,9 +156,8 @@ export const AwayGameForm = () => {
               </div>
             )
           })}
-          <div className="flex flex-col space-y-2">
-            <Button
-              type="button"
+          <div className="flex flex-col space-y-4">
+            <Button              
               onClick={() => {
                 setPassengers((prev) => [...prev, { index: prev.length, busId: firstAvailableBus?.id, }])
               }}
@@ -160,9 +165,7 @@ export const AwayGameForm = () => {
                 Lägg till passagerare
               </Button>
             <Button disabled={isSubmitting || modalOpen} type="submit">Anmäl</Button>
-              <p className="text-center">Summa: {passengers.reduce((acc, { member, youth }) => {
-                return acc + getPassengerPrice(!!member, !!youth, awayGame);
-              }, 0)} kr</p>
+              <p className="text-center">Summa: {totalPrice} kr</p>
           </div>
         </div>
     </form>

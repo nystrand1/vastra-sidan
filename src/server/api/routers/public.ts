@@ -12,6 +12,7 @@ import { GetNewsDocument } from "~/types/wordpresstypes/graphql";
 import { featureFlags } from "~/utils/featureFlags";
 import { parseDateString, stripHtmlTags } from "./wordpress";
 import { toUTCDate } from "~/server/utils/helpers";
+import { getMemberCount } from "~/server/utils/member/getMemberCount";
 
 export const busesWithPaidPassengers = {
   buses: {
@@ -94,8 +95,13 @@ export const publicRouter = createTRPCRouter({
         id: true,
         imageUrl: true,
         price: true,
+        name: true,
+      },
+      orderBy: {
+        endDate: 'desc'
       }
     });
+    console.log('res', res);
     return {
       regular: res.find((m) => m.type === MembershipType.REGULAR),
       family: res.find((m) => m.type === MembershipType.FAMILY),
@@ -103,7 +109,8 @@ export const publicRouter = createTRPCRouter({
     };
   }),
   getStartPage: publicProcedure.query(async ({ ctx }) => {
-    const memberCount = await getCardSkipperMemberCount();
+
+    const memberCount = featureFlags.ENABLE_MEMBERSHIPS ? await getMemberCount() : await getCardSkipperMemberCount();
     const upcomingEvent = featureFlags.ENABLE_AWAYGAMES ? await ctx.prisma.vastraEvent.findFirst({
       include: busesWithPaidPassengers,
       where: {

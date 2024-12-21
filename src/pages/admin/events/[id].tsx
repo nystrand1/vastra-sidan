@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { Button } from "~/components/atoms/Button/Button";
+import { Button } from "~/components/ui/button";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { OutlinedButton } from "~/components/atoms/OutlinedButton/OutlinedButton";
 import { Progressbar } from "~/components/atoms/Progressbar/Progressbar";

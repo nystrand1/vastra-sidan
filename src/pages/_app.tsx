@@ -12,8 +12,8 @@ import Layout from "~/components/layouts/Layout";
 import "~/styles/globals.css";
 import { api } from "~/utils/api";
 import { featureFlags } from "~/utils/featureFlags";
-setDefaultOptions({ locale: sv });
 
+setDefaultOptions({ locale: sv });
  
 const MyApp: AppType<{ session: Session | null}> = ({
   Component,

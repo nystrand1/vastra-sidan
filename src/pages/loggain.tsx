@@ -3,7 +3,7 @@ import Error from "next/error";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { Button } from "~/components/atoms/Button/Button";
+import { Button } from "~/components/ui/button";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { InputField } from "~/components/atoms/InputField/InputField";
 import { featureFlags } from "~/utils/featureFlags";

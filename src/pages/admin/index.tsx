@@ -37,9 +37,9 @@ export default function Admin() {
       {featureFlags.ENABLE_MEMBERSHIPS && (
         <Card 
           title="Antal medlemmar"
-          link="/admin/events"
+          href="/admin/events"
           className="w-full md:w-96 space-y-0 md:h-52"
-          contentClassName="flex flex-col justify-between h-full"
+          contentClassName="flex flex-col justify-between"
         >
           <p className="text-4xl">{members.length}</p>
           <ButtonLink href="/admin/members" className="w-full">Hantera medlemmar</ButtonLink>
@@ -47,9 +47,9 @@ export default function Admin() {
       )}
       <Card 
         title="Kommande bussresor"
-        link="/admin/events"
+        href="/admin/events"
         className="w-full md:w-96 space-y-0 md:h-52"
-        contentClassName="flex flex-col justify-between h-full"
+        contentClassName="flex flex-col justify-between"
       >
         {seats.totalSeats > 0 && (
           <Progressbar 

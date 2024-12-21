@@ -2,7 +2,7 @@ import { signIn } from "next-auth/react";
 import Error from "next/error";
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { Button } from "~/components/atoms/Button/Button";
+import { Button } from "~/components/ui/button";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { InputField } from "~/components/atoms/InputField/InputField";
 import { api } from "~/utils/api";

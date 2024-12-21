@@ -1,5 +1,4 @@
 import { useSession } from "next-auth/react";
-import Image from "next/image";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { api } from "~/utils/api";
 import { featureFlags } from "~/utils/featureFlags";
@@ -24,21 +23,7 @@ export const ProfilePage = () => {
           title="Mina medlemskap"
           className="w-full md:w-96"
         >
-          <div className="h-0.5 border-t-0 bg-neutral-100" />
-          {data.memberShips && data.memberShips.map((membership) => {
-            return (
-              <div className="flex flex-col space-y-2" key={membership.id}>
-                <p>{membership.name}</p>
-                <p>{membership.type}</p>
-                <div className="h-56 relative">
-                  <Image src={membership.imageUrl} fill alt={membership.name} style={{ objectFit: 'contain' }} />
-                </div>
-              </div>
-            )
-          })}
-          {!data.memberShips?.length && (
-            <p className="text-center">Du har inget medlemskap</p>
-          )}
+          <div className="h-0.5 border-t-0 bg-neutral-100" />          
         </Card>
     </div>
   )
@@ -49,13 +34,14 @@ export default ProfilePage;
 
 
 export const getStaticProps = () => {
-  if (!featureFlags.ENABLE_MEMBERSHIPS) {
+  if (!featureFlags.ENABLE_LOGIN || !featureFlags.ENABLE_MEMBERSHIPS) {
     return {
       notFound: true,
     }
   }
 
   return {
+    props: {},
     revalidate: 60,
   };
 }

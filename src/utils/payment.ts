@@ -1,6 +1,4 @@
 import { StripePaymentStatus, StripeRefundStatus } from "@prisma/client";
-import { v4 as uuidv4 } from 'uuid';
-import { env } from "~/env.mjs";
 import { delay } from "./helpers";
 
 export const pollPaymentStatus = async (
@@ -50,29 +48,3 @@ export const pollRefundStatus = async (
   await delay(1000);
   return pollRefundStatus(originalPaymentId, checkRefundStatus, attempt + 1);
 };
-
-interface CreatePaymentIntentPayload {
-  payerAlias: string;
-  amount: number;
-  message: string;
-  callbackEndPoint: "swishMemberCallback" | "swishEventCallback";
-}
-
-export const createPaymentReference = () => (
-  uuidv4().replaceAll("-", "").toUpperCase()
-);
-
-export const createPaymentIntentPayload = ({
-  payerAlias,
-  amount,
-  message,
-  callbackEndPoint
-}: CreatePaymentIntentPayload) => ({
-  payeePaymentReference: createPaymentReference(),
-  callbackUrl: `${env.API_URL}/payment/${callbackEndPoint}`,
-  payeeAlias: env.SWISH_NUMBER,
-  currency: "SEK",
-  message,
-  amount,
-  payerAlias: payerAlias.replaceAll("+46", "0")
-});
