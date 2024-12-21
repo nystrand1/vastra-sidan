@@ -3,11 +3,11 @@ import { ArrowUpDown } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { type adminMemberFormatter } from "~/server/utils/admin/getActiveMembers";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
- 
+
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
 export type Member = Awaited<ReturnType<typeof adminMemberFormatter>>;
- 
+
 export const columns: ColumnDef<Member>[] = [
   {
     accessorKey: 'id',
@@ -36,7 +36,18 @@ export const columns: ColumnDef<Member>[] = [
   },
   {
     accessorKey: "type",
-    header: "Typ",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          className="p-0 bg-transparent hover:bg-transparent"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Typ
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      )
+    },
     accessorFn: (row) => row.activeMembership.type
   },
   {

@@ -116,13 +116,13 @@ export const handleRefund = async (refund: Stripe.ChargeRefundedEvent) => {
   if (!refundIntent) {
     // Manual refund from Stripe dashboard
     if (status === 'succeeded') {
-      await prisma.stripeRefund.create({
+      const dbRefund = await prisma.stripeRefund.create({
         data: {
           status: StripeRefundStatus.REFUNDED,
           amount: refund.data.object.amount,
           stripeRefundId: refundId,
           originalPaymentId: payment.id,        
-        }
+        },
       });
       const membershipId = refund.data.object.metadata.membershipId;
       if (membershipId) {
@@ -136,17 +136,32 @@ export const handleRefund = async (refund: Stripe.ChargeRefundedEvent) => {
             },
           }
         });
+
+        // Attach a refund to the members
+        const refundPromise = prisma.stripeRefund.update({
+          where: {
+            id: dbRefund.id
+          },
+          data: {
+            members: {
+              connect: membersRelatedToRefund.map(m => ({ id: m.id }))
+            }
+          }
+        });
+
         // Remove the membership from the members
-        await prisma.membership.update({
+        const disconnectPromise = prisma.membership.update({
           where: {
             id: membershipId
           },
           data: {
             members: {
               disconnect: membersRelatedToRefund.map(m => ({ id: m.id }))
-            }
+            },            
           }
         });
+
+        await Promise.all([refundPromise, disconnectPromise]);
       }
     }
     if (status === 'failed') {
