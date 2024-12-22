@@ -17,7 +17,6 @@ declare module '@react-three/fiber' {
 }
 
 extend({ MeshLineGeometry, MeshLineMaterial })
-useGLTF.preload('/static/membercard_tag.glb');
 useTexture.preload('/static/membercard_band.jpg');
 useTexture.preload('/static/membercard_back.jpg');
 
@@ -29,7 +28,7 @@ interface BandAndCardProps {
   name?: string
   memberType?: string
   flipped?: boolean,
-  imageUrl?: string
+  textureUrl?: string
 }
 
 export default function BandAndCard({
@@ -37,7 +36,7 @@ export default function BandAndCard({
   minSpeed = 10,
   name = "Filip Nystrand",
   memberType = "Familjemedlemskap",
-  imageUrl = "/static/membercard_2021.jpg",
+  textureUrl = "https://cmsdev.vastrasidan.se/wp-content/uploads/2024/12/membercard_tag_vss.glb",
   flipped = true,
 }: BandAndCardProps) {
   const band = useRef() as RefObject<THREE.Mesh & { geometry: { setPoints: (points: THREE.Vector3[]) => void } }>;
@@ -51,10 +50,8 @@ export default function BandAndCard({
   const rot = new THREE.Vector3(0, 0, 0);
   const dir = new THREE.Vector3(0, 0, 0);
   const segmentProps = { type: 'dynamic', canSleep: true, angularDamping: 2, linearDamping: 2 }
-  const { nodes, materials } = useGLTF('/static/membercard_tag.glb');
+  const { nodes, materials } = useGLTF(textureUrl);
   const texture = useTexture('/static/membercard_band.jpg');
-  const cardTexture = useTexture(imageUrl);
-  const cardBackTexture = useTexture('/static/membercard_back.jpg');
   const { width, height } = useThree((state) => state.size)
   const [curve] = useState(() => new THREE.CatmullRomCurve3([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()]))
   const [dragged, drag] = useState<boolean | THREE.Vector3>(false)
@@ -114,7 +111,7 @@ export default function BandAndCard({
 
   curve.curveType = 'chordal'
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping
-
+  console.log('materials', materials);
   return (
     <>
       <group position={[0, 4, 0]} dispose={null}>
@@ -148,34 +145,29 @@ export default function BandAndCard({
               drag(new THREE.Vector3().copy(e.point).sub(vec.copy(card.current!.translation())));
             }}>
             <group dispose={null} position={[0, 0.5, 0]} rotation={[0, 0, 0]}>
-              <mesh rotation={[0, 0, 0]} dispose={null}>
-                <planeGeometry args={[0.7, 1 / 1]} />
-                <meshBasicMaterial map={cardTexture} side={THREE.FrontSide} />
-              </mesh>
-              <mesh rotation={[0, 0, 0]} material={materials.metal} dispose={null}>
-                <planeGeometry args={[0.7, 1 / 1]} />
-                <meshStandardMaterial map={cardBackTexture} side={THREE.BackSide} />
-                <Center scale={0.5} position={[0.5, -0.05, 0]}>
-                  <Html
-                    center
-                    transform
-                    className={twMerge('text-white text-right whitespace-nowrap flex w-36 m-auto transition-opacity opacity-0 delay-300', flipped ? 'opacity-100' : '')}
-                    scale={0.2}
-                    position={[-0.785, -0.35, 0]}
-                    rotation={[0, Math.PI, 0]}>
-                    {name}
-                  </Html>
-                  <Html
-                    center
-                    transform
-                    className={twMerge('text-white text-right whitespace-nowrap flex w-36 m-auto transition-opacity opacity-0 delay-300', flipped ? 'opacity-100' : '')}
-                    scale={0.15}
-                    position={[-0.7, -0.5, 0]}
-                    rotation={[0, Math.PI, 0]}>
-                    {memberType}
-                  </Html>
-                </Center>
-              </mesh>
+              <mesh geometry={(nodes.card as THREE.Mesh).geometry} position={[0, -0.5, 0]} material={materials.metal} material-roughness={0.3}>
+                <meshPhysicalMaterial map={(materials.base as THREE.MeshStandardMaterial)?.map} map-anisotropy={16} clearcoat={1} clearcoatRoughness={0.15} roughness={0.3} metalness={0.5} />
+                <Center scale={0.5} position={[0.5, 0.45, 0]}>
+                    <Html
+                      center
+                      transform
+                      className={twMerge('text-white text-right whitespace-nowrap flex w-36 m-auto transition-opacity opacity-0 delay-300', flipped ? 'opacity-100 animate-pulse' : '')}
+                      scale={0.2}
+                      position={[-0.785, -0.35, 0]}
+                      rotation={[0, Math.PI, 0]}>
+                      {name}
+                    </Html>
+                    <Html
+                      center
+                      transform
+                      className={twMerge('text-white text-right whitespace-nowrap flex w-36 m-auto transition-opacity opacity-0 delay-300', flipped ? 'opacity-100 animate-pulse' : '')}
+                      scale={0.15}
+                      position={[-0.7, -0.5, 0]}
+                      rotation={[0, Math.PI, 0]}>
+                      {memberType}
+                    </Html>
+                  </Center>
+              </mesh>                
             </group>
             <mesh dispose={null} geometry={'geometry' in nodes.clip! ? nodes.clip.geometry as THREE.BufferGeometry<THREE.NormalBufferAttributes> : undefined} material={materials.metal} material-roughness={0.3} />
             <mesh dispose={null} geometry={'geometry' in nodes.clamp! ? nodes.clamp.geometry as THREE.BufferGeometry<THREE.NormalBufferAttributes> : undefined} material={materials.metal} />
