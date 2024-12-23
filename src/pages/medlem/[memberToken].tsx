@@ -69,7 +69,7 @@ export const MemberPage = ({ memberToken }: InferGetStaticPropsType<typeof getSt
           flipped={flipped}
           imageUrl={`${env.NEXT_PUBLIC_WEBSITE_URL}/_next/image?url=${encodeURIComponent(activeMembership.imageUrl)}&w=640&q=75`}
         />
-        <div className="m-auto bottom-0 absolute w-52 md:w-64">
+        <div className="m-auto bottom-8 absolute w-52 md:w-64">
           <Button className="text-center w-full" onClick={() => setFlipped(!flipped)}>
             {flipped ? 'Vänd tillbaka' : 'Vänd'}
           </Button>

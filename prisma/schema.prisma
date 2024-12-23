@@ -50,6 +50,7 @@ model Membership {
   name           String
   wordpressId    String
   imageUrl       String
+  textureUrl     String?
   type           MembershipType
   price          Int
   startDate      DateTime
