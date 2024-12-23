@@ -1,6 +1,13 @@
 import { captureException } from '@sentry/nextjs';
 import { NextResponse } from 'next/server';
 
+const ALLOWED_ORIGINS = [
+  'https://api.vastrasidan.se',
+  'https://www.vastrasidan.se',
+  'https://cmsdev.vastrasidan.se',
+  'https://www.cmsdev.vastrasidan.se',
+]
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
@@ -8,6 +15,12 @@ export async function GET(request: Request) {
     if (!targetUrl) {
       return NextResponse.json({ error: 'No target URL provided' }, { status: 400 });
     }
+
+    const allowedUrl = ALLOWED_ORIGINS.find((origin) => targetUrl.startsWith(origin));
+    if (!allowedUrl) {
+      return NextResponse.json({ error: 'Invalid target URL' }, { status: 400 });
+    }
+
     const response = await fetch(targetUrl, {
       headers: request.headers,
       next: {
