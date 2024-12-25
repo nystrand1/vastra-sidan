@@ -59,7 +59,7 @@ export default function Home() {
             {...memberLink}
           >
             <p className="text-4xl">{member.count}</p>
-            <p className="text-sm text-gray-500">Mål 2024, 1000 medlemmar</p>
+            <p className="text-sm text-gray-500">Mål 2025, 1000 medlemmar</p>
             <p className="text-sm text-gray-500">Senast uppdaterad: {formatSwedishTime(member.updatedAt, "yyyy-MM-dd HH:mm", { locale: sv })}</p>
             <Button>Bli medlem</Button>
           </Card>
