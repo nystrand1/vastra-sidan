@@ -205,7 +205,6 @@ export const userRouter = createTRPCRouter({
   updateProfile: userProcedure
     .input(profileSchema)
     .mutation(async ({ ctx, input }) => {
-      console.log('test', ctx.session.user);
       if (!ctx.session.user.email) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -217,7 +216,6 @@ export const userRouter = createTRPCRouter({
           email: ctx.session.user.email
         }
       })
-      console.log('user', ctx.session.user.email);
       if (!user) {
         throw new TRPCError({
           code: "BAD_REQUEST",

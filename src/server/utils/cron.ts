@@ -165,7 +165,7 @@ export const wpMembershipToMembership = (
     wordpressId: wpMembership.id.toString(),
     name: wpMembership.title,
     imageUrl: wpMembership.membership.image.sourceUrl,
-    textureUrl: wpMembership.membership.model.sourceUrl,
+    textureUrl: wpMembership.membership.model.mediaItemUrl,
     type: membershipType,
     price: prices[membershipType],
     startDate: parseISO(wpMembership.membership.startDate),
