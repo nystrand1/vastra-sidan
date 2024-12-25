@@ -81,7 +81,9 @@ export const cronRouter = createTRPCRouter({
     const { data } = await ctx.apolloClient.query({
       query: GetMembershipsDocument
     })
+    console.log('data', JSON.stringify(data, null, 2));
     const memberships = data.memberships.nodes.flatMap(wpMembershipToMembership);
+    console.log('memberships', JSON.stringify(memberships, null, 2));
     await Promise.all(
       memberships.map((membership) => upsertMembership(membership, ctx))
     );
