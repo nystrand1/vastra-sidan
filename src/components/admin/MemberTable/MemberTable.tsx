@@ -58,7 +58,7 @@ export function MemberTable<TData, TValue>({
 
   return (
     <div>
-      <div className="flex items-center py-4 space-x-4">
+      <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 py-4 md:space-x-4">
         <InputField
           label="Sök på email"
           placeholder="Sök på email"
@@ -66,7 +66,7 @@ export function MemberTable<TData, TValue>({
           onChange={(event) =>
             table.getColumn("email")?.setFilterValue(event.target.value)
           }
-          className="max-w-sm"
+          className="w-full md:w-56"
         />
         <SelectField
           label="Medlemskap"
@@ -76,9 +76,9 @@ export function MemberTable<TData, TValue>({
           }
           options={[
             { value: "", label: "Alla" },
-            { value: "Medlemskap 2024", label: "Medlemskap 2024" },
             { value: "Medlemskap 2025", label: "Medlemskap 2025" },
           ]}
+          className="w-full md:w-56"
         />
         <SelectField
           label="Typ"
@@ -92,6 +92,7 @@ export function MemberTable<TData, TValue>({
             { value: "Ungdomsmedlemskap", label: "Ungdom" },
             { value: "Ordinarie medlemskap", label: "Vuxen" },
           ]}
+          className="w-full md:w-56"
         />
       </div>
       <div className="rounded-md border border-slate-600">

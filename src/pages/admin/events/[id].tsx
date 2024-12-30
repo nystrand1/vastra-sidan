@@ -17,14 +17,14 @@ export const AdminEventPage = () => {
     { enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN && !!query.id }
   );
 
-  if (!event && isLoading) {
+  if (!event || isLoading) {
     return <p className="text-center">Laddar event...</p>
   }
 
-  const amountYouthMembers = event?.participants.filter((participant) => participant.member && participant.youth).length;
-  const amountYouthNonMembers = event?.participants.filter((participant) => !participant.member && participant.youth).length;
-  const amountAdultMembers = event?.participants.filter((participant) => participant.member && !participant.youth).length;
-  const amountAdultNonMembers = event?.participants.filter((participant) => !participant.member && !participant.youth).length;
+  const amountYouthMembers = event.participants.filter((participant) => participant.member && participant.youth).length;
+  const amountYouthNonMembers = event.participants.filter((participant) => !participant.member && participant.youth).length;
+  const amountAdultMembers = event.participants.filter((participant) => participant.member && !participant.youth).length;
+  const amountAdultNonMembers = event.participants.filter((participant) => !participant.member && !participant.youth).length;
 
   const allOption = [{ label: "Alla", value: "" }];
   const busOptions = event?.buses.map((bus) => ({
@@ -38,7 +38,7 @@ export const AdminEventPage = () => {
     <div className="flex flex-col justify-center align-middle gap-4">
       <Card>
         <CardHeader>
-          <p className="text-3xl">Passagerare</p>
+          <p className="text-3xl">{event.title}</p>
         </CardHeader>
         <CardContent>
           <div className="flex flex-row gap-4 mb-2">

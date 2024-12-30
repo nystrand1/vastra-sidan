@@ -57,23 +57,31 @@ export function PassengerTable<TData, TValue>({
       columnFilters,
       columnVisibility: {
         id: false,
-      }
+      },
     },
   })
 
   return (
     <div>
-      <div className="flex items-center py-4 space-x-4">
+      <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 py-4 md:space-x-4">
         <InputField
           placeholder="Namn"
           label="Namn"
+          className="w-full md:w-56"
           onChange={(e) => table.getColumn('name')?.setFilterValue(e.target.value)}
+        />
+        <InputField
+          placeholder="Email"
+          label="Email"
+          className="w-full md:w-56"
+          onChange={(e) => table.getColumn('email')?.setFilterValue(e.target.value)}
         />
         {busOptions && (
           <SelectField
             label="Buss"
             value={table.getColumn('bus')?.getFilterValue() as string}
             options={busOptions}
+            className="w-full md:w-56"
             onChange={(e) => table.getColumn('bus')?.setFilterValue(e.target.value)}
           />
         )}
