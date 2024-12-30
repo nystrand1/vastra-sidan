@@ -10,8 +10,6 @@ import {
   useReactTable,
 } from "@tanstack/react-table"
 import { useState } from "react"
-import { InputField } from "~/components/atoms/InputField/InputField"
-import { SelectField } from "~/components/atoms/SelectField/SelectField"
 import { Button } from "~/components/ui/button"
 
 import {
@@ -23,17 +21,17 @@ import {
   TableRow,
 } from '~/components/ui/table'
 
-interface DataTableProps<TData, TValue> {
+interface EventTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[],
-  onRowClick?: (memberId: string) => void
+  onRowClick?: (id: string) => void
 }
 
-export function DataTable<TData, TValue>({
+export function EventTable<TData, TValue>({
   columns,
   data,
   onRowClick,
-}: DataTableProps<TData, TValue>) {
+}: EventTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(
     []
@@ -58,42 +56,6 @@ export function DataTable<TData, TValue>({
 
   return (
     <div>
-      <div className="flex items-center py-4 space-x-4">
-        <InputField
-          label="Sök på email"
-          placeholder="Sök på email"
-          value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("email")?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm"
-        />
-        <SelectField
-          label="Medlemskap"
-          value={(table.getColumn("membershipName")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("membershipName")?.setFilterValue(event.target.value)
-          }
-          options={[
-            { value: "", label: "Alla" },
-            { value: "Medlemskap 2024", label: "Medlemskap 2024" },
-            { value: "Medlemskap 2025", label: "Medlemskap 2025" },
-          ]}
-        />
-        <SelectField
-          label="Typ"
-          value={(table.getColumn("type")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("type")?.setFilterValue(event.target.value)
-          }
-          options={[
-            { value: "", label: "Alla" },
-            { value: "Familjemedlemskap", label: "Familj" },
-            { value: "Ungdomsmedlemskap", label: "Ungdom" },
-            { value: "Ordinarie medlemskap", label: "Vuxen" },
-          ]}
-        />
-      </div>
       <div className="rounded-md border border-slate-600">
         <Table>
           <TableHeader>

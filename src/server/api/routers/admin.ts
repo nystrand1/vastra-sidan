@@ -1,37 +1,20 @@
-import {
-  StripePaymentStatus,
-  StripeRefundStatus,
-  type Prisma
-} from "@prisma/client";
+import { type Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { adminProcedure, createTRPCRouter } from "~/server/api/trpc";
-import { formatActiveMember, getActiveMember } from "~/server/utils/admin/getActiveMember";
+import {
+  formatActiveMember,
+  getActiveMember
+} from "~/server/utils/admin/getActiveMember";
 import {
   adminMemberFormatter,
   getActiveMembers
 } from "~/server/utils/admin/getActiveMembers";
-
-const busesWithPaidPassengers = {
-  buses: {
-    include: {
-      passengers: {
-        where: {
-          stripePayments: {
-            some: {
-              status: StripePaymentStatus.SUCCEEDED
-            }
-          },
-          stripeRefunds: {
-            none: {
-              status: StripeRefundStatus.REFUNDED
-            }
-          }
-        }
-      }
-    }
-  }
-};
+import {
+  adminSingleEventFormatter,
+  getEvent
+} from "~/server/utils/admin/getEvent";
+import { adminEventFormatter, getEvents } from "~/server/utils/admin/getEvents";
 
 export type AdminUserProfile = Prisma.UserGetPayload<{
   select: {
@@ -64,97 +47,15 @@ export type AdminUserProfile = Prisma.UserGetPayload<{
 }>;
 
 export const adminRouter = createTRPCRouter({
-  getEvents: adminProcedure.query(async ({ ctx }) => {
-    const res = await ctx.prisma.vastraEvent.findMany({
-      include: busesWithPaidPassengers
-    });
-    return {
-      upcomingEvents: res
-        .filter((event) => event.date > new Date())
-        .map((event) => ({
-          ...event,
-          amountYouthNonMember: event.buses.reduce(
-            (acc, bus) =>
-              acc +
-              bus.passengers.filter(
-                (passenger) => passenger.youth && !passenger.member
-              ).length,
-            0
-          ),
-          amountAdultNonMember: event.buses.reduce(
-            (acc, bus) =>
-              acc +
-              bus.passengers.filter(
-                (passenger) => !passenger.youth && !passenger.member
-              ).length,
-            0
-          ),
-          amountYouthMember: event.buses.reduce(
-            (acc, bus) =>
-              acc +
-              bus.passengers.filter(
-                (passenger) => passenger.youth && passenger.member
-              ).length,
-            0
-          ),
-          amountAdultMember: event.buses.reduce(
-            (acc, bus) =>
-              acc +
-              bus.passengers.filter(
-                (passenger) => !passenger.youth && passenger.member
-              ).length,
-            0
-          )
-        })),
-      pastEvents: res
-        .filter((event) => event.date <= new Date())
-        .map((event) => ({
-          ...event,
-          amountYouthNonMember: event.buses.reduce(
-            (acc, bus) =>
-              acc +
-              bus.passengers.filter(
-                (passenger) => passenger.youth && !passenger.member
-              ).length,
-            0
-          ),
-          amountAdultNonMember: event.buses.reduce(
-            (acc, bus) =>
-              acc +
-              bus.passengers.filter(
-                (passenger) => !passenger.youth && !passenger.member
-              ).length,
-            0
-          ),
-          amountYouthMember: event.buses.reduce(
-            (acc, bus) =>
-              acc +
-              bus.passengers.filter(
-                (passenger) => passenger.youth && passenger.member
-              ).length,
-            0
-          ),
-          amountAdultMember: event.buses.reduce(
-            (acc, bus) =>
-              acc +
-              bus.passengers.filter(
-                (passenger) => !passenger.youth && passenger.member
-              ).length,
-            0
-          )
-        }))
-    };
+  getEvents: adminProcedure.query(async () => {
+    const events = await getEvents();
+    return events.map(adminEventFormatter);
   }),
   getEvent: adminProcedure
     .input(z.object({ id: z.string() }))
-    .query(async ({ input, ctx }) => {
-      const res = await ctx.prisma.vastraEvent.findFirst({
-        where: {
-          id: input.id
-        },
-        include: busesWithPaidPassengers
-      });
-      return res;
+    .query(async ({ input }) => {
+      const event = await getEvent(input.id);
+      return adminSingleEventFormatter(event);
     }),
   checkInParticipant: adminProcedure
     .input(z.object({ id: z.string(), checkedIn: z.boolean() }))
@@ -176,15 +77,15 @@ export const adminRouter = createTRPCRouter({
   getMemberById: adminProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input }) => {
-      const member = await getActiveMember(input.id)
+      const member = await getActiveMember(input.id);
       if (!member) {
         throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Member not found',
-        })
+          code: "NOT_FOUND",
+          message: "Member not found"
+        });
       }
       return {
-        ...formatActiveMember(member),
+        ...formatActiveMember(member)
       };
     })
 });
