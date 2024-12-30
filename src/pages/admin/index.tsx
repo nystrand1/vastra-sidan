@@ -2,7 +2,6 @@ import { Role } from "@prisma/client";
 import { useSession } from "next-auth/react";
 import { ButtonLink } from "~/components/atoms/ButtonLink/ButtonLink";
 import Card from "~/components/atoms/CardLink/CardLink";
-import { Progressbar } from "~/components/atoms/Progressbar/Progressbar";
 import { api } from "~/utils/api";
 import { featureFlags } from "~/utils/featureFlags";
 
@@ -21,17 +20,9 @@ export default function Admin() {
   if (!events || !members) {
     return <p className="text-center">Laddar...</p>
   }
-  const { upcomingEvents } = events;
+  const today = new Date();
+  const upcomingEvents = events.filter((event) => new Date(event.date) > today)
 
-  const seats = upcomingEvents.reduce((acc, event) => {
-    const bookedSeats = event.buses.reduce((acc, bus) => {
-      return acc + bus.passengers.length
-    }, 0)
-    const totalSeats = event.buses.reduce((acc, bus) => {
-      return acc + bus.seats
-    }, 0)
-    return { bookedSeats: acc.bookedSeats + bookedSeats, totalSeats: acc.totalSeats + totalSeats }
-  }, { bookedSeats: 0, totalSeats: 0 })
   return (
     <div className="flex flex-col md:flex-row justify-center align-middle gap-4">
       {featureFlags.ENABLE_MEMBERSHIPS && (
@@ -51,16 +42,7 @@ export default function Admin() {
         className="w-full md:w-96 space-y-0 md:h-52"
         contentClassName="flex flex-col justify-between"
       >
-        {seats.totalSeats > 0 && (
-          <Progressbar 
-            label="Total bokade platser"
-            maxValue={seats.totalSeats}
-            currentValue={seats.bookedSeats}
-          />
-        )}
-        {seats.totalSeats === 0 && (
-          <p className="text-center">Ingen resa planerad</p>
-        )}
+        <p className="text-4xl">{upcomingEvents.length}</p>
         <ButtonLink href="/admin/events" className="w-full">Se alla bussresor</ButtonLink>
       </Card>
     </div>
