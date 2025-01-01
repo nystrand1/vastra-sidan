@@ -60,9 +60,6 @@ export const StripeWidget = ({ title, subTitle, isOpen, onClose, clientSecret, i
 
   const content = (
     <>
-      {title && (
-        <p className="text-xl">{title}</p>
-      )}
       {subTitle && (
         <p className="text-lg">{subTitle}</p>
       )}
@@ -86,6 +83,7 @@ export const StripeWidget = ({ title, subTitle, isOpen, onClose, clientSecret, i
   return (
     <DialogDrawer
       content={content}
+      title={title}
       trigger={<></>}
       open={isOpen}
       setOpen={onClose}

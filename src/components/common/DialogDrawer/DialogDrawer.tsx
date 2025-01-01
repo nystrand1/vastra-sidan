@@ -76,7 +76,7 @@ export default function DialogDrawer({
               }}
               className={className}
             >
-              {title && <DialogTitle>{title}</DialogTitle>}
+              {title && <DialogTitle className='text-xl font-normal tracking-normal'>{title}</DialogTitle>}
               {content}
               {closeTrigger && <DialogTrigger asChild>{closeTrigger}</DialogTrigger>}
             </DialogContent>
