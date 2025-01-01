@@ -17,6 +17,7 @@ import {
   participantSchema
 } from "~/utils/zodSchemas";
 import { busesWithPaidPassengers } from "./public";
+import { paidPassengerQuery } from "~/server/utils/queryConstants/paidPassengerQuery";
 
 
 type ParticipantInput = z.infer<typeof participantSchema>;
@@ -119,18 +120,7 @@ export const eventPaymentRouter = createTRPCRouter({
                 select: {
                   _count: true
                 },
-                where: {
-                  stripePayments: {
-                    some: {
-                      status: StripePaymentStatus.SUCCEEDED
-                    }
-                  },
-                  stripeRefunds: {
-                    none: {
-                      status: StripeRefundStatus.REFUNDED
-                    }
-                  }
-                }
+                ...paidPassengerQuery,
               }
             }
           }
