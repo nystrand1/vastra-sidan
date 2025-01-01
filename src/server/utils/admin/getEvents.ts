@@ -1,4 +1,5 @@
-import { prisma } from "~/server/db"
+import { prisma } from "~/server/db";
+import { paidPassengerQuery } from "../queryConstants/paidPassengerQuery";
 
 
 type Event = Awaited<ReturnType<typeof getEvents>>[number];
@@ -20,10 +21,10 @@ export const adminEventFormatter = (event: Event) => {
 export const getEvents = async () => {
   const events = await prisma.vastraEvent.findMany({
     include: {
-      participants: true,
+      participants: paidPassengerQuery,
       buses: {
         include: {
-          passengers: true
+          passengers: paidPassengerQuery
         }
       }
     },

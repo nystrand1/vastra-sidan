@@ -1,5 +1,5 @@
-import { StripePaymentStatus, StripeRefundStatus } from "@prisma/client";
 import { prisma } from "~/server/db";
+import { paidPassengerQuery } from "../queryConstants/paidPassengerQuery";
 
 type Event = Awaited<ReturnType<typeof getEvent>>;
 
@@ -38,23 +38,10 @@ export const getEvent = async (id: string) => {
       id: id
     },
     include: {
-      participants: {
-        where: {
-          stripePayments: {
-            some: {
-              status: StripePaymentStatus.SUCCEEDED
-            }
-          },
-          stripeRefunds: {
-            none: {
-              status: StripeRefundStatus.REFUNDED
-            }
-          }
-        }
-      },
+      participants: paidPassengerQuery,
       buses: {
         include: {
-          passengers: true
+          passengers: paidPassengerQuery,
         }
       }
     }
