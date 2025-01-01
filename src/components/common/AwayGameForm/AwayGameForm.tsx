@@ -1,17 +1,16 @@
 import { captureException } from "@sentry/nextjs";
 import { Elements } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
 import { TRPCClientError } from "@trpc/client";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
-import { env } from "~/env.mjs";
+import { Button } from "~/components/ui/button";
+import getStripe from "~/utils/stripePromise";
 import { participantSchema } from "~/utils/zodSchemas";
 import { api } from "../../../utils/api";
-import { PassengerForm, getPassengerPrice, type IPassenger, type PassengerWithIndex } from "./PassengerForm";
 import { StripeWidget } from "../StripeWidget/StripeWidget";
-import { Button } from "~/components/ui/button";
+import { PassengerForm, getPassengerPrice, type IPassenger, type PassengerWithIndex } from "./PassengerForm";
 
 const formToParticipant = (form: Record<string, IPassenger>) => {
   return Object.values(form).map((input) => {
@@ -24,7 +23,7 @@ const formToParticipant = (form: Record<string, IPassenger>) => {
   })
 }
 
-const stripePromise = loadStripe(env.NEXT_PUBLIC_STRIPE_API_KEY);
+const stripePromise = getStripe();
 
 
 export const AwayGameForm = () => {

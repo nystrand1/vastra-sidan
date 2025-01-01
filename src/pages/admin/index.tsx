@@ -28,7 +28,6 @@ export default function Admin() {
       {featureFlags.ENABLE_MEMBERSHIPS && (
         <Card 
           title="Antal medlemmar"
-          href="/admin/events"
           className="w-full md:w-96 space-y-0 md:h-52"
           contentClassName="flex flex-col justify-between"
         >
@@ -38,7 +37,6 @@ export default function Admin() {
       )}
       <Card 
         title="Kommande bussresor"
-        href="/admin/events"
         className="w-full md:w-96 space-y-0 md:h-52"
         contentClassName="flex flex-col justify-between"
       >

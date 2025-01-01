@@ -1,5 +1,4 @@
 import { Elements } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
 import { useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
@@ -12,16 +11,16 @@ import { InputField } from "~/components/atoms/InputField/InputField";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { StripeWidget } from "~/components/common/StripeWidget/StripeWidget";
 import { Button } from "~/components/ui/button";
-import { env } from "~/env.mjs";
 import { friendlyMembershipNames } from "~/server/utils/membership";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 import { featureFlags } from "~/utils/featureFlags";
+import getStripe from "~/utils/stripePromise";
 import { memberSignupSchema } from "~/utils/zodSchemas";
 
 type AdditionalMember = NonNullable<z.infer<typeof memberSignupSchema>["additionalMembers"]>[number];
 
-const stripePromise = loadStripe(env.NEXT_PUBLIC_STRIPE_API_KEY);
+const stripePromise = getStripe();
 
 
 export const MemberPage = () => {
