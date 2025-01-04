@@ -1,16 +1,18 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Elements } from "@stripe/react-stripe-js";
-import { useSession } from "next-auth/react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { type z } from "zod";
 import Accordion from "~/components/atoms/Accordion/Accordion";
 import { memberPerks } from "~/components/atoms/Accordion/accordionContent";
 import Card from "~/components/atoms/CardLink/CardLink";
-import Checkbox from "~/components/atoms/Checkbox/Checkbox";
-import { InputField } from "~/components/atoms/InputField/InputField";
-import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { StripeWidget } from "~/components/common/StripeWidget/StripeWidget";
 import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "~/components/ui/form";
+import { Input } from "~/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { friendlyMembershipNames } from "~/server/utils/membership";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
@@ -24,28 +26,36 @@ const stripePromise = getStripe();
 
 
 export const MemberPage = () => {
-  const formRef = useRef<HTMLFormElement>(null);
-  const session = useSession();
-  const { user } = session.data ?? {};
-  const [email, setEmail] = useState(user?.email ?? "");
-  const [firstName, setFirstName] = useState(user?.firstName ?? "");
-  const [lastName, setLastName] = useState(user?.lastName ?? "");
-  const [phone, setPhone] = useState("");
-  const [additionalMembers, setAdditionalMembers] = useState<AdditionalMember[]>();
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const { data: memberships } = api.public.getAvailableMemberships.useQuery();
-  const [membershipId, setMembershipId] = useState(memberships?.regular?.id);
-  const [membershipType, setMembershipType] = useState(memberships?.regular?.type);
   const [disabled, setDisabled] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const { mutateAsync: createPaymentIntent, data } = api.memberPayment.requestPayment.useMutation();
+  const form = useForm<z.infer<typeof memberSignupSchema>>({
+    resolver: zodResolver(memberSignupSchema),
+  });
 
-  useEffect(() => {
-    if (membershipType !== 'FAMILY') {
-      setAdditionalMembers(undefined);
+  const additionalMembers = useFieldArray({
+    control: form.control,
+    name: 'additionalMembers',
+    rules: {
+      maxLength: 4,
     }
-  }, [membershipType])
+  });
+
+  const defaultFamilyMember: AdditionalMember = {
+    firstName: '',
+    lastName: '',
+    phone: '',
+    email: '',
+  }
+
+  const membershipId = form.watch('membershipId');
+
+  const membershipArray = Object.values(memberships ?? []);
+
+  form.setValue('membershipType', membershipArray.find((x) => x?.id === membershipId)?.type ?? 'REGULAR');
+
+  const { mutateAsync: createPaymentIntent, data } = api.memberPayment.requestPayment.useMutation();
 
   if (!memberships || !memberships.regular || !memberships.family || !memberships.youth) {
     return <p className="text-center text-xl">Finns inga medlemskap för tillfället!</p>
@@ -71,32 +81,17 @@ export const MemberPage = () => {
 
   const selectedMembership = Object.values(memberships).find((x) => x?.id === membershipId);
 
-  const handleSignup = async () => {
-    setDisabled(true);
-    const signUpPayload = {
-      firstName,
-      lastName,
-      email,
-      phone,
-      membershipId,
-      membershipType,
-      acceptedTerms,
-      additionalMembers
-    };
+  const membershipType = selectedMembership?.type;
 
-    const payload = memberSignupSchema.safeParse(signUpPayload);
-    if (!payload.success) {
-      payload.error.issues.map((x) => toast.error(x.message))
-      setDisabled(false);
-      return;
-    }
+  const handleSignup = async (data: z.infer<typeof memberSignupSchema>) => {
+    setDisabled(true);
     try {
       setModalOpen(true);
-      await createPaymentIntent(payload.data);
+      await createPaymentIntent(data);
     } catch (error) {
       console.log(error);
       const err = error as Error;
-      toast.error(err.message)      
+      toast.error(err.message)
       setDisabled(false);
     }
   }
@@ -106,12 +101,12 @@ export const MemberPage = () => {
       {data?.clientId && modalOpen && (
         <Elements stripe={stripePromise} options={{ clientSecret: data.clientId, appearance: { theme: 'night' }, locale: 'sv' }}>
           <StripeWidget
-            isOpen={modalOpen} 
+            isOpen={modalOpen}
             onClose={() => {
               setModalOpen(false);
               setDisabled(false);
-            }} 
-            clientSecret={data.clientId} 
+            }}
+            clientSecret={data.clientId}
             title={selectedMembership ? `${friendlyMembershipNames[selectedMembership.type]} - ${selectedMembership?.price / 100} kr` : 'Medlemskap'}
             isMemberSignup
           />
@@ -121,167 +116,173 @@ export const MemberPage = () => {
         {selectedMembership?.name && (
           <h1 className="text-3xl mb-4">{selectedMembership.name}</h1>
         )}
-        <Accordion items={[memberPerks]} className="mb-4 w-full"/>
-        <form className="w-full flex flex-col items-center justify-center" ref={formRef}>
+        <Accordion items={[memberPerks]} className="mb-4 w-full" />
+        <Form {...form}>
           <Card
             title="Bli medlem i Västra Sidan"
             className="w-full"
           >
-            <div className="space-y-4">
-              <InputField
-                type="name"
-                label="Förnamn"
-                placeholder="Förnamn..."
+            <form onSubmit={form.handleSubmit(handleSignup)}>
+              <FormField
+                control={form.control}
                 name="firstName"
-                required
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Förnamn</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Förnamn..." {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
               />
-              <InputField
-                type="name"
-                label="Efternamn"
-                placeholder="Efternamn..."
+              <FormField
+                control={form.control}
                 name="lastName"
-                required
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Efternamn</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Efternamn..." {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
               />
-              <InputField
-                type="email"
-                label="Email"
-                placeholder="Email..."
-                name="emailLogin"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Email..." {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
               />
-              <InputField
-                label="Mobilnummer"
-                placeholder="Mobil..."
+              <FormField
+                control={form.control}
                 name="phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mobilnummber</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Mobil..." {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
               />
-              <SelectField
-                label="Medlemskap"
-                name="membershipType"
-                value={membershipId}
-                options={memberShipOptions}
-                onChange={(e) => {
-                  setMembershipId(e.target.value);
-                  const membership = memberShipOptions.find((x) => x.value === e.target.value);
-                  setMembershipType(membership?.type);
-                }}
+              <FormField
+                control={form.control}
+                name="membershipId"
+                render={({ field }) => (
+                  <FormItem className='w-full'>
+                    <FormLabel>Medlemskap</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Välj medlemskap" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {memberShipOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormControl>
+                    </FormControl>
+                  </FormItem>
+                )}
               />
               {membershipType === 'FAMILY' && (
                 <div className="space-y-4">
-                {[...Array(4) as number[]].map((_, index) => (
-                  <div key={index} className="space-y-2">
-                    {additionalMembers?.[index] && (
-                      <>
-                        <div className="flex justify-between items-center">
-                          <h3 className="text-lg font-semibold">Familjemedlem {index + 1}</h3>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newMembers = [...(additionalMembers ?? [])];
-                              newMembers.splice(index, 1);
-                              setAdditionalMembers(newMembers);
-                            }}
-                            className="text-red-500 hover:text-red-600"
-                          >
-                            Ta bort
-                          </button>
-                        </div>
-                        <InputField
-                          type="name"
-                          label="Förnamn"
-                          placeholder="Förnamn..."
-                          value={additionalMembers[index].firstName}
-                          onChange={(e) => {
-                            const newMembers = [...(additionalMembers ?? [])];
-                            newMembers[index] = { ...newMembers[index] as AdditionalMember, firstName: e.target.value };
-                            setAdditionalMembers(newMembers);
-                          }}
-                          required
-                        />
-                        <InputField
-                          type="name"
-                          label="Efternamn"
-                          placeholder="Efternamn..."
-                          value={additionalMembers[index].lastName}
-                          onChange={(e) => {
-                            const newMembers = [...(additionalMembers ?? [])];
-                            newMembers[index] = { ...newMembers[index] as AdditionalMember, lastName: e.target.value };
-                            setAdditionalMembers(newMembers);
-                          }}
-                          required
-                        />
-                        <InputField
-                          type="email"
-                          label="Email"
-                          placeholder="Email..."
-                          value={additionalMembers[index].email}
-                          onChange={(e) => {
-                            const newMembers = [...(additionalMembers ?? [])];
-                            newMembers[index] = { ...newMembers[index] as AdditionalMember, email: e.target.value };
-                            setAdditionalMembers(newMembers);
-                          }}
-                          required
-                        />
-                        <InputField
-                          type="tel"
-                          label="Mobilnummer"
-                          placeholder="Mobil..."
-                          value={additionalMembers[index].phone}
-                          onChange={(e) => {
-                            const newMembers = [...(additionalMembers ?? [])];
-                            newMembers[index] = { ...newMembers[index] as AdditionalMember, phone: e.target.value };
-                            setAdditionalMembers(newMembers);
-                          }}
-                        />
-                      </>
-                    )}
-                  </div>
-                ))}                
-              </div>
+                  {additionalMembers.fields.map((member, index) => (
+                    <div key={member.id} className="space-y-4 border-t mt-4 pt-2">
+                      <div className='flex flex-row justify-between items-center'>
+                        <h2 className="text-xl">Familjemedlem {index + 1}</h2>
+                        <Button variant="link" className='text-destructive w-fit' type="button" onClick={() => additionalMembers.remove(index)}>Ta bort</Button>
+                      </div>
+                      <FormField
+                        control={form.control}
+                        name={`additionalMembers.${index}.firstName`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Förnamn</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Förnamn..." {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`additionalMembers.${index}.lastName`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Efternamn</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Efternamn..." {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`additionalMembers.${index}.email`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Email..." {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`additionalMembers.${index}.phone`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Mobilnummber</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Mobil..." {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  ))}
+                </div>
               )}
-              <Checkbox
-                id="terms"
-                label="Jag godkänner villkoren"
-                name="terms"
-                checked={acceptedTerms}
-                onChange={(e) => setAcceptedTerms(e.target.checked)}
-                required
-              />
-              {membershipType === 'FAMILY' && (!additionalMembers || additionalMembers.length < 4) && (
-                  <Button
-                    onClick={() => {
-                      const newMembers = [...(additionalMembers ?? [])];
-                      newMembers.push({ firstName: '', lastName: '', email: '' });
-                      setAdditionalMembers(newMembers);
-                    }}
-                    className="w-full"
-                  >
-                    Lägg till familjemedlem
-                  </Button>
+              <FormField
+                control={form.control}
+                name="acceptedTerms"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md p-4 shadow">
+                    <FormControl>
+                      <Checkbox onCheckedChange={field.onChange} checked={field.value} />
+                    </FormControl>
+                    <FormLabel>Jag godkänner villkoren</FormLabel>
+                  </FormItem>
                 )}
-              <Button
-                className="w-full"
-                type="submit"
-                onClick={(e) => {
-                  e.preventDefault();
-                  void handleSignup();
-                }}
-                disabled={!acceptedTerms || disabled}
-              >
-                Bli Medlem
-              </Button>
-            </div>
+              />
+              <div className='space-y-4'>
+                {membershipType === 'FAMILY' && (
+                  <Button className='w-full' type="button" onClick={() => additionalMembers.append(defaultFamilyMember)}>Lägg till familjemedlem</Button>
+                )}
+                <Button
+                  onClick={form.handleSubmit(handleSignup)}
+                  disabled={!form.formState.isValid || disabled}
+                  className='w-full'
+                >
+                  Bli medlem
+                </Button>
+              </div>
+            </form>
           </Card>
-        </form>
+        </Form>
       </div>
     </>
   )

@@ -25,7 +25,7 @@ const CardLink = ({ title, href, target, className, children, contentClassName, 
             )
         )}
       </CardHeader>
-      <CardContent className={twMerge("[&_button]:w-full space-y-4", contentClassName)}>
+      <CardContent className={twMerge("space-y-4", contentClassName)}>
         {children}
       </CardContent>
     </Card>
