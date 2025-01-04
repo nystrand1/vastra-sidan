@@ -49,12 +49,6 @@ export const MemberPage = () => {
     email: '',
   }
 
-  const membershipId = form.watch('membershipId');
-
-  const membershipArray = Object.values(memberships ?? []);
-
-  form.setValue('membershipType', membershipArray.find((x) => x?.id === membershipId)?.type ?? 'REGULAR');
-
   const { mutateAsync: createPaymentIntent, data } = api.memberPayment.requestPayment.useMutation();
 
   if (!memberships || !memberships.regular || !memberships.family || !memberships.youth) {
@@ -79,9 +73,18 @@ export const MemberPage = () => {
     }
   ];
 
+
+  const membershipId = form.watch('membershipId');
   const selectedMembership = Object.values(memberships).find((x) => x?.id === membershipId);
 
-  const membershipType = selectedMembership?.type;
+  const membershipType = selectedMembership?.type ?? 'REGULAR';
+
+  form.setValue('membershipType', membershipType);
+
+  if (membershipType !== 'FAMILY') {
+    form.setValue('additionalMembers', undefined);
+  }
+
 
   const handleSignup = async (data: z.infer<typeof memberSignupSchema>) => {
     setDisabled(true);
@@ -122,7 +125,7 @@ export const MemberPage = () => {
             title="Bli medlem i Västra Sidan"
             className="w-full"
           >
-            <form onSubmit={form.handleSubmit(handleSignup)}>
+            <form onSubmit={form.handleSubmit(handleSignup)} className='space-y-2'>
               <FormField
                 control={form.control}
                 name="firstName"
@@ -260,7 +263,7 @@ export const MemberPage = () => {
                 control={form.control}
                 name="acceptedTerms"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md p-4 shadow">
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md py-4 shadow">
                     <FormControl>
                       <Checkbox onCheckedChange={field.onChange} checked={field.value} />
                     </FormControl>
