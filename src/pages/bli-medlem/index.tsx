@@ -10,7 +10,7 @@ import Card from "~/components/atoms/CardLink/CardLink";
 import { StripeWidget } from "~/components/common/StripeWidget/StripeWidget";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "~/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { friendlyMembershipNames } from "~/server/utils/membership";
@@ -99,6 +99,7 @@ export const MemberPage = () => {
     }
   }
 
+  const hasErrors = Object.keys(form.formState.errors).length > 0;
   return (
     <>
       {data?.clientId && modalOpen && (
@@ -135,6 +136,7 @@ export const MemberPage = () => {
                     <FormControl>
                       <Input placeholder="Förnamn..." {...field} />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -147,6 +149,7 @@ export const MemberPage = () => {
                     <FormControl>
                       <Input placeholder="Efternamn..." {...field} />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -159,6 +162,7 @@ export const MemberPage = () => {
                     <FormControl>
                       <Input placeholder="Email..." {...field} />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -171,6 +175,7 @@ export const MemberPage = () => {
                     <FormControl>
                       <Input placeholder="Mobil..." {...field} />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -194,8 +199,7 @@ export const MemberPage = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormControl>
-                    </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -205,7 +209,9 @@ export const MemberPage = () => {
                     <div key={member.id} className="space-y-4 border-t mt-4 pt-2">
                       <div className='flex flex-row justify-between items-center'>
                         <h2 className="text-xl">Familjemedlem {index + 1}</h2>
-                        <Button variant="link" className='text-destructive w-fit' type="button" onClick={() => additionalMembers.remove(index)}>Ta bort</Button>
+                        {index > 0 && (
+                          <Button variant="link" className='text-destructive w-fit' type="button" onClick={() => additionalMembers.remove(index)}>Ta bort</Button>
+                        )}
                       </div>
                       <FormField
                         control={form.control}
@@ -263,7 +269,7 @@ export const MemberPage = () => {
                 control={form.control}
                 name="acceptedTerms"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md py-4 shadow">
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md py-4">
                     <FormControl>
                       <Checkbox onCheckedChange={field.onChange} checked={field.value} />
                     </FormControl>
@@ -272,16 +278,21 @@ export const MemberPage = () => {
                 )}
               />
               <div className='space-y-4'>
-                {membershipType === 'FAMILY' && (
+                {membershipType === 'FAMILY' && additionalMembers.fields.length < 4 && (
                   <Button className='w-full' type="button" onClick={() => additionalMembers.append(defaultFamilyMember)}>Lägg till familjemedlem</Button>
                 )}
                 <Button
                   onClick={form.handleSubmit(handleSignup)}
-                  disabled={!form.formState.isValid || disabled}
+                  disabled={disabled}
                   className='w-full'
                 >
                   Bli medlem
                 </Button>
+                {hasErrors && (
+                  <div className='text-destructive'>
+                    Kolla att du fyllt i alla uppgifter korrekt
+                  </div>
+                )}
               </div>
             </form>
           </Card>

@@ -1,27 +1,25 @@
+import { zodResolver } from "@hookform/resolvers/zod";
 import { captureException } from "@sentry/nextjs";
 import { Elements } from "@stripe/react-stripe-js";
 import { TRPCClientError } from "@trpc/client";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "react-hot-toast";
+import { twMerge } from "tailwind-merge";
+import { type z } from "zod";
 import { Button } from "~/components/ui/button";
+import { Card, CardContent } from "~/components/ui/card";
+import { Checkbox } from "~/components/ui/checkbox";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "~/components/ui/form";
+import { Input } from "~/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import getStripe from "~/utils/stripePromise";
-import { participantSchema } from "~/utils/zodSchemas";
+import { eventSignupSchema } from "~/utils/zodSchemas";
 import { api } from "../../../utils/api";
 import { StripeWidget } from "../StripeWidget/StripeWidget";
-import { PassengerForm, getPassengerPrice, type IPassenger, type PassengerWithIndex } from "./PassengerForm";
-
-const formToParticipant = (form: Record<string, IPassenger>) => {
-  return Object.values(form).map((input) => {
-    return {
-      ...input,
-      name: `${input.firstName} ${input.lastName}`,
-      member: !!input.member,
-      youth: !!input.youth,
-    }
-  })
-}
+import { getParticipantPrice } from "~/utils/event/getParticipantPrice";
+import { Textarea } from "~/components/ui/textarea";
 
 const stripePromise = getStripe();
 
@@ -32,55 +30,46 @@ export const AwayGameForm = () => {
   const { data: awayGame, isLoading } = api.public.getAwayGame.useQuery({ id: id });
   const { mutateAsync: createPaymentIntent, data: clientSecret } = api.eventPayment.requestStripePayment.useMutation();
 
-  const { data: sessionData } = useSession();
-  const [passengers, setPassengers] = useState<PassengerWithIndex[]>([{ index: 0 }]);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null); 
   const firstAvailableBus = awayGame?.buses.find((bus) => bus.availableSeats > 0);
-
-  useEffect(() => {
-    if (passengers.length > 1) return;
-    const initialPassenger: PassengerWithIndex = {
-      index: 0,
-      firstName: sessionData?.user.firstName ?? '',
-      lastName: sessionData?.user.lastName ?? '',
-      email: sessionData?.user.email ?? '',
-      member: !!sessionData?.user.isMember,
-      phone: sessionData?.user.phone ?? '',
-      busId: firstAvailableBus?.id ?? '',
+  const form = useForm<z.infer<typeof eventSignupSchema>>({
+    resolver: zodResolver(eventSignupSchema),
+    defaultValues: {
+      participants: [
+        {
+          firstName: '',
+          lastName: '',
+          email: '',
+          phone: '',
+          member: false,
+          youth: false,
+          busId: firstAvailableBus?.id ?? '',
+          consent: false,
+        }
+      ],
     }
-    setPassengers([initialPassenger]);
-  }, [sessionData, firstAvailableBus, passengers.length]);
+  });
+
+  const passengers = useFieldArray({
+    control: form.control,
+    name: 'participants',
+    rules: {
+      minLength: 1,
+    },
+  });
+  const [modalOpen, setModalOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   if (!id) return null
   if (isLoading) return null;
   if (!awayGame) return null;
 
-  const totalPrice = passengers.reduce((acc, { member, youth }) => {
-    return acc + getPassengerPrice(!!member, !!youth, awayGame);
+  const totalPrice = form.watch('participants').reduce((acc, { member, youth }) => {
+    return acc + getParticipantPrice(!!member, !!youth, awayGame);
   }, 0);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const values = Object.fromEntries(formData.entries());
-    const formattedValues = Object.entries(values).reduce((acc, [key, value]) => {
-      const [type, index] = key.split("_") as [string, string];
-      if (!acc[index]) acc[index] = {};
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      acc[index][type] = value;
-      if (["consent", "member", "youth"].includes(type)) {
-        // Handle checkbox values (on/off)
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        acc[index][type] = value === "on";
-      }
-      return acc;
-    }, {} as Record<string, any>);
-    const participants = participantSchema.array().parse(formToParticipant(formattedValues));
-    if (participants.length < 1) return;
+  const handleSubmit = async ({ participants }: z.infer<typeof eventSignupSchema>) => {
     setModalOpen(true);
-    
+
     const fullBusses = awayGame.buses.filter((bus) => {
       const participantsOnBus = participants.filter((p) => p.busId === bus.id);
       return bus.availableSeats < participantsOnBus.length;
@@ -113,61 +102,204 @@ export const AwayGameForm = () => {
 
   return (
     <>
-    {clientSecret && (
-      <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'night' }, locale: 'sv' }}>
-        <StripeWidget 
-          isOpen={modalOpen} 
-          onClose={() => setModalOpen(false)} 
-          clientSecret={clientSecret} 
-          title={awayGame ? `${awayGame.name}: ${totalPrice} kr` : 'Betalning för bortaresa'}
-          subTitle={`${passengers.length} passagerare`}
-        />
-      </Elements>
-    )}
-      <form onSubmit={async (event) => {
-        setIsSubmitting(true);
-        await handleSubmit(event);
-        setIsSubmitting(false);
-      }} ref={formRef} className="w-full md:w-96">
-        <div className="w-full grid gap-4">
-          {passengers.map((passenger) => {
-            return (
-              <div key={passenger.index}>
-                <PassengerForm
-                  buses={awayGame.buses}
-                  passenger={passenger}                  
-                  eventId={id}
-                  onChange={(x: Partial<IPassenger>) => {
-                    setPassengers(passengers.map((p) => {
-                      if (p.index === passenger.index) {
-                        return {
-                          ...p,
-                          ...x,
-                        }
-                      }
-                      return p;
-                    }))
+      {clientSecret && (
+        <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'night' }, locale: 'sv' }}>
+          <StripeWidget
+            isOpen={modalOpen}
+            onClose={() => setModalOpen(false)}
+            clientSecret={clientSecret}
+            title={awayGame ? `${awayGame.name}: ${totalPrice} kr` : 'Betalning för bortaresa'}
+            subTitle={`${passengers.fields.length} passagerare`}
+          />
+        </Elements>
+      )}
+      <Card>
+        <CardContent className="pt-4">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} ref={formRef} className="space-y-4">
+              {passengers.fields.map((_, index) => {
+                return (
+                  <div key={`passenger-${index}`} className={twMerge("space-y-2", index > 0 ? 'border-t pt-4' : '')}>
+                    <div className='flex flex-row justify-between items-center'>
+                      <h2 className="text-xl">Passagerare {index + 1}</h2>
+                      {index > 0 && (
+                        <Button variant="link" className='text-destructive w-fit' type="button" onClick={() => passengers.remove(index)}>Ta bort</Button>
+                      )}
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name={`participants.${index}.firstName`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Förnamn</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Förnamn..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`participants.${index}.lastName`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Efternamn</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Efternamn..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`participants.${index}.email`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Email..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`participants.${index}.phone`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Mobilnumber</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Mobil..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`participants.${index}.busId`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Buss</FormLabel>
+                          <Select defaultValue={firstAvailableBus?.id} onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Välj buss..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {awayGame.buses.map((bus) => (
+                                <SelectItem key={bus.id} value={bus.id}>
+                                  {bus.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField 
+                      control={form.control}
+                      name={`participants.${index}.note`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Övrigt</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="T.ex endast hem..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`participants.${index}.member`}
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md py-2">
+                          <FormControl>
+                            <Checkbox onCheckedChange={field.onChange} checked={field.value} />
+                          </FormControl>
+                          <FormMessage />
+                          <div>
+                            <FormLabel>
+                              Medlem
+                            </FormLabel>
+                            <FormMessage />
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`participants.${index}.youth`}
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md py-2">
+                          <FormControl>
+                            <Checkbox onCheckedChange={field.onChange} checked={field.value} />
+                          </FormControl>
+                          <div>
+                            <FormLabel>
+                              Ungdom (upp till 20 år)
+                            </FormLabel>
+                            <FormMessage />
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`participants.${index}.consent`}
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md py-2">
+                          <FormControl>
+                            <Checkbox onCheckedChange={field.onChange} checked={field.value} />
+                          </FormControl>
+                          <div>
+                            <FormLabel>
+                              Jag har läst & förstått reglerna kring bussresorna
+                            </FormLabel>
+                            <FormMessage />
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )
+              })}
+              <div className="flex flex-col space-y-4">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    passengers.append({
+                      firstName: '',
+                      lastName: '',
+                      email: '',
+                      phone: '',
+                      member: false,
+                      youth: false,
+                      busId: firstAvailableBus?.id ?? '',
+                      consent: false,
+                    });
                   }}
-                  onRemove={(x: number) => {
-                    setPassengers(passengers.filter((p) => p.index !== x));
-                  }} 
-                />
+                >
+                  Lägg till passagerare
+                </Button>
+                <Button disabled={form.formState.isSubmitting || modalOpen} type="submit">Anmäl</Button>
+                {!!form.formState.errors?.participants?.length && (
+                  <div className='text-destructive'>
+                    Kolla att du fyllt i alla uppgifter korrekt
+                  </div>
+                )}
+                <p className="text-center">Summa: {totalPrice} kr</p>
               </div>
-            )
-          })}
-          <div className="flex flex-col space-y-4">
-            <Button              
-              onClick={() => {
-                setPassengers((prev) => [...prev, { index: prev.length, busId: firstAvailableBus?.id, }])
-              }}
-              >
-                Lägg till passagerare
-              </Button>
-            <Button disabled={isSubmitting || modalOpen} type="submit">Anmäl</Button>
-              <p className="text-center">Summa: {totalPrice} kr</p>
-          </div>
-        </div>
-    </form>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
     </>
-);
+  );
 }

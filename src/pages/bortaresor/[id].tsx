@@ -31,33 +31,36 @@ export const BusPage = () => {
         <p className="text-3xl">
           Bussen avgår {formatSwedishTime(game.date, "HH:mm")}
         </p>
-        <Accordion
-          items={[
-            awayGameRules,
-            {
-              title: 'Bussinfo',
-              content: game.description
-            },
-            {
-              title: 'Priser',
-              content: (
-                <div className="space-y-1">
-                  <p className="text-sm">Pris vuxen medlem: {game.memberPrice} kr</p>
-                  <p className="text-sm">Pris vuxen icke medlem: {game.defaultPrice} kr</p>
-                  <p className="text-sm">Pris ungdom medlem: {game.youthMemberPrice} kr</p>
-                  <p className="text-sm">Pris ungdom icke medlem: {game.youthPrice} kr</p>
-                </div>
-              )
-            }
-          ]}
-          className="w-full space-y-6" 
-          />
-        {!gameExpired && (
-          <AwayGameForm />
-        )}
-        {gameExpired && (
-          <p className="text-white text-lg">Bussen har avgått</p>
-        )}
+        <div className="max-w-lg space-y-6">
+          <Accordion
+            items={[
+              awayGameRules,
+              {
+                title: 'Bussinfo',
+                content: game.description
+              },
+              {
+                title: 'Priser',
+                content: (
+                  <div className="space-y-1">
+                    <p className="text-sm">Pris vuxen medlem: {game.memberPrice} kr</p>
+                    <p className="text-sm">Pris vuxen icke medlem: {game.defaultPrice} kr</p>
+                    <p className="text-sm">Pris ungdom medlem: {game.youthMemberPrice} kr</p>
+                    <p className="text-sm">Pris ungdom icke medlem: {game.youthPrice} kr</p>
+                  </div>
+                )
+              }
+            ]}
+            className="w-full space-y-6" 
+            />
+          {!gameExpired && (
+            <AwayGameForm />
+          )}
+          {gameExpired && (
+            <p className="text-white text-lg">Bussen har avgått</p>
+          )}
+
+        </div>
       </div>
     </>
   )
