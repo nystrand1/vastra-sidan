@@ -6,14 +6,22 @@ import {
 import { z } from "zod";
 
 export const participantSchema = z.object({
-  name: z.string(),
-  email: z.string().email(),
-  phone: z.string(),
-  consent: z.literal(true),
+  firstName: z.string({ required_error: "Ange förnamn" }).min(1, { message: "Ange förnamn" }),
+  lastName: z.string({ required_error: "Ange efternamn" }).min(1, { message: "Ange efternamn" }),
+  email: z.string({ required_error: "Ange email" }).email({ message: "Felaktig email" }),
+  phone: z.string({ required_error: "Ange telefonnummer" }).min(1, { message: "Ange telefonnummer" }),
+  consent: z
+    .boolean()
+    .default(false)
+    .refine((x) => x, { message: "Du måste godkänna villkoren" }),
   note: z.string().optional(),
-  busId: z.string(),
+  busId: z.string({ required_error: "Välj buss" }).min(1, { message: "Välj buss" }),
   member: z.boolean(),
   youth: z.boolean()
+});
+
+export const eventSignupSchema = z.object({
+  participants: participantSchema.array()
 });
 
 const StripePaymentStatuses: [StripePaymentStatus, ...StripePaymentStatus[]] = [
@@ -89,43 +97,69 @@ export const loginSchema = z.object({
 
 export const memberSignupSchema = z
   .object({
-    firstName: z.string().min(1, { message: 'Ange förnamn' }),
-    lastName: z.string().min(1, { message: 'Ange efternamn' }),
-    email: z.string().email({ message: "Felaktig email" }),
-    acceptedTerms: z.literal<boolean>(true, { message: 'Du måste acceptera villkoren' }),
+    firstName: z
+      .string({ required_error: "Ange förnamn" })
+      .min(1, { message: "Ange förnamn" }),
+    lastName: z
+      .string({ required_error: "Ange efternamn" })
+      .min(1, { message: "Ange efternamn" }),
+    email: z
+      .string({ required_error: "Ange email" })
+      .email({ message: "Felaktig email" }),
+    acceptedTerms: z.literal<boolean>(true, {
+      message: "Du måste acceptera villkoren",
+      required_error: "Du måste acceptera villkoren",      
+    }),
     membershipType: z.nativeEnum(MembershipType),
-    membershipId: z.string().min(1),
-    phone: z.string().min(1, { message: 'Ange telefonnummer' }),
+    membershipId: z.string({ required_error: "Välj medlemskap" }).min(1),
+    phone: z
+      .string({ required_error: "Ange telefonnummer" })
+      .min(1, { message: "Ange telefonnummer" }),
     additionalMembers: z
       .array(
         z.object({
-          firstName: z.string().min(1, { message: 'Ange förnamn' }),
-          lastName: z.string().min(1, { message: 'Ange efternamn' }),
+          firstName: z
+            .string({ required_error: "Ange förnamn" })
+            .min(1, { message: "Ange förnamn" }),
+          lastName: z
+            .string({ required_error: "Ange efternamn" })
+            .min(1, { message: "Ange efternamn" }),
           phone: z.string().optional(),
-          email: z.string().email({ message: "Felaktig email" }),
+          email: z
+            .string({ required_error: "Ange email" })
+            .email({ message: "Felaktig email" })
         })
       )
       .optional()
   })
-  .refine((x) => {
-    // Require additional members if membership type is family
-    if (x.membershipType === MembershipType.FAMILY) {
-      return x.additionalMembers && x.additionalMembers.length > 0;
-    }
-    return true;
-  }, { message: 'Familjemedlemskap kräver minst en familjemedlem' });
+  .refine(
+    (x) => {
+      // Require additional members if membership type is family
+      if (x.membershipType === MembershipType.FAMILY) {
+        return x.additionalMembers && x.additionalMembers.length > 0;
+      }
+      return true;
+    },
+    { message: "Familjemedlemskap kräver minst en familjemedlem" }
+  );
 
 export const profileSchema = z.object({
-  firstName: z.string().min(1, { message: "Förnamn måste vara minst 1 tecken" }),
-  lastName: z.string().min(1, { message: "Efternamn måste vara minst 1 tecken" }),
+  firstName: z
+    .string()
+    .min(1, { message: "Förnamn måste vara minst 1 tecken" }),
+  lastName: z
+    .string()
+    .min(1, { message: "Efternamn måste vara minst 1 tecken" }),
   email: z.string().email({ message: "Felaktig email" }),
-  phone: z.string().min(1, { message: "Felaktigt nummer" }),
-})
-
-export const updatePasswordSchema = z.object({
-  oldPassword: z.string().min(8).max(64),
-  newPassword: z.string().min(8).max(64),
-  confirmPassword: z.string().min(8).max(64)
-}).refine((x) => x.newPassword === x.confirmPassword, {
-  message: "Lösenorden matchar inte"
+  phone: z.string().min(1, { message: "Felaktigt nummer" })
 });
+
+export const updatePasswordSchema = z
+  .object({
+    oldPassword: z.string().min(8).max(64),
+    newPassword: z.string().min(8).max(64),
+    confirmPassword: z.string().min(8).max(64)
+  })
+  .refine((x) => x.newPassword === x.confirmPassword, {
+    message: "Lösenorden matchar inte"
+  });

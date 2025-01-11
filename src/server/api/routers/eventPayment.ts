@@ -49,7 +49,7 @@ export type ParticipantWithParticipants = Prisma.ParticipantGetPayload<{
 }>;
 
 const getParticipantCost = (
-  participant: Omit<ParticipantInput, "consent">,
+  participant: Pick<ParticipantInput, "youth" | "member">,
   event: VastraEvent
 ) => {
   if (participant.youth && participant.member) {
@@ -152,10 +152,11 @@ export const eventPaymentRouter = createTRPCRouter({
       try {
         // Create participants for event
         const participants = await ctx.prisma.$transaction(
-          input.participants.map(({ consent: _consent, ...participant }) =>
+          input.participants.map(({ consent: _consent, firstName, lastName, ...participant }) =>
             ctx.prisma.participant.create({
               data: {
                 ...participant,
+                name: `${firstName} ${lastName}`,
                 userEmail: participant.email,
                 payAmount: getParticipantCost(participant, event),
                 eventId: event.id
