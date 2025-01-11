@@ -101,7 +101,6 @@ export const publicRouter = createTRPCRouter({
         endDate: 'desc'
       }
     });
-    console.log('res', res);
     return {
       regular: res.find((m) => m.type === MembershipType.REGULAR),
       family: res.find((m) => m.type === MembershipType.FAMILY),

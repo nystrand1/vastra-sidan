@@ -81,8 +81,8 @@ export const Navigation = () => {
         </div>
         <div className="flex items-center md:order-2">
           {!sessionData?.user.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
-            <Button className="!mb-0 mr-3 hidden md:block">
-              <Link href="/bli-medlem">
+            <Button asChild>
+              <Link href="/bli-medlem" className="!mb-0 mr-3 hidden md:flex md:items-center">
                 <p>Bli medlem</p>
               </Link>
             </Button>
