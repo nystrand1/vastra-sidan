@@ -1,6 +1,7 @@
 import Head from "next/head";
 import Link from "next/link";
 import Card from "~/components/atoms/CardLink/CardLink";
+import { Button } from "~/components/ui/button";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 
@@ -19,20 +20,24 @@ export default function SeasonBySeasonPage() {
         <meta name="description" key="description" content={seoDescription} />
       </Head>
       <div>
-        <h1 className="text-center mb-4 text-5xl">Säsong för säsong</h1>
+        <h1 className="text-center my-8 text-5xl">Säsong för säsong</h1>
         <div className="flex flex-col md:flex-row gap-4 md:items-stretch flex-wrap justify-center">
-          <Card title="Fotboll" className="w-full md:w-96" titleClassName="!text-3xl">
+          <Card title="Fotboll" className="w-full md:w-96 flex flex-col justify-start" titleClassName="!text-3xl">
             {awayGuides.fotball?.map((guide) => (
-              <Link prefetch={false} className="ml-4 hover:text-gray-200" href={`/sasongforsasong/${guide.slug}`} key={`fotboll-${guide.seasonChronicleContent.title}`}>
-                {guide.seasonChronicleContent.title}
-              </Link>
+              <Button asChild variant="link" className="text-white w-fit" key={`fotboll-${guide.seasonChronicleContent.title}`}>
+                <Link prefetch={false} href={`/sasongforsasong/${guide.slug}`}>
+                  {guide.seasonChronicleContent.title}
+                </Link>
+              </Button>
             ))}
           </Card>
           <Card title="Bandy" className="w-full md:w-96" titleClassName="!text-3xl">
             {awayGuides.bandy?.map((guide) => (
-              <Link prefetch={false} className="ml-4 hover:text-gray-200" href={`/sasongforsasong/${guide.slug}`} key={`bandy-${guide.seasonChronicleContent.title}`}>
-                {guide.seasonChronicleContent.title}
-              </Link>
+              <Button asChild variant="link" className="text-white w-fit" key={`bandy-${guide.seasonChronicleContent.title}`}>
+                <Link prefetch={false} href={`/sasongforsasong/${guide.slug}`}>
+                  {guide.seasonChronicleContent.title}
+                </Link>
+              </Button>
             ))}
           </Card>
         </div>

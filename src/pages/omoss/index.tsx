@@ -23,7 +23,7 @@ export const AboutUsPage = () => {
       </Head>
       <div>
         <h1 className="text-center mb-4 text-5xl">Om oss</h1>
-        <div className="flex justify-center space-x-5 py-6 text-lg underline underline-offset-4">
+        <div className="flex flex-col md:flex-row justify-center md:space-x-5 py-6 text-lg underline underline-offset-4">
           <Link className="hover:text-gray-200" href="/omoss/stadgar">
             Stadgar
           </Link>

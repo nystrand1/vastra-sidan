@@ -27,7 +27,7 @@ export default function NewsPage() {
             <Card key={slug} titleClassName="text-center" contentClassName="md:!grid md:!grid-cols-2 md:gap-4 md:space-y-0">
               <div className="relative aspect-video rounded-md overflow-hidden md:order-2 md:my-auto">
                 {image ? (
-                  <Image className="object-fill" src={image.sourceUrl} alt={image.altText} fill />
+                  <Image className="object-cover" src={image.sourceUrl} alt={image.altText} fill />
                 ) : (
                   <Image className="object-contain" src="/static/logo.png" alt="Västra Sidan logo" fill />
                 )}
@@ -39,7 +39,7 @@ export default function NewsPage() {
                   <p className="text-gray-400 !mt-0">{author}</p>
                 </div>
                 <Wysiwyg content={excerpt} />
-                <ButtonLink className="justify-end md:w-96 md:m-auto" href={`/nyheter/${slug}`}>Läs mer</ButtonLink>
+                <ButtonLink className="md:w-96 md:m-auto [&>*]:h-auto h-auto" href={`/nyheter/${slug}`}>Läs mer</ButtonLink>
               </div>
             </Card>
           ))}
