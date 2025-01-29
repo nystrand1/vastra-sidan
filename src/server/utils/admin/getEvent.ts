@@ -27,7 +27,8 @@ export const adminSingleEventFormatter = (event: Event) => {
         checkedIn: passenger.checkedIn,
         member: passenger.member,
         youth: passenger.youth,
-        date: passenger.createdAt
+        date: passenger.createdAt,
+        note: passenger.note,
       }))
   };
 };
