@@ -3,6 +3,7 @@ import { type GetServerSidePropsContext } from "next";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { columns } from "~/components/admin/PassengerTable/Columns";
+import { DownloadPassengerListCsv } from "~/components/admin/PassengerTable/DownloadPassengerListCsv";
 import { PassengerTable } from "~/components/admin/PassengerTable/PassengerTable";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { prisma } from "~/server/db";
@@ -39,6 +40,7 @@ export const AdminEventPage = () => {
       <Card>
         <CardHeader>
           <p className="text-3xl">{event.title}</p>
+          <DownloadPassengerListCsv passengers={event.participants} title={event.title} />
         </CardHeader>
         <CardContent>
           <div className="flex flex-row gap-4 mb-2">

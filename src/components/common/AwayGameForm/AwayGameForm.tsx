@@ -43,6 +43,7 @@ export const AwayGameForm = () => {
           member: false,
           youth: false,
           busId: firstAvailableBus?.id ?? '',
+          note: '',
           consent: false,
         }
       ],

@@ -2,6 +2,7 @@ import { Role } from "@prisma/client";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { columns } from "~/components/admin/MemberTable/Columns";
+import { DownloadMemberListButton } from "~/components/admin/MemberTable/DownloadMemberListButton";
 import { MemberTable } from "~/components/admin/MemberTable/MemberTable";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { api } from "~/utils/api";
@@ -25,6 +26,7 @@ export default function Admin() {
       <Card>
         <CardHeader>
           <p className="text-3xl">Medlemsregister</p>
+          <DownloadMemberListButton members={members} />
         </CardHeader>
         <CardContent>
           <MemberTable data={members} columns={columns} onRowClick={(id) => router.push(`/admin/members/${id}`)} />

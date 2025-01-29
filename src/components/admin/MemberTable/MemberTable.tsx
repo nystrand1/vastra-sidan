@@ -56,6 +56,7 @@ export function MemberTable<TData, TValue>({
     },
   })
 
+
   return (
     <div>
       <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 py-4 md:space-x-4">
