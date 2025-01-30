@@ -163,3 +163,9 @@ export const updatePasswordSchema = z
   .refine((x) => x.newPassword === x.confirmPassword, {
     message: "Lösenorden matchar inte"
   });
+
+export const updateMemberSchema = z.object({
+  id: z.string(),
+  email: z.string().email().optional(),
+  phone: z.string().optional()
+});

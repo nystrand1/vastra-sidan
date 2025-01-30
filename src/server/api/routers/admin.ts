@@ -16,6 +16,7 @@ import {
 } from "~/server/utils/admin/getEvent";
 import { adminEventFormatter, getEvents } from "~/server/utils/admin/getEvents";
 import { sendMemberConfirmationEmail } from "~/server/utils/email/sendMemberConfirmationEmail";
+import { updateMemberSchema } from "~/utils/zodSchemas";
 
 export type AdminUserProfile = Prisma.UserGetPayload<{
   select: {
@@ -100,5 +101,16 @@ export const adminRouter = createTRPCRouter({
         });
       }
       await sendMemberConfirmationEmail(member, member.memberships[0]);
+    }),
+  updateMember: adminProcedure
+    .input(updateMemberSchema)
+    .mutation(async ({ input, ctx }) => {
+      await ctx.prisma.member.update({
+        where: { id: input.id },
+        data: {
+          email: input.email ?? undefined,
+          phone: input.phone ?? undefined
+        }
+      });
     })
 });
