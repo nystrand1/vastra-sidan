@@ -109,7 +109,7 @@ export default function AdminMemberPage() {
               Skicka medlemslänk
             </Button>
             <Button asChild variant="outline">
-              <Link href={`/medlemskort/${member.token}`}>
+              <Link href={`/medlem/${member.token}`}>
                   <IdCardIcon />
                   Visa medlemskort
               </Link>
