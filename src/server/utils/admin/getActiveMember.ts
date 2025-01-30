@@ -19,6 +19,7 @@ export const formatActiveMember = (member: NonNullable<ActiveMember>) => {
     name: member.firstName + " " + member.lastName,
     email: member.email,
     phone: member.phone,
+    token: member.memberToken,
     activeMembership: {
       type: friendlyMembershipNames[activeMembership.type],
       becameMemberAt: stripePayment.createdAt,
