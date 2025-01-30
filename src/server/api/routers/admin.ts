@@ -15,6 +15,8 @@ import {
   getEvent
 } from "~/server/utils/admin/getEvent";
 import { adminEventFormatter, getEvents } from "~/server/utils/admin/getEvents";
+import { sendMemberConfirmationEmail } from "~/server/utils/email/sendMemberConfirmationEmail";
+import { updateMemberSchema } from "~/utils/zodSchemas";
 
 export type AdminUserProfile = Prisma.UserGetPayload<{
   select: {
@@ -87,5 +89,28 @@ export const adminRouter = createTRPCRouter({
       return {
         ...formatActiveMember(member)
       };
+    }),
+  sendMemberLink: adminProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input }) => {
+      const member = await getActiveMember(input.id);
+      if (!member || !member.memberships[0]) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Member not found"
+        });
+      }
+      await sendMemberConfirmationEmail(member, member.memberships[0]);
+    }),
+  updateMember: adminProcedure
+    .input(updateMemberSchema)
+    .mutation(async ({ input, ctx }) => {
+      await ctx.prisma.member.update({
+        where: { id: input.id },
+        data: {
+          email: input.email ?? undefined,
+          phone: input.phone ?? undefined
+        }
+      });
     })
 });
