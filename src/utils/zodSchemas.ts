@@ -181,3 +181,13 @@ export const updateParticipantSchema = z.object({
   email: z.string().email().optional(),
   phone: z.string().optional()
 });
+
+export const addFamilyMemberSchema = z.object({
+  ownerId: z.string(),
+  member: z.object({
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+    email: z.string().email(),
+    phone: z.string().optional()
+  })
+});
