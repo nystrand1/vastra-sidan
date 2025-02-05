@@ -141,7 +141,13 @@ export const memberSignupSchema = z
       return true;
     },
     { message: "Familjemedlemskap kräver minst en familjemedlem" }
-  );
+  ).refine((x) => {
+    // All emails must be unique
+    if (x.membershipType === MembershipType.FAMILY) {
+      const emails = [x.email, ...x.additionalMembers!.map((m) => m.email)];
+      return new Set(emails).size === emails.length;
+    }
+  }, { message: 'Alla emailadresser måste vara unika' });
 
 export const profileSchema = z.object({
   firstName: z
@@ -165,6 +171,12 @@ export const updatePasswordSchema = z
   });
 
 export const updateMemberSchema = z.object({
+  id: z.string(),
+  email: z.string().email().optional(),
+  phone: z.string().optional()
+});
+
+export const updateParticipantSchema = z.object({
   id: z.string(),
   email: z.string().email().optional(),
   phone: z.string().optional()

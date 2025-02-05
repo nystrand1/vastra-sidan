@@ -290,7 +290,9 @@ export const MemberPage = () => {
                 </Button>
                 {hasErrors && (
                   <div className='text-destructive'>
-                    Kolla att du fyllt i alla uppgifter korrekt
+                    {Object.values(form.formState.errors).map((error) => (
+                      <p key={error.message}>{error.message}</p>
+                    ))}
                   </div>
                 )}
               </div>
