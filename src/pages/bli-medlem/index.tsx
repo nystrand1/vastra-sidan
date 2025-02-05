@@ -171,7 +171,7 @@ export const MemberPage = () => {
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Mobilnummber</FormLabel>
+                    <FormLabel>Mobilnummer</FormLabel>
                     <FormControl>
                       <Input placeholder="Mobil..." {...field} />
                     </FormControl>
