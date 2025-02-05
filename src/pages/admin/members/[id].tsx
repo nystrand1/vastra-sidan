@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { type z } from "zod";
+import { FamilyMembers } from "~/components/admin/Members/FamilyMembers";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { Button } from "~/components/ui/button";
 import { Form, FormField } from "~/components/ui/form";
@@ -65,11 +66,12 @@ export default function AdminMemberPage() {
     })
     await refetch();
   }
+  const isOwner = member.id === member.ownerId;
 
   return (
     <div className="flex flex-col justify-center align-middle">
       <div className="flex flex-row gap-4 justify-center flex-wrap">
-        <Card title={member.name} className="w-96">
+        <Card title={member.name} badge={isOwner ? 'Ägare' : ''} className="w-96 h-fit">
             <p>{member.activeMembership.type}</p>
               <p>Blev medlem: {formatSwedishTime(member.activeMembership.becameMemberAt, 'yyyy-MM-dd HH:mm')}</p>
             <Form {...form}>
@@ -114,7 +116,10 @@ export default function AdminMemberPage() {
                   Visa medlemskort
               </Link>
             </Button> 
-        </Card>        
+        </Card>   
+        {member.activeMembership.type === 'Familjemedlemskap' && (
+          <FamilyMembers members={member.familyMembers} ownerId={member.ownerId} />
+        )}
       </div>
     </div>
   )
