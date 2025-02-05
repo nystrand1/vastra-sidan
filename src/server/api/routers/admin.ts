@@ -2,6 +2,7 @@ import { type Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { adminProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { addFamilyMember } from "~/server/utils/admin/addFamilyMember";
 import {
   formatActiveMember,
   getActiveMember
@@ -17,7 +18,7 @@ import {
 import { formatEventParticipant, getEventParticipantById } from "~/server/utils/admin/getEventParticipantById";
 import { adminEventFormatter, getEvents } from "~/server/utils/admin/getEvents";
 import { sendMemberConfirmationEmail } from "~/server/utils/email/sendMemberConfirmationEmail";
-import { updateMemberSchema, updateParticipantSchema } from "~/utils/zodSchemas";
+import { addFamilyMemberSchema, updateMemberSchema, updateParticipantSchema } from "~/utils/zodSchemas";
 
 export type AdminUserProfile = Prisma.UserGetPayload<{
   select: {
@@ -140,5 +141,10 @@ export const adminRouter = createTRPCRouter({
           phone: input.phone ?? undefined
         }
       });
-    })
+    }),
+  addFamilyMember: adminProcedure
+    .input(addFamilyMemberSchema)
+    .mutation(async ({ input }) => {
+      await addFamilyMember(input);
+    }),
 });
