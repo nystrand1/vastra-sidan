@@ -7,7 +7,6 @@ type ActiveMember = Awaited<ReturnType<typeof getActiveMember>>;
 const extractFamilyMembers = (member: NonNullable<ActiveMember>) => {
   // Family member, but not the owner
   if (member.familyMemberShipOwner) {
-    console.log('all members', [member, ...member.familyMemberShipOwner.familyMembers]);
     return [member.familyMemberShipOwner, ...member.familyMemberShipOwner.familyMembers]
       .filter((familyMember) => familyMember.id !== member.id)
       .map((familyMember) => {
@@ -96,6 +95,5 @@ export const getActiveMember = async (id: string) => {
       }
     }
   });
-  console.log('res', res);
   return res;
 };
