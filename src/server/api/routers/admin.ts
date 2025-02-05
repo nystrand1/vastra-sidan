@@ -14,9 +14,10 @@ import {
   adminSingleEventFormatter,
   getEvent
 } from "~/server/utils/admin/getEvent";
+import { formatEventParticipant, getEventParticipantById } from "~/server/utils/admin/getEventParticipantById";
 import { adminEventFormatter, getEvents } from "~/server/utils/admin/getEvents";
 import { sendMemberConfirmationEmail } from "~/server/utils/email/sendMemberConfirmationEmail";
-import { updateMemberSchema } from "~/utils/zodSchemas";
+import { updateMemberSchema, updateParticipantSchema } from "~/utils/zodSchemas";
 
 export type AdminUserProfile = Prisma.UserGetPayload<{
   select: {
@@ -76,6 +77,33 @@ export const adminRouter = createTRPCRouter({
     const activeMembers = await getActiveMembers();
     return activeMembers.map(adminMemberFormatter);
   }),
+  getEventParticipantById: adminProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ input }) => {
+      const participant = await getEventParticipantById(input.id);
+      if (!participant) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Participant not found"
+        });
+      }
+      return formatEventParticipant(participant);
+    }),
+  updateEventParticipant: adminProcedure
+    .input(updateParticipantSchema)
+    .mutation(async ({ input, ctx }) => {
+      const participant = await getEventParticipantById(input.id);
+      if (!participant) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Participant not found"
+        });
+      }
+      await ctx.prisma.participant.update({
+        where: { id: input.id },
+        data: { email: input.email ?? undefined, phone: input.phone ?? undefined }
+      });
+    }),
   getMemberById: adminProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input }) => {
