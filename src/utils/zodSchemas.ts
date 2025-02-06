@@ -147,6 +147,7 @@ export const memberSignupSchema = z
       const emails = [x.email, ...x.additionalMembers!.map((m) => m.email)];
       return new Set(emails).size === emails.length;
     }
+    return true;
   }, { message: 'Alla emailadresser måste vara unika' });
 
 export const profileSchema = z.object({
