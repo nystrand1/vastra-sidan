@@ -48,6 +48,9 @@ export const publicRouter = createTRPCRouter({
           gte: subHours(new Date(), 8),
         },
         active: true,
+      },
+      orderBy: {
+        date: 'asc'
       }
     });
     const eventWithParticiantCount = res.map((event) => ({
@@ -117,6 +120,9 @@ export const publicRouter = createTRPCRouter({
           gte: subHours(new Date(), 0.5) // Show event for an additional 30 minutes
         },
         active: true,
+      },
+      orderBy: {
+        date: 'asc'
       }
     }) : null;
 
