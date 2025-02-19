@@ -7,12 +7,8 @@ import { TRPCError } from "@trpc/server";
 import { subHours } from "date-fns";
 import { z } from "zod";
 import { createTRPCRouter, membershipProcedure, publicProcedure } from "~/server/api/trpc";
-import { getCardSkipperMemberCount } from "~/server/utils/cardSkipper";
-import { GetNewsDocument } from "~/types/wordpresstypes/graphql";
-import { featureFlags } from "~/utils/featureFlags";
-import { parseDateString, stripHtmlTags } from "./wordpress";
 import { toUTCDate } from "~/server/utils/helpers";
-import { getMemberCount } from "~/server/utils/member/getMemberCount";
+import { getStartPage } from "~/server/utils/public/getStartPage";
 
 export const busesWithPaidPassengers = {
   buses: {
@@ -110,84 +106,9 @@ export const publicRouter = createTRPCRouter({
       youth: res.find((m) => m.type === MembershipType.YOUTH)
     };
   }),
-  getStartPage: publicProcedure.query(async ({ ctx }) => {
-
-    const memberCount = featureFlags.ENABLE_MEMBERSHIPS ? await getMemberCount() : await getCardSkipperMemberCount();
-    const upcomingEvent = featureFlags.ENABLE_AWAYGAMES ? await ctx.prisma.vastraEvent.findFirst({
-      include: busesWithPaidPassengers,
-      where: {
-        date: {
-          gte: subHours(new Date(), 0.5) // Show event for an additional 30 minutes
-        },
-        active: true,
-      },
-      orderBy: {
-        date: 'asc'
-      }
-    }) : null;
-
-    const { data } = await ctx.apolloClient.query({
-      query: GetNewsDocument,
-      variables: {
-        limit: 1
-      },
-    });
-
-    const upcomingGame = await ctx.prisma.fotballGame.findFirst({
-      where: {
-        date: {
-          gte: subHours(new Date(), 8)
-        }
-      },
-      include: {
-        ticketSalesRecords: {
-          orderBy: {
-            createdAt: 'desc',
-          },
-          take: 1,
-        }
-      }
-    });
-
-    const [latestNewsPost] = data.newsPosts.nodes;
-
-    let newsPost = null;
-
-    if (latestNewsPost) {
-      newsPost = {
-        id: latestNewsPost.id,
-        slug: latestNewsPost.slug,
-        title: latestNewsPost.newsContent.title,
-        excerpt: stripHtmlTags(latestNewsPost.newsContent.text).split(".").splice(0, 1).join(" ") + ".",
-        date: parseDateString(latestNewsPost.date),
-        image: latestNewsPost.newsContent.newsImg,
-      }
-    }
-
-    return {
-      member: {
-        count: memberCount,
-        updatedAt: new Date(),
-      },
-      latestNewsPost: newsPost,
-      upcomingGame: !!upcomingGame && upcomingGame.ticketSalesRecords[0] && {
-        homeTeam: upcomingGame.homeTeam,
-        awayTeam: upcomingGame.awayTeam,
-        date: toUTCDate(upcomingGame.date),
-        location: upcomingGame.location,
-        ticketLink: upcomingGame.ticketLink,
-        ticketsSold: upcomingGame?.ticketSalesRecords[0].ticketsSold,
-        updatedAt: upcomingGame.ticketSalesRecords[0].createdAt,
-      },
-      upcomingEvent: !!upcomingEvent && {
-        ...upcomingEvent,
-        maxSeats: upcomingEvent?.buses.reduce((acc, bus) => acc + bus.seats, 0),
-        bookedSeats: upcomingEvent?.buses.reduce(
-          (acc, bus) => acc + bus._count.passengers,
-          0
-        )
-      }
-    };
+  getStartPage: publicProcedure.query(async () => {
+    const startPage = await getStartPage();
+    return startPage;
   }),
   getHomeGames: publicProcedure.query(async ({ ctx }) => {
     const res = await ctx.prisma.fotballGame.findMany({
