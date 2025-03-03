@@ -11,14 +11,16 @@ export const AwayGameRules = () => {
         <li>
           <h5 className="text-xl">Anmälan</h5>
           <p>
-            Anmälan till resa görs via Cardskipper eller mejl till info@vastrasidan.se, om inget annat uppges. 
-            Betalning skall ske omgående om det inte tydligt framgår att du ska vänta med betalning pga. osäkerhet om resan blir av.
+            Anmälan till bussar görs på hemsidan vastrasidan.se 
           </p>
         </li>
         <li>
           <h5 className="text-xl">Avbokning</h5>
           <p>
-            Avbokning ska ske via kontakt med styrelsen via mejl på <a href="mailto:info@vastrasidan.se">info@vastrasidan.se</a> innan avresa.
+            Avbokning kan göras via länken i ditt mail du får som bekräftelse på bokningen.
+            Pengarna återbetalas då inom 3 bankdagar.
+            Avbokning kan göras senast 24 timmar innan avresa. 
+            Allmän information och ordningsregler
           </p>
         </li>
       </ul>
@@ -39,7 +41,8 @@ export const AwayGameRules = () => {
         <li>
           <h5 className="text-xl">Bussbiljett</h5>
           <p>
-            Biljett för resan i Cardskipper eller din Swishbetalning är din bussbiljett, och skall visas upp vid ombordstigning på bussen
+            Biljett för resan är det mail du får när du bokar dig.
+            Bussvärden på bussen har alltid en lista med alla anmälda och ser till så att ingen går på fel buss.
           </p>
         </li>
         <li>
