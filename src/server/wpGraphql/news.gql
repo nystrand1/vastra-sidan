@@ -1,5 +1,10 @@
 query GetNews($limit: Int = 100) {
-  newsPosts(first: $limit) {
+  newsPosts(first: $limit, where:  {
+     orderby: [ {
+        field: DATE,
+        order: DESC
+     }]
+  }) {
     nodes {
       id
       date

@@ -51,16 +51,17 @@ export const wordpressRouter = createTRPCRouter({
       };
     }),
     getAwayGuides: publicProcedure
-    .query(async ({ ctx }) => {
+    .input(z.optional(z.object({ limit: z.number() })))
+    .query(async ({ ctx, input }) => {
       const res = await ctx.apolloClient.query({
         query: GetAwayGuidesDocument,
-      });
+        variables: input?.limit ? { limit: input.limit, after: '' } : undefined      });
       let guides = res.data.awayguides.nodes;
       let { hasNextPage, endCursor } = res.data.awayguides.pageInfo;
       while (hasNextPage) {
         const nextPage = await ctx.apolloClient.query({
           query: GetAwayGuidesDocument,
-          variables: { after: endCursor }
+          variables: { after: endCursor, limit: input?.limit || 100 }
         });
         guides = [...guides, ...nextPage.data.awayguides.nodes];
         hasNextPage = nextPage.data.awayguides.pageInfo.hasNextPage;
@@ -115,6 +116,7 @@ export const wordpressRouter = createTRPCRouter({
     .query(async ({ ctx }) => {
       const res = await ctx.apolloClient.query({
         query: GetNewsDocument,
+        variables: { limit: 10 }
       });
 
       return res.data.newsPosts.nodes.map((news) => ({

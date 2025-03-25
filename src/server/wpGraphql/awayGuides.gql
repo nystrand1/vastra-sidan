@@ -7,8 +7,13 @@ query GetAwayGuidesSlugs {
   }
 }
 
-query GetAwayGuides($after: String) {
-  awayguides(first: 100, after: $after) {
+query GetAwayGuides($after: String, $limit: Int = 100) {
+  awayguides(first: $limit, after: $after, where:  {
+     orderby: [ {
+        field: DATE,
+        order: DESC
+     }]
+  }) {
     pageInfo {
       hasNextPage
       endCursor

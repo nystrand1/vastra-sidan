@@ -126,7 +126,7 @@ export default function AwayGamePage() {
 export const getStaticPaths = async () => {
 
   const ssrHelper = await createSSRHelper();
-  const awayGames = await ssrHelper.wordpress.getAwayGuides.fetch();
+  const awayGames = await ssrHelper.wordpress.getAwayGuides.fetch({ limit: 10 });
   const paths = awayGames.slugs?.map((slug) => ({ params: { id: slug } }));
   return {
     paths,
