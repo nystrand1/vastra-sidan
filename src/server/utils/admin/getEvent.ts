@@ -14,7 +14,9 @@ export const adminSingleEventFormatter = (event: Event) => {
     description: event.description,
     buses: event.buses.map((bus) => ({
       id: bus.id,
-      name: bus.name
+      name: bus.name,
+      seats: bus.seats,
+      passengers: bus.passengers.length,
     })),
     participants: event.buses
       .flatMap((bus) => bus.passengers)
@@ -43,6 +45,9 @@ export const getEvent = async (id: string) => {
       buses: {
         include: {
           passengers: paidPassengerQuery,
+        },
+        orderBy: {
+          name: "asc"
         }
       }
     }

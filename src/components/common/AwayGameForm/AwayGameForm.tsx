@@ -193,8 +193,8 @@ export const AwayGameForm = () => {
                             </FormControl>
                             <SelectContent>
                               {awayGame.buses.map((bus) => (
-                                <SelectItem key={bus.id} value={bus.id}>
-                                  {bus.name}
+                                <SelectItem key={bus.id} value={bus.id} disabled={bus.availableSeats <= 0}>
+                                  {bus.name} {bus.availableSeats > 0 ? `(${bus.seats-bus.availableSeats}/${bus.seats})` : '(Fullbokad)'}
                                 </SelectItem>
                               ))}
                             </SelectContent>

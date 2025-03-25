@@ -76,7 +76,7 @@ export const publicRouter = createTRPCRouter({
       }
       return {
         ...res,
-        buses: res.buses.map((bus) => ({
+        buses: res.buses.sort((a, b) => a.name.localeCompare(b.name)).map((bus) => ({
           ...bus,
           availableSeats: bus.seats - bus._count.passengers
         }))
