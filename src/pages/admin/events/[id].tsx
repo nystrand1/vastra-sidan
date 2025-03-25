@@ -29,7 +29,7 @@ export const AdminEventPage = () => {
 
   const allOption = [{ label: "Alla", value: "" }];
   const busOptions = event?.buses.map((bus) => ({
-    label: bus.name,
+    label: `${bus.name} (${bus.passengers < bus.seats ? `${bus.passengers}/${bus.seats}` : "Full"})`,
     value: bus.name
   }));
 
