@@ -26,7 +26,7 @@ export const createPaymentIntent = async (data: CreatePaymentIntentInput) => {
 
   if (!existingCustomer) {
     existingCustomer = await stripe.customers.create({
-      email: payee.email,
+      email: payee.email.toLowerCase(),
       name: payee.name,
     });
   }
