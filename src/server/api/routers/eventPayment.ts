@@ -273,9 +273,26 @@ export const eventPaymentRouter = createTRPCRouter({
           message: `No related event to participant: ${participant.id}`
         });
       }
-        
-      const amountOfParticipants = stripePayment.participants.length;
-      const participantPayAmount = Math.floor(stripePayment.netAmount / amountOfParticipants);
+
+      let eventCost = event.defaultPrice;
+
+      if (participant.youth && participant.member) {
+        eventCost = event.youthMemberPrice;
+      } else if (participant.member) {
+        eventCost = event.memberPrice;
+      } else if (participant.youth) {
+        eventCost = event.youthPrice;
+      }
+
+      const stripeFee = stripePayment.amount - stripePayment.netAmount;
+
+      // How big is the fee for this participant
+      const eventCostFeeFraction = eventCost / stripePayment.amount;
+      const eventCostFee = Math.floor(stripeFee * eventCostFeeFraction);
+
+      // So, this is the amount that the participant will get back after the Stripe fees.
+      const participantPayAmount = eventCost - eventCostFee;
+    
       try {
         const stripeRefundIntent = await createRefundIntent({ 
           paymentIntentId: stripePayment.stripePaymentId,
