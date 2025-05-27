@@ -6,18 +6,17 @@ import {
 } from "@prisma/client";
 import { captureException, captureMessage } from "@sentry/nextjs";
 import { TRPCError } from "@trpc/server";
-import { isWithinInterval, subDays } from "date-fns";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { isEventCancelable } from "~/server/utils/event";
 import { checkRefundStatus } from "~/server/utils/payment";
+import { paidPassengerQuery } from "~/server/utils/queryConstants/paidPassengerQuery";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { createPaymentIntent, createRefundIntent } from "~/utils/stripeHelpers";
 import {
   participantSchema
 } from "~/utils/zodSchemas";
 import { busesWithPaidPassengers } from "./public";
-import { paidPassengerQuery } from "~/server/utils/queryConstants/paidPassengerQuery";
 
 
 type ParticipantInput = z.infer<typeof participantSchema>;
@@ -239,18 +238,11 @@ export const eventPaymentRouter = createTRPCRouter({
         });
       }
 
-      // You can't cancel within 48 hours of the departure
-      const twoDaysBeforeDeparture = subDays(participant.event.date, 2);
-      const today = new Date();
-      const isWithin48Hours = isWithinInterval(today, {
-        start: twoDaysBeforeDeparture,
-        end: participant.event.date
-      });
-
-      if (isWithin48Hours) {
+      const isCancelable = isEventCancelable(participant.event.date);
+      if (isCancelable) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Du kan inte avboka inom 48h"
+          message: "Du kan inte avboka inom 36h"
         });
       }
 

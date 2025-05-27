@@ -112,7 +112,7 @@ export const ParticipantInfo = ({
           <p className="rounded-md border p-2 text-center">{`Avbokad! (${cancellationDate})`}</p>
         )}
         {cancellationDisabled && !hasCancelled && (
-          <p>Du kan inte avboka inom 48h från avgång</p>
+          <p>Du kan inte avboka inom 36h från avgång</p>
         )}
       </div>
     </div>
