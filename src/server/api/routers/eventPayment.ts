@@ -239,7 +239,7 @@ export const eventPaymentRouter = createTRPCRouter({
       }
 
       const isCancelable = isEventCancelable(participant.event.date);
-      if (isCancelable) {
+      if (!isCancelable) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Du kan inte avboka inom 36h"
