@@ -283,7 +283,8 @@ export const eventPaymentRouter = createTRPCRouter({
       const eventCostFee = Math.floor(stripeFee * eventCostFeeFraction);
 
       // So, this is the amount that the participant will get back after the Stripe fees.
-      const participantPayAmount = eventCost - eventCostFee;
+      // It's in cents, so we multiply by 100 to get the full amount.
+      const participantPayAmount = (eventCost - eventCostFee) * 100;
     
       try {
         const stripeRefundIntent = await createRefundIntent({ 
