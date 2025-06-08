@@ -112,7 +112,7 @@ export const ParticipantInfo = ({
           <p className="rounded-md border p-2 text-center">{`Avbokad! (${cancellationDate})`}</p>
         )}
         {cancellationDisabled && !hasCancelled && (
-          <p>Du kan inte avboka inom 48h från avgång</p>
+          <p>Du kan inte avboka inom 36h från avgång</p>
         )}
       </div>
     </div>
@@ -142,7 +142,7 @@ export const CancelPage = () => {
           <div>
             <p className="font-bold">Avgångstid: {departureTime}</p>
             <p>
-              Avbokning kan endast ske senast 48 timmar innan avresa annars debiteras du fullt pris.
+              Avbokning kan endast ske senast 36 timmar innan avresa annars debiteras du fullt pris.
             </p>
             <p>
               Du blir återbetald hela summan minus serviceavgift från Stripe. Läs mer om Stripe&apos;s avgifter <a href="https://stripe.com/pricing">här</a>

@@ -62,7 +62,7 @@ const ThanksPage = () => {
               <Wysiwyg content={`Reseinfo: ${data.gameInfo}`} />
             )}
             <p>
-              Avbokning kan endast ske senast 48 timmar innan avresa annars debiteras du fullt pris.
+              Avbokning kan endast ske senast 36 timmar innan avresa annars debiteras du fullt pris.
             </p>
           </div>
         </div>
