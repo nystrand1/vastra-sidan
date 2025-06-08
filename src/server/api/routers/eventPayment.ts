@@ -276,6 +276,9 @@ export const eventPaymentRouter = createTRPCRouter({
         eventCost = event.youthPrice;
       }
 
+      // Eventcost is in SEK, we need to convert it to cents (öre) to be synced with Stripe
+      eventCost = eventCost * 100;
+
       const stripeFee = stripePayment.amount - stripePayment.netAmount;
 
       // How big is the fee for this participant
@@ -283,9 +286,8 @@ export const eventPaymentRouter = createTRPCRouter({
       const eventCostFee = Math.floor(stripeFee * eventCostFeeFraction);
 
       // So, this is the amount that the participant will get back after the Stripe fees.
-      // It's in cents, so we multiply by 100 to get the full amount.
-      const participantPayAmount = (eventCost - eventCostFee) * 100;
-    
+      const participantPayAmount = eventCost - eventCostFee;
+
       try {
         const stripeRefundIntent = await createRefundIntent({ 
           paymentIntentId: stripePayment.stripePaymentId,
