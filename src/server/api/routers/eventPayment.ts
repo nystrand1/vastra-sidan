@@ -135,6 +135,7 @@ export const eventPaymentRouter = createTRPCRouter({
       // check if we have slots on the buses
       const someBusIsFull = event.buses.some((bus) => {
         const participantsOnBus = input.participants.filter((p) => p.busId === bus.id);
+        if (participantsOnBus.length === 0) return false; // Skip check if no participants on bus
         const availableSeats = bus.seats - bus.passengers.length;
         return availableSeats < participantsOnBus.length;
       });
