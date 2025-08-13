@@ -73,6 +73,7 @@ export const AwayGameForm = () => {
 
     const fullBusses = awayGame.buses.filter((bus) => {
       const participantsOnBus = participants.filter((p) => p.busId === bus.id);
+      if (participantsOnBus.length === 0) return false;
       return bus.availableSeats < participantsOnBus.length;
     });
 
