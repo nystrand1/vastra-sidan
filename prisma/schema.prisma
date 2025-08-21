@@ -67,6 +67,7 @@ enum MembershipType {
   FAMILY
   YOUTH
   REGULAR
+  HONORARY
 }
 
 model Member {
