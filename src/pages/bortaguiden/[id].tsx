@@ -140,10 +140,13 @@ export const getStaticProps = async (props: GetStaticPropsContext ) => {
     return { notFound: true };
   }
   const ssrHelper = await createSSRHelper();
+  console.time(`fetchChronicle - ${slug}`);
   const chronicle = await ssrHelper.wordpress.getAwayGuideBySlug.fetch({ slug });
+  console.timeEnd(`fetchChronicle - ${slug}`);
   if (!chronicle) {
     return { notFound: true };
   }
+
   return {
     props: {
       trpcState: ssrHelper.dehydrate(),
