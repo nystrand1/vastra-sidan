@@ -70,12 +70,14 @@ export default function AwayGuidePage() {
 
 export const getStaticProps = async () => {
   const ssrHelper = await createSSRHelper();
+  console.time("fetchAwayGuides");
   await ssrHelper.wordpress.getAwayGuides.prefetch();
+  console.timeEnd("fetchAwayGuides");
 
   return {
     props: {
       trpcState: ssrHelper.dehydrate(),
     },
-    revalidate: 60,
+    revalidate: 3600,
   }
 };

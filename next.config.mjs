@@ -29,9 +29,17 @@ const config = {
         protocol: "https",
       },
       {
+        hostname: "*.vastrasidan.se",
+        protocol: "http",
+      },
+      {
         hostname: "vastrasidan.se",
         protocol: "https",
       },
+      {
+        hostname: "vastrasidan.temp.citynetwork.se",
+        protocol: "http",
+      }
     ]
   },
   rewrites: async () => {
