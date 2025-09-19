@@ -10,6 +10,7 @@ import { env } from "~/env.mjs";
 import { type createTRPCContext } from "../api/trpc";
 import { captureException } from "@sentry/nextjs";
 import { type GetMembershipsQuery, type GetAwayGamesQuery } from "~/types/wordpresstypes/graphql";
+import { fromZonedTime } from "date-fns-tz";
 
 const apiKey = env.WORDPRESS_API_KEY;
 
@@ -76,7 +77,7 @@ export const awayGameToEvent = (
       id: awayGame.id.toString(),
       name: `${awayGame.enemyTeam} - ${awayGame.date.split(" ")[0] || ""}`,
       description: awayGame.busInfo || "",
-      date: new Date(awayGame.date),
+      date: fromZonedTime(awayGame.date, 'Europe/Stockholm'),
       createdAt: new Date(),
       updatedAt: new Date(),
       defaultPrice: Number(awayGame.nonMemberPrice),
