@@ -57,17 +57,17 @@ export const MemberPage = () => {
 
   const memberShipOptions = [
     {
-      label: `Ordinarie (${memberships.regular?.price / 100} kr)`,
+      label: `${memberships.regular.name} - Ordinarie (${memberships.regular?.price / 100} kr)`,
       value: memberships.regular?.id,
       type: memberships.regular?.type
     },
     {
-      label: `Ungdom (under 18) (${memberships.youth?.price / 100} kr)`,
+      label: `${memberships.youth.name} - Ungdom (under 18) (${memberships.youth?.price / 100} kr)`,
       value: memberships.youth?.id,
       type: memberships.youth?.type
     },
     {
-      label: `Familj (${memberships.family.price / 100} kr)`,
+      label: `${memberships.family.name} - Familj (${memberships.family.price / 100} kr)`,
       value: memberships.family?.id,
       type: memberships.family?.type
     }
