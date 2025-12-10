@@ -87,6 +87,9 @@ export const publicRouter = createTRPCRouter({
       where: {
         endDate: {
           gt: new Date()
+        },
+        startDate: {
+          lte: new Date()
         }
       },
       select: {
