@@ -3,6 +3,10 @@ import { createTRPCRouter, publicProcedure } from "../trpc";
 import { isBefore } from "date-fns";
 import { friendlyMembershipNames } from "~/server/utils/membership";
 
+const sortByDateDesc = <T extends { endDate: Date }>(a: T, b: T) => {
+  return b.endDate.getTime() - a.endDate.getTime();
+};
+
 export const memberRouter = createTRPCRouter({
   getMember: publicProcedure
     .input(z.object({ memberToken: z.string() }))
@@ -20,8 +24,12 @@ export const memberRouter = createTRPCRouter({
       }
 
       const fullName = `${member.firstName} ${member.lastName}`;
-      const activeMemberships = member.memberships.filter((m) => isBefore(new Date(), m.endDate));
-      const expiredMemberships = member.memberships.filter((m) => !isBefore(new Date(), m.endDate));
+      const activeMemberships = member.memberships
+        .filter((m) => isBefore(new Date(), m.endDate))
+        .sort(sortByDateDesc);
+      const expiredMemberships = member.memberships
+        .filter((m) => !isBefore(new Date(), m.endDate))
+        .sort(sortByDateDesc);
       return {
         name: fullName,
         activeMemberships: activeMemberships.map((m) => ({
@@ -30,7 +38,7 @@ export const memberRouter = createTRPCRouter({
           imageUrl: m.imageUrl,
           textureUrl: m.textureUrl,
           type: friendlyMembershipNames[m.type],
-          expiresAt: m.endDate,
+          expiresAt: m.endDate
         })),
         expiredMemberships: expiredMemberships.map((m) => ({
           id: m.id,
@@ -38,9 +46,8 @@ export const memberRouter = createTRPCRouter({
           imageUrl: m.imageUrl,
           textureUrl: m.textureUrl,
           type: friendlyMembershipNames[m.type],
-          expiresAt: m.endDate,
-        })),
+          expiresAt: m.endDate
+        }))
       };
-    }),
-
+    })
 });
