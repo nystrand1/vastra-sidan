@@ -1,4 +1,4 @@
-import { prisma } from "~/server/db"
+import { prisma } from "~/server/db";
 import { friendlyMembershipNames } from "../membership";
 import { StripePaymentStatus } from "@prisma/client";
 
@@ -11,7 +11,7 @@ export const adminMemberFormatter = (member: ActiveMember) => {
     throw new Error("Member has no active membership");
   }
 
-  if (!stripePayment) {
+  if (!stripePayment && activeMembership.type !== "HONORARY") {
     throw new Error("Member has no active payment");
   }
   return {
@@ -22,13 +22,13 @@ export const adminMemberFormatter = (member: ActiveMember) => {
     activeMembership: {
       name: activeMembership.name,
       type: friendlyMembershipNames[activeMembership.type],
-      becameMemberAt: stripePayment.createdAt,
+      becameMemberAt:
+        stripePayment?.createdAt ?? new Date("1997-04-29T00:00:00Z"),
       startDate: activeMembership.startDate,
-      endDate: activeMembership.endDate,
-    },
-  }
-}
-
+      endDate: activeMembership.endDate
+    }
+  };
+};
 
 export const getActiveMembers = async () => {
   const today = new Date();
@@ -37,12 +37,12 @@ export const getActiveMembers = async () => {
       memberships: true,
       stripePayments: {
         where: {
-          status: StripePaymentStatus.SUCCEEDED,
+          status: StripePaymentStatus.SUCCEEDED
         },
         orderBy: {
-          createdAt: "desc",
-        },
-      },
+          createdAt: "desc"
+        }
+      }
     },
     where: {
       memberships: {
@@ -59,4 +59,4 @@ export const getActiveMembers = async () => {
   });
 
   return res;
-}
+};

@@ -11,7 +11,7 @@ import { api } from "~/utils/api";
 
 
 export const AdminEventPage = () => {
-  const { query } = useRouter();
+  const { query, push } = useRouter();
   const { data: sessionData } = useSession();
   const { data: event, isLoading } = api.admin.getEvent.useQuery(
     { id: query.id as string },
@@ -55,7 +55,7 @@ export const AdminEventPage = () => {
               <p>Icke-medlemmar: {amountYouthNonMembers}</p>
             </div>
           </div>
-          <PassengerTable busOptions={allOptions} data={event?.participants ?? []} columns={columns} />
+          <PassengerTable busOptions={allOptions} data={event?.participants ?? []} columns={columns} onRowClick={(id) => push(`/admin/events/${query.id as string}/${id}`)} />
         </CardContent>
       </Card>
     </div>
@@ -66,7 +66,7 @@ export const AdminEventPage = () => {
 export default AdminEventPage;
 
 
-export async function getServerSideProps({ query } : GetServerSidePropsContext) {
+export async function getServerSideProps({ query }: GetServerSidePropsContext) {
   const { id } = query;
   if (!id) {
     return {
