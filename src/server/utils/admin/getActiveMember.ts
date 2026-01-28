@@ -7,7 +7,10 @@ type ActiveMember = Awaited<ReturnType<typeof getActiveMember>>;
 const extractFamilyMembers = (member: NonNullable<ActiveMember>) => {
   // Family member, but not the owner
   if (member.familyMemberShipOwner) {
-    return [member.familyMemberShipOwner, ...member.familyMemberShipOwner.familyMembers]
+    return [
+      member.familyMemberShipOwner,
+      ...member.familyMemberShipOwner.familyMembers
+    ]
       .filter((familyMember) => familyMember.id !== member.id)
       .map((familyMember) => {
         return {
@@ -16,7 +19,7 @@ const extractFamilyMembers = (member: NonNullable<ActiveMember>) => {
           email: familyMember.email,
           phone: familyMember.phone
         };
-    });
+      });
   }
 
   // Family member owner
@@ -30,7 +33,7 @@ const extractFamilyMembers = (member: NonNullable<ActiveMember>) => {
       };
     });
   }
-}
+};
 
 export const formatActiveMember = (member: NonNullable<ActiveMember>) => {
   const [activeMembership] = member.memberships;
@@ -39,10 +42,9 @@ export const formatActiveMember = (member: NonNullable<ActiveMember>) => {
     throw new Error("Member has no active membership");
   }
 
-  if (!stripePayment) {
+  if (!stripePayment && activeMembership.type !== "HONORARY") {
     throw new Error("Member has no active payment");
   }
-
 
   return {
     id: member.id,
@@ -51,10 +53,14 @@ export const formatActiveMember = (member: NonNullable<ActiveMember>) => {
     phone: member.phone,
     token: member.memberToken,
     ownerId: member.familyMemberShipOwnerId ?? member.id,
-    familyMembers: friendlyMembershipNames[activeMembership.type] === 'Familjemedlemskap' ? extractFamilyMembers(member) : null,
+    familyMembers:
+      friendlyMembershipNames[activeMembership.type] === "Familjemedlemskap"
+        ? extractFamilyMembers(member)
+        : null,
     activeMembership: {
       type: friendlyMembershipNames[activeMembership.type],
-      becameMemberAt: stripePayment.createdAt,
+      becameMemberAt:
+        stripePayment?.createdAt ?? new Date("1997-04-29T00:00:00Z"),
       startDate: activeMembership.startDate,
       endDate: activeMembership.endDate
     }

@@ -15,10 +15,20 @@ import {
   adminSingleEventFormatter,
   getEvent
 } from "~/server/utils/admin/getEvent";
-import { formatEventParticipant, getEventParticipantById } from "~/server/utils/admin/getEventParticipantById";
+import {
+  formatEventParticipant,
+  getEventParticipantById
+} from "~/server/utils/admin/getEventParticipantById";
 import { adminEventFormatter, getEvents } from "~/server/utils/admin/getEvents";
+import { sendEventConfirmationEmail } from "~/server/utils/email/sendEventConfirmationEmail";
 import { sendMemberConfirmationEmail } from "~/server/utils/email/sendMemberConfirmationEmail";
-import { addFamilyMemberSchema, updateMemberSchema, updateParticipantSchema } from "~/utils/zodSchemas";
+import {
+  addFamilyMemberSchema,
+  updateMemberSchema,
+  updateParticipantSchema
+} from "~/utils/zodSchemas";
+import { busesWithPaidPassengers } from "./public";
+import { captureMessage } from "@sentry/nextjs";
 
 export type AdminUserProfile = Prisma.UserGetPayload<{
   select: {
@@ -90,6 +100,58 @@ export const adminRouter = createTRPCRouter({
       }
       return formatEventParticipant(participant);
     }),
+  changeBus: adminProcedure
+    .input(z.object({ busId: z.string(), participantId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const participant = await ctx.prisma.participant.findUnique({
+        where: {
+          id: input.participantId
+        }
+      });
+
+      if (!participant) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Participant not found"
+        });
+      }
+
+      const bus = await ctx.prisma.bus.findFirst({
+        where: {
+          id: input.busId
+        },
+        include: busesWithPaidPassengers.buses.include
+      });
+
+      if (!bus) {
+        captureMessage("Bus not found");
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Bus not found"
+        });
+      }
+
+      const availableSeats = bus.seats - bus._count.passengers;
+
+      if (!availableSeats) {
+        captureMessage("Bus is full");
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Bus is full"
+        });
+      }
+
+      await ctx.prisma.participant.update({
+        where: {
+          id: participant.id
+        },
+        data: {
+          busId: input.busId
+        }
+      });
+
+      return "ok";
+    }),
   updateEventParticipant: adminProcedure
     .input(updateParticipantSchema)
     .mutation(async ({ input, ctx }) => {
@@ -102,7 +164,10 @@ export const adminRouter = createTRPCRouter({
       }
       await ctx.prisma.participant.update({
         where: { id: input.id },
-        data: { email: input.email ?? undefined, phone: input.phone ?? undefined }
+        data: {
+          email: input.email ?? undefined,
+          phone: input.phone ?? undefined
+        }
       });
     }),
   getMemberById: adminProcedure
@@ -131,6 +196,18 @@ export const adminRouter = createTRPCRouter({
       }
       await sendMemberConfirmationEmail(member, member.memberships[0]);
     }),
+  sendParticipantEmail: adminProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input }) => {
+      const participant = await getEventParticipantById(input.id);
+      if (!participant) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Participant not found"
+        });
+      }
+      await sendEventConfirmationEmail(participant);
+    }),
   updateMember: adminProcedure
     .input(updateMemberSchema)
     .mutation(async ({ input, ctx }) => {
@@ -146,5 +223,5 @@ export const adminRouter = createTRPCRouter({
     .input(addFamilyMemberSchema)
     .mutation(async ({ input }) => {
       await addFamilyMember(input);
-    }),
+    })
 });
