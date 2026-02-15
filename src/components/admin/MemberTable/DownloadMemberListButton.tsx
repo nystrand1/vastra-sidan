@@ -8,8 +8,8 @@ export type Members = inferRouterOutputs<AppRouter>['admin']['getActiveMembers']
 
 
 export const DownloadMemberListButton = ({ members }: { members: Members }) => {
-  const csvHeaders = ['Namn', 'Email', 'Telefon'].join(',');
-  const csvContent = members.map(member => `${member.name},${member.email},'${member.phone}`).join('\n');
+  const csvHeaders = ['Namn', 'Email', 'Telefon', 'Typ av medlemskap'].join(',');
+  const csvContent = members.map(member => `${member.name},${member.email},'${member.phone},${member.activeMembership.type}`).join('\n');
   const blob = new Blob([csvHeaders + '\n' + csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
