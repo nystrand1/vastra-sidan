@@ -33,17 +33,6 @@ export const adminMemberFormatter = (member: ActiveMember) => {
 export const getActiveMembers = async () => {
   const today = new Date();
   const res = await prisma.member.findMany({
-    include: {
-      memberships: true,
-      stripePayments: {
-        where: {
-          status: StripePaymentStatus.SUCCEEDED
-        },
-        orderBy: {
-          createdAt: "desc"
-        }
-      }
-    },
     where: {
       memberships: {
         some: {
@@ -53,6 +42,21 @@ export const getActiveMembers = async () => {
           startDate: {
             lte: today
           }
+        }
+      }
+    },
+    include: {
+      memberships: {
+        orderBy: {
+          endDate: "desc"
+        }
+      },
+      stripePayments: {
+        where: {
+          status: StripePaymentStatus.SUCCEEDED
+        },
+        orderBy: {
+          createdAt: "desc"
         }
       }
     }

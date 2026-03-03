@@ -69,7 +69,11 @@ export function MemberTable<TData, TValue>({
           }
           className="w-full md:w-56"
         />
-        <SelectField
+        {/* 
+          This requires rework of the endpoint. Currently it only returns active members, but for this to work it should
+          return all members and the filter should be applied client side.
+        */}
+        {/* <SelectField
           label="Medlemskap"
           value={(table.getColumn("membershipName")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
@@ -78,9 +82,10 @@ export function MemberTable<TData, TValue>({
           options={[
             { value: "", label: "Alla" },
             { value: "Medlemskap 2025", label: "Medlemskap 2025" },
+            { value: "Medlemskap 2026", label: "Medlemskap 2026" },
           ]}
           className="w-full md:w-56"
-        />
+        /> */}
         <SelectField
           label="Typ"
           value={(table.getColumn("type")?.getFilterValue() as string) ?? ""}
