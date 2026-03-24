@@ -100,12 +100,12 @@ export const EventSignUp = ({
               {note && <Text className="text-lg">Övrigt: {note}</Text>}
             </Container>
             <Hr />
-            <Text className="text-lg">Du kan avboka din plats genom att klicka på knappen nedan</Text>
+            <Text className="text-lg">Du kan hantera eller avboka din plats genom att klicka på knappen nedan</Text>
             <Button
               href={cancellationUrl}
               className="bg-blue-500 hover:bg-blue-700 font-bold py-2 px-4 rounded text-white"
             >
-              Avboka
+              Hantera/Avboka
             </Button>
           </Container>
         </Section>

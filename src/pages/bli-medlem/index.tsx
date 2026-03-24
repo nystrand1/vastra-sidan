@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { type z } from "zod";
 import Accordion from "~/components/atoms/Accordion/Accordion";
 import { memberPerks } from "~/components/atoms/Accordion/accordionContent";
+import { ButtonLink } from '~/components/atoms/ButtonLink/ButtonLink';
 import Card from "~/components/atoms/CardLink/CardLink";
 import { StripeWidget } from "~/components/common/StripeWidget/StripeWidget";
 import { Button } from "~/components/ui/button";
@@ -299,6 +300,9 @@ export const MemberPage = () => {
             </form>
           </Card>
         </Form>
+        <ButtonLink href="/medlem/glomt-lank" className="w-full mt-4">
+          Redan medlem? Hämta medlemskap
+        </ButtonLink>
       </div>
     </>
   )
