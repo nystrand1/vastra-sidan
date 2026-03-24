@@ -71,7 +71,11 @@ export const getActiveMember = async (id: string) => {
   const today = new Date();
   const res = await prisma.member.findFirst({
     include: {
-      memberships: true,
+      memberships: {
+        orderBy: {
+          endDate: "desc"
+        }
+      },
       familyMembers: true,
       familyMemberShipOwner: {
         include: {
