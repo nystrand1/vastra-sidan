@@ -1,6 +1,8 @@
 import { isAfter } from "date-fns";
 import { sv } from "date-fns/locale/sv";
+import { ExternalLink } from "lucide-react";
 import Head from "next/head";
+import Link from "next/link";
 import Card from "~/atoms/CardLink/CardLink";
 import { Progressbar } from "~/atoms/Progressbar/Progressbar";
 import { Wysiwyg } from "~/components/atoms/Wysiwyg/Wysiwyg";
@@ -94,6 +96,13 @@ export default function Home() {
                 })}
               </p>
               <Button>Köp biljett</Button>
+              <Link
+                href={"/biljettstatistik"}
+                className="mt-2 flex flex-row items-center gap-2 text-sm text-gray-500"
+              >
+                Se biljettstatistik
+                <ExternalLink className="size-4" />
+              </Link>
             </Card>
           )}
           {upcomingEvent && (
