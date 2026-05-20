@@ -80,13 +80,10 @@ export const getStartPage = async () => {
   const salesRecordsToday = upcomingGame?.ticketSalesRecords.filter((record) =>
     isToday(record.createdAt)
   );
-  console.log("salesRecordsToday", salesRecordsToday);
   const [firstRecord, lastRecord] =
     salesRecordsToday && salesRecordsToday.length > 0
       ? [salesRecordsToday[0], salesRecordsToday[salesRecordsToday.length - 1]]
       : [];
-  console.log("firstRecord", firstRecord);
-  console.log("lastRecord", lastRecord);
   let ticketsSoldToday = null;
   if (firstRecord && lastRecord) {
     ticketsSoldToday = firstRecord.ticketsSold - lastRecord.ticketsSold;
