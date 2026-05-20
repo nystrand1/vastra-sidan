@@ -7,12 +7,12 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   type SortingState,
-  useReactTable,
-} from "@tanstack/react-table"
-import { useState } from "react"
-import { InputField } from "~/components/atoms/InputField/InputField"
-import { SelectField } from "~/components/atoms/SelectField/SelectField"
-import { Button } from "~/components/ui/button"
+  useReactTable
+} from "@tanstack/react-table";
+import { useState } from "react";
+import { InputField } from "~/components/atoms/InputField/InputField";
+import { SelectField } from "~/components/atoms/SelectField/SelectField";
+import { Button } from "~/components/ui/button";
 
 import {
   Table,
@@ -20,24 +20,22 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
-} from '~/components/ui/table'
+  TableRow
+} from "~/components/ui/table";
 
 interface MemberTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[]
-  data: TData[],
-  onRowClick?: (memberId: string) => void
+  columns: ColumnDef<TData, TValue>[];
+  data: TData[];
+  onRowClick?: (memberId: string) => void;
 }
 
 export function MemberTable<TData, TValue>({
   columns,
   data,
-  onRowClick,
+  onRowClick
 }: MemberTableProps<TData, TValue>) {
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(
-    []
-  );
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const table = useReactTable({
     data,
     columns,
@@ -51,21 +49,29 @@ export function MemberTable<TData, TValue>({
       sorting,
       columnFilters,
       columnVisibility: {
-        id: false,
+        id: false
       }
-    },
-  })
-
+    }
+  });
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 py-4 md:space-x-4">
+      <div className="flex flex-col space-y-4 py-4 md:flex-row md:items-center md:space-x-4 md:space-y-0">
         <InputField
           label="Sök på email"
           placeholder="Sök på email"
           value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
             table.getColumn("email")?.setFilterValue(event.target.value)
+          }
+          className="w-full md:w-56"
+        />
+        <InputField
+          label="Sök på namn"
+          placeholder="Sök på namn"
+          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+          onChange={(event) =>
+            table.getColumn("name")?.setFilterValue(event.target.value)
           }
           className="w-full md:w-56"
         />
@@ -96,7 +102,7 @@ export function MemberTable<TData, TValue>({
             { value: "", label: "Alla" },
             { value: "Familjemedlemskap", label: "Familj" },
             { value: "Ungdomsmedlemskap", label: "Ungdom" },
-            { value: "Ordinarie medlemskap", label: "Vuxen" },
+            { value: "Ordinarie medlemskap", label: "Vuxen" }
           ]}
           className="w-full md:w-56"
         />
@@ -112,11 +118,11 @@ export function MemberTable<TData, TValue>({
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                     </TableHead>
-                  )
+                  );
                 })}
               </TableRow>
             ))}
@@ -128,22 +134,28 @@ export function MemberTable<TData, TValue>({
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
                   onClick={() => {
-                    const memberId = row.getValue('id')
-                    if (onRowClick && typeof memberId === 'string') {
-                      onRowClick(memberId)
+                    const memberId = row.getValue("id");
+                    if (onRowClick && typeof memberId === "string") {
+                      onRowClick(memberId);
                     }
                   }}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
                   Inga resultat.
                 </TableCell>
               </TableRow>
@@ -170,5 +182,5 @@ export function MemberTable<TData, TValue>({
         </Button>
       </div>
     </div>
-  )
+  );
 }
