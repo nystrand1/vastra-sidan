@@ -22,6 +22,9 @@ export const adminMemberFormatter = (member: ActiveMember) => {
     activeMembership: {
       name: activeMembership.name,
       type: friendlyMembershipNames[activeMembership.type],
+      familyMembershipOwner:
+        activeMembership.type === "FAMILY" &&
+        member.familyMemberShipOwnerId === null,
       becameMemberAt:
         stripePayment?.createdAt ?? new Date("1997-04-29T00:00:00Z"),
       startDate: activeMembership.startDate,

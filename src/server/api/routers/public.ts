@@ -3,10 +3,13 @@ import {
   StripePaymentStatus,
   StripeRefundStatus
 } from "@prisma/client";
-import { TRPCError } from "@trpc/server";
 import { subHours } from "date-fns";
 import { z } from "zod";
-import { createTRPCRouter, membershipProcedure, publicProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  membershipProcedure,
+  publicProcedure
+} from "~/server/api/trpc";
 import { toUTCDate } from "~/server/utils/helpers";
 import { getStartPage } from "~/server/utils/public/getStartPage";
 
@@ -41,12 +44,12 @@ export const publicRouter = createTRPCRouter({
       include: busesWithPaidPassengers,
       where: {
         date: {
-          gte: subHours(new Date(), 8),
+          gte: subHours(new Date(), 8)
         },
-        active: true,
+        active: true
       },
       orderBy: {
-        date: 'asc'
+        date: "asc"
       }
     });
     const eventWithParticiantCount = res.map((event) => ({
@@ -66,9 +69,9 @@ export const publicRouter = createTRPCRouter({
       const res = await ctx.prisma.vastraEvent.findUnique({
         where: {
           id: input.id,
-          active: true,
+          active: true
         },
-        include: busesWithPaidPassengers,
+        include: busesWithPaidPassengers
       });
 
       if (!res) {
@@ -76,10 +79,12 @@ export const publicRouter = createTRPCRouter({
       }
       return {
         ...res,
-        buses: res.buses.sort((a, b) => a.name.localeCompare(b.name)).map((bus) => ({
-          ...bus,
-          availableSeats: bus.seats - bus._count.passengers
-        }))
+        buses: res.buses
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map((bus) => ({
+            ...bus,
+            availableSeats: bus.seats - bus._count.passengers
+          }))
       };
     }),
   getAvailableMemberships: membershipProcedure.query(async ({ ctx }) => {
@@ -97,10 +102,10 @@ export const publicRouter = createTRPCRouter({
         id: true,
         imageUrl: true,
         price: true,
-        name: true,
+        name: true
       },
       orderBy: {
-        endDate: 'desc'
+        endDate: "desc"
       }
     });
     return {
@@ -119,41 +124,37 @@ export const publicRouter = createTRPCRouter({
         date: true,
         id: true,
         awayTeam: true,
-        homeTeam: true,
+        homeTeam: true
       },
       orderBy: {
-        date: 'desc'
-      }      
+        date: "desc"
+      }
     });
 
     return res.map((game) => ({
       ...game,
-      date: toUTCDate(game.date),
+      date: toUTCDate(game.date)
     }));
   }),
   getTicketStatistics: publicProcedure
-  .input(z.object({ gameId: z.string() }))
-  .query(async ({ input, ctx }) => {
-    const res = await ctx.prisma.ticketSalesRecord.findMany({
-      where: {
-        fotballGameId: input.gameId
-      },
-      orderBy: {
-        createdAt: 'asc',
-      },
-      select: {
-        ticketsSold: true,
-        createdAt: true,
-      }
-    });
+    .input(z.object({ gameId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const res = await ctx.prisma.ticketSalesRecord.findMany({
+        where: {
+          fotballGameId: input.gameId
+        },
+        orderBy: {
+          createdAt: "asc"
+        },
+        select: {
+          ticketsSold: true,
+          createdAt: true
+        }
+      });
 
-    if (!res) {
-      throw new TRPCError({ code: "NOT_FOUND" });
-    }
-
-    return res.map((record) => ({
-      'Sålda biljetter': record.ticketsSold,
-      createdAt: toUTCDate(record.createdAt),
-    }));
-  }),
+      return res.map((record) => ({
+        ticketsSold: record.ticketsSold,
+        createdAt: toUTCDate(record.createdAt)
+      }));
+    })
 });

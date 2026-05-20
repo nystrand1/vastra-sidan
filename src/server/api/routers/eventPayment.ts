@@ -13,11 +13,8 @@ import { checkRefundStatus } from "~/server/utils/payment";
 import { paidPassengerQuery } from "~/server/utils/queryConstants/paidPassengerQuery";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { createPaymentIntent, createRefundIntent } from "~/utils/stripeHelpers";
-import {
-  participantSchema
-} from "~/utils/zodSchemas";
+import { participantSchema } from "~/utils/zodSchemas";
 import { busesWithPaidPassengers } from "./public";
-
 
 type ParticipantInput = z.infer<typeof participantSchema>;
 
@@ -30,21 +27,21 @@ export type ParticipantWithBusAndEvent = Prisma.ParticipantGetPayload<{
 
 export type ParticipantWithParticipants = Prisma.ParticipantGetPayload<{
   select: {
-    phone: true,
-    event: true,
+    phone: true;
+    event: true;
     stripePayments: {
       select: {
-        id: true,
+        id: true;
         participants: {
           include: {
-            event: true,
-            stripeRefunds: true
-            cancellationDate: true
-          }
-        },
-      },
-    },
-  }
+            event: true;
+            stripeRefunds: true;
+            cancellationDate: true;
+          };
+        };
+      };
+    };
+  };
 }>;
 
 const getParticipantCost = (
@@ -63,8 +60,8 @@ const getParticipantCost = (
 };
 /**
  * Calculates the total cost
- * @param participants 
- * @param event 
+ * @param participants
+ * @param event
  * @returns The total cost in cents (ören)
  */
 const calculateCost = (
@@ -77,7 +74,9 @@ const calculateCost = (
   return totalCost * 100;
 };
 
-const participantFormatter = (participant: ParticipantWithParticipants['stripePayments'][number]['participants'][number]) => {
+const participantFormatter = (
+  participant: ParticipantWithParticipants["stripePayments"][number]["participants"][number]
+) => {
   const isCancelable = isEventCancelable(participant.event.date);
   const hasCancelled = participant.stripeRefunds.some(
     (x) => x.status === StripeRefundStatus.REFUNDED
@@ -91,11 +90,13 @@ const participantFormatter = (participant: ParticipantWithParticipants['stripePa
     payAmount: participant.payAmount,
     busId: participant.busId,
     departureTime: formatSwedishTime(participant.event.date, "HH:mm"),
-    cancellationDate: participant.cancellationDate ? formatSwedishTime(participant.cancellationDate, "yyyy-MM-dd HH:mm") : null,
+    cancellationDate: participant.cancellationDate
+      ? formatSwedishTime(participant.cancellationDate, "yyyy-MM-dd HH:mm")
+      : null,
     note: participant.note,
     cancellationDisabled: !isCancelable,
-    hasCancelled,
-  }
+    hasCancelled
+  };
   return res;
 };
 
@@ -119,7 +120,7 @@ export const eventPaymentRouter = createTRPCRouter({
                 select: {
                   _count: true
                 },
-                ...paidPassengerQuery,
+                ...paidPassengerQuery
               }
             }
           }
@@ -134,7 +135,9 @@ export const eventPaymentRouter = createTRPCRouter({
       }
       // check if we have slots on the buses
       const someBusIsFull = event.buses.some((bus) => {
-        const participantsOnBus = input.participants.filter((p) => p.busId === bus.id);
+        const participantsOnBus = input.participants.filter(
+          (p) => p.busId === bus.id
+        );
         if (participantsOnBus.length === 0) return false; // Skip check if no participants on bus
         const availableSeats = bus.seats - bus.passengers.length;
         return availableSeats < participantsOnBus.length;
@@ -152,16 +155,17 @@ export const eventPaymentRouter = createTRPCRouter({
       try {
         // Create participants for event
         const participants = await ctx.prisma.$transaction(
-          input.participants.map(({ consent: _consent, firstName, lastName, ...participant }) =>
-            ctx.prisma.participant.create({
-              data: {
-                ...participant,
-                name: `${firstName} ${lastName}`,
-                userEmail: participant.email,
-                payAmount: getParticipantCost(participant, event),
-                eventId: event.id
-              }
-            })
+          input.participants.map(
+            ({ consent: _consent, firstName, lastName, ...participant }) =>
+              ctx.prisma.participant.create({
+                data: {
+                  ...participant,
+                  name: `${firstName} ${lastName}`,
+                  userEmail: participant.email,
+                  payAmount: getParticipantCost(participant, event),
+                  eventId: event.id
+                }
+              })
           )
         );
 
@@ -174,18 +178,19 @@ export const eventPaymentRouter = createTRPCRouter({
           });
         }
 
-        const description = `${event.name}. ${input.participants.length} resenärer`
-          .slice(0, 50)
-          .replaceAll("/", "-");
-        const stripeRes = await createPaymentIntent({ 
-          amount: cost, 
-          description, 
+        const description =
+          `${event.name}. ${input.participants.length} resenärer`
+            .slice(0, 50)
+            .replaceAll("/", "-");
+        const stripeRes = await createPaymentIntent({
+          amount: cost,
+          description,
           payee,
           metadata: {
-            type: 'EVENT'
+            type: "EVENT"
           }
-         });
-        
+        });
+
         // Create payment request in our database
         await ctx.prisma.stripePayment.create({
           data: {
@@ -226,7 +231,7 @@ export const eventPaymentRouter = createTRPCRouter({
               participants: true,
               amount: true,
               netAmount: true,
-              status: true,
+              status: true
             }
           }
         }
@@ -252,14 +257,14 @@ export const eventPaymentRouter = createTRPCRouter({
       const stripePayment = stripePayments?.find(
         (p) => p.status === StripePaymentStatus.SUCCEEDED
       );
-      
+
       if (!stripePayment) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Payment not found"
         });
       }
-      
+
       if (!event) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -290,9 +295,9 @@ export const eventPaymentRouter = createTRPCRouter({
       const participantPayAmount = eventCost - eventCostFee;
 
       try {
-        const stripeRefundIntent = await createRefundIntent({ 
+        const stripeRefundIntent = await createRefundIntent({
           paymentIntentId: stripePayment.stripePaymentId,
-          amount: participantPayAmount,
+          amount: participantPayAmount
         });
 
         const refundIntent = await ctx.prisma.stripeRefund.create({
@@ -322,7 +327,7 @@ export const eventPaymentRouter = createTRPCRouter({
     .query(async ({ input, ctx }) => {
       const payer = await ctx.prisma.participant.findFirst({
         where: {
-          cancellationToken: input.token,
+          cancellationToken: input.token
         },
         select: {
           phone: true,
@@ -339,13 +344,13 @@ export const eventPaymentRouter = createTRPCRouter({
                   event: true,
                   stripeRefunds: true
                 }
-              },
+              }
             },
             where: {
               status: StripePaymentStatus.SUCCEEDED,
               participants: {
                 some: {
-                  cancellationToken: input.token,
+                  cancellationToken: input.token
                 }
               }
             }
@@ -369,7 +374,7 @@ export const eventPaymentRouter = createTRPCRouter({
         });
       }
 
-      const participants = payment.participants.map(participantFormatter); 
+      const participants = payment.participants.map(participantFormatter);
 
       return {
         participants,
@@ -378,16 +383,16 @@ export const eventPaymentRouter = createTRPCRouter({
         buses: payer.event.buses.map((bus) => ({
           ...bus,
           availableSeats: bus.seats - bus._count.passengers
-        })),
-      }
+        }))
+      };
     }),
   changeBus: publicProcedure
     .input(z.object({ busId: z.string(), token: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const participant = await ctx.prisma.participant.findFirst({
         where: {
-          cancellationToken: input.token,
-        },
+          cancellationToken: input.token
+        }
       });
 
       if (!participant) {
@@ -399,7 +404,7 @@ export const eventPaymentRouter = createTRPCRouter({
 
       const bus = await ctx.prisma.bus.findFirst({
         where: {
-          id: input.busId,
+          id: input.busId
         },
         include: busesWithPaidPassengers.buses.include
       });
@@ -429,7 +434,7 @@ export const eventPaymentRouter = createTRPCRouter({
         data: {
           busId: input.busId
         }
-      })
+      });
 
       return "ok";
     }),
@@ -472,7 +477,5 @@ export const eventPaymentRouter = createTRPCRouter({
         totalPrice: payment.amount / 100,
         gameInfo: payment.participants[0]?.event.description
       };
-    }),
-
-    
+    })
 });
