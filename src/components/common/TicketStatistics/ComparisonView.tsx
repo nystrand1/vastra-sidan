@@ -144,7 +144,6 @@ export const ComparisonView = ({ homeGames }: ComparisonViewProps) => {
           <LineChart data={comparisonData.data}>
             <XAxis
               dataKey="daysLeft"
-              reversed
               tickFormatter={(value: number) => `${value}d`}
               label={{
                 value: "Dagar kvar till match",
