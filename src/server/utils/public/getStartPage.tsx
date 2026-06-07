@@ -13,8 +13,8 @@ export const getStartPage = async () => {
   const memberCountPromise = featureFlags.ENABLE_MEMBERSHIPS
     ? getMemberCount()
     : getCardSkipperMemberCount();
-  const upcomingEventPromise = featureFlags.ENABLE_AWAYGAMES
-    ? prisma.vastraEvent.findFirst({
+  const upcomingEventsPromise = featureFlags.ENABLE_AWAYGAMES
+    ? prisma.vastraEvent.findMany({
         include: busesWithPaidPassengers,
         where: {
           date: {
@@ -50,10 +50,10 @@ export const getStartPage = async () => {
     }
   });
 
-  const [memberCount, upcomingEvent, { data }, upcomingGame] =
+  const [memberCount, upcomingEvents, { data }, upcomingGame] =
     await Promise.all([
       memberCountPromise,
-      upcomingEventPromise,
+      upcomingEventsPromise,
       newsPromise,
       upcomingGamePromise
     ]);
@@ -106,13 +106,14 @@ export const getStartPage = async () => {
         ticketsSoldToday,
         updatedAt: upcomingGame.ticketSalesRecords[0].createdAt
       },
-    upcomingEvent: !!upcomingEvent && {
-      ...upcomingEvent,
-      maxSeats: upcomingEvent?.buses.reduce((acc, bus) => acc + bus.seats, 0),
-      bookedSeats: upcomingEvent?.buses.reduce(
-        (acc, bus) => acc + bus._count.passengers,
-        0
-      )
-    }
+    upcomingEvents:
+      upcomingEvents?.map((event) => ({
+        ...event,
+        maxSeats: event.buses.reduce((acc, bus) => acc + bus.seats, 0),
+        bookedSeats: event.buses.reduce(
+          (acc, bus) => acc + bus._count.passengers,
+          0
+        )
+      })) ?? []
   };
 };
