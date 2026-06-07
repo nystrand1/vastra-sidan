@@ -26,14 +26,16 @@ export const TotalChart = ({ data }: TotalChartProps) => {
       <LineChart data={chartData}>
         <XAxis
           dataKey="createdAt"
-          tickFormatter={(value: number) => formatSwedishTime(value, "dd MMM")}
+          tickFormatter={(value) =>
+            formatSwedishTime(value as number, "dd MMM")
+          }
         />
         <YAxis />
         <Tooltip
           wrapperClassName="!bg-slate-800 rounded-lg"
           labelClassName="bg-slate-800 text-white"
-          labelFormatter={(value: number) =>
-            formatSwedishTime(value, "yyyy-MM-dd HH:mm")
+          labelFormatter={(value) =>
+            formatSwedishTime(value as number, "yyyy-MM-dd HH:mm")
           }
         />
         <Line

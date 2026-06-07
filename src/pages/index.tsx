@@ -20,14 +20,10 @@ export default function Home() {
     return null;
   }
 
-  const { upcomingEvent, member, latestNewsPost, upcomingGame } = startPage;
+  const { upcomingEvents, member, latestNewsPost, upcomingGame } = startPage;
 
   const seoDescription =
     "Välkommen till Västra Sidan. Vi är en supporterförening till IK Sirius som arbetar för att skapa en bättre upplevelse för blåsvarta supportrar.";
-
-  const upcomingEventExpired = upcomingEvent
-    ? isAfter(new Date(), upcomingEvent.date)
-    : false;
 
   const memberLink = featureFlags.ENABLE_MEMBERSHIPS
     ? {
@@ -74,7 +70,7 @@ export default function Home() {
           {upcomingGame && (
             <Card
               title={`${upcomingGame.homeTeam} - ${upcomingGame.awayTeam}`}
-              href={upcomingGame.ticketLink}
+              className="h-fit"
             >
               <p className="text-md">
                 {formatSwedishTime(upcomingGame.date, "dd MMMM yyyy HH:mm", {
@@ -89,13 +85,15 @@ export default function Home() {
               <p className="!mt-1 text-lg text-gray-400">
                 Varav idag {upcomingGame.ticketsSoldToday} st
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="pb-1 text-sm text-gray-500">
                 Senast uppdaterad:{" "}
                 {formatSwedishTime(upcomingGame.updatedAt, "yyyy-MM-dd HH:mm", {
                   locale: sv
                 })}
               </p>
-              <Button>Köp biljett</Button>
+              <Link href={upcomingGame.ticketLink} target="_blank">
+                <Button className="w-full">Köp biljett</Button>
+              </Link>
               <Link
                 href={"/biljettstatistik"}
                 className="mt-2 flex flex-row items-center gap-2 text-sm text-gray-500"
@@ -105,37 +103,49 @@ export default function Home() {
               </Link>
             </Card>
           )}
-          {upcomingEvent && (
-            <Card
-              title="Nästa bortaresa"
-              href={`${PATHS.awayGames}${upcomingEvent.id}`}
-            >
-              <div className="space-y-1">
-                <p className="text-lg font-semibold">{upcomingEvent.name}</p>
-                <p className="text-md font-semibold">
-                  Bussen avgår{" "}
-                  {formatSwedishTime(upcomingEvent.date, "HH:mm", {
-                    locale: sv,
-                    timeZone: "Europe"
-                  })}
-                </p>
+          {upcomingEvents.length > 0 && (
+            <Card title="Kommande bortaresor">
+              <div className="flex flex-col gap-4">
+                {upcomingEvents.map((event) => {
+                  const expired = isAfter(new Date(), event.date);
+                  const full = event.bookedSeats >= event.maxSeats;
+                  return (
+                    <div
+                      key={event.id}
+                      className="flex flex-col gap-2 border-b border-slate-600 pb-4 last:border-0 last:pb-0"
+                    >
+                      <div className="space-y-1">
+                        <p className="text-lg font-semibold">{event.name}</p>
+                        <p className="text-md font-semibold">
+                          Bussen avgår{" "}
+                          {formatSwedishTime(event.date, "dd MMMM HH:mm", {
+                            locale: sv,
+                            timeZone: "Europe"
+                          })}
+                        </p>
+                      </div>
+                      <Progressbar
+                        label="Antal anmälda"
+                        maxValue={event.maxSeats}
+                        currentValue={event.bookedSeats}
+                      />
+                      <Link href={`${PATHS.awayGames}${event.id}`}>
+                        {expired ? (
+                          <Button disabled className="w-full">
+                            Bussen har avgått
+                          </Button>
+                        ) : full ? (
+                          <Button disabled className="w-full">
+                            Fullbokat
+                          </Button>
+                        ) : (
+                          <Button className="w-full">Till anmälan</Button>
+                        )}
+                      </Link>
+                    </div>
+                  );
+                })}
               </div>
-              <Progressbar
-                label="Antal anmälda"
-                maxValue={upcomingEvent.maxSeats}
-                currentValue={upcomingEvent.bookedSeats}
-              />
-              {upcomingEventExpired && (
-                <Button disabled>Bussen har avgått</Button>
-              )}
-              {!upcomingEventExpired &&
-                upcomingEvent.bookedSeats < upcomingEvent.maxSeats && (
-                  <Button>Till anmälan</Button>
-                )}
-              {!upcomingEventExpired &&
-                upcomingEvent.bookedSeats >= upcomingEvent.maxSeats && (
-                  <Button disabled>Fullbokat</Button>
-                )}
             </Card>
           )}
         </div>
