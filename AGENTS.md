@@ -69,8 +69,7 @@ This is the website for **Västra Sidan** (a Swedish football supporters associa
 │   │   │   └── routers/           # tRPC routers (admin, member, public, etc.)
 │   │   ├── auth.ts                # NextAuth configuration
 │   │   ├── db.ts                  # Prisma client singleton
-│   │   ├── stripe.ts              # Stripe client
-│   │   ├── resend.ts              # Resend email client
+│   │   ├── stripe.ts              # Stripe **client**
 │   │   ├── ses.ts                 # AWS SES email client
 │   │   ├── utils/                 # Server-side helpers (payment, email, admin queries)
 │   │   └── wpGraphql/             # WordPress GraphQL queries (.gql files)

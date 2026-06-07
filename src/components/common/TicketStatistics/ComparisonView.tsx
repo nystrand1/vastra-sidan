@@ -156,7 +156,7 @@ export const ComparisonView = ({ homeGames }: ComparisonViewProps) => {
             <Tooltip
               wrapperClassName="!bg-slate-800 rounded-lg"
               labelClassName="bg-slate-800 text-white"
-              labelFormatter={(value: number) => `${value} dagar kvar`}
+              labelFormatter={(value) => `${String(value)} dagar kvar`}
             />
             <Legend />
             {comparisonData.labels.map(({ label, gameId }) => (

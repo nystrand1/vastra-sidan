@@ -21,6 +21,7 @@ const config = {
     locales: ["sv-SE"],
     defaultLocale: "sv-SE"
   },
+  turbopack: {},
   images: {
     minimumCacheTTL: 60 * 60 * 24 * 365, // 1 year
     remotePatterns: [

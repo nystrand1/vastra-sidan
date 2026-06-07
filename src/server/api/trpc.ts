@@ -11,8 +11,7 @@ import { Role } from "@prisma/client";
 import { initTRPC, TRPCError } from "@trpc/server";
 import { type CreateNextContextOptions } from "@trpc/server/adapters/next";
 import { type Session } from "next-auth";
-import superjson from "superjson";
-import { type SuperJSONResult } from "superjson/dist/types";
+import superjson, { type SuperJSONResult } from "superjson";
 import { ZodError } from "zod";
 import { env } from "~/env.mjs";
 import { getServerAuthSession } from "~/server/auth";
@@ -32,7 +31,7 @@ import { stripe } from "../stripe";
 type CreateContextOptions = {
   session: Session | null;
   cronKey: string | null;
-  apolloClient: typeof apolloClient | null,
+  apolloClient: typeof apolloClient | null;
 };
 
 /**
@@ -51,7 +50,7 @@ const createInnerTRPCContext = (opts: CreateContextOptions) => {
     prisma,
     stripe,
     cronKey: opts.cronKey,
-    apolloClient,
+    apolloClient
   };
 };
 
@@ -70,7 +69,7 @@ export const createTRPCContext = async (opts: CreateNextContextOptions) => {
   return createInnerTRPCContext({
     session,
     cronKey: cronKey as string,
-    apolloClient,
+    apolloClient
   });
 };
 
