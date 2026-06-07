@@ -70,7 +70,7 @@ export default function Home() {
           {upcomingGame && (
             <Card
               title={`${upcomingGame.homeTeam} - ${upcomingGame.awayTeam}`}
-              href={upcomingGame.ticketLink}
+              className="h-fit"
             >
               <p className="text-md">
                 {formatSwedishTime(upcomingGame.date, "dd MMMM yyyy HH:mm", {
@@ -85,13 +85,15 @@ export default function Home() {
               <p className="!mt-1 text-lg text-gray-400">
                 Varav idag {upcomingGame.ticketsSoldToday} st
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="pb-1 text-sm text-gray-500">
                 Senast uppdaterad:{" "}
                 {formatSwedishTime(upcomingGame.updatedAt, "yyyy-MM-dd HH:mm", {
                   locale: sv
                 })}
               </p>
-              <Button>Köp biljett</Button>
+              <Link href={upcomingGame.ticketLink} target="_blank">
+                <Button className="w-full">Köp biljett</Button>
+              </Link>
               <Link
                 href={"/biljettstatistik"}
                 className="mt-2 flex flex-row items-center gap-2 text-sm text-gray-500"
