@@ -44,7 +44,7 @@ export const MemberSignup = ({
             <Hr />
             <Container>
               <Text>
-                Nu kan du njuta av alla medlemsförmåner som Västra Sidan har att erbjuda! Som t.ex rabatterade priser på Terassen i samband med matcher, samt billigare bussresor till bortamatcher.
+                Nu kan du njuta av alla medlemsförmåner som Västra Sidan har att erbjuda! Som t.ex rabatterade priser på Kaliber och Puben i samband med matcher, samt billigare bussresor till bortamatcher.
               </Text>
               <Text>
                 Om du har några frågor eller funderingar är du välkommen att kontakta oss på info@vastrasidan.se
