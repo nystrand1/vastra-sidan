@@ -11,7 +11,10 @@ import {
   upsertMembership,
   wpMembershipToMembership
 } from "~/server/utils/cron";
-import { GetAwayGamesDocument, GetMembershipsDocument } from "~/types/wordpresstypes/graphql";
+import {
+  GetAwayGamesDocument,
+  GetMembershipsDocument
+} from "~/types/wordpresstypes/graphql";
 
 interface SiriusGame {
   place: string;
@@ -29,31 +32,33 @@ interface SiriusGame {
   tickets: {
     availible: number; // API has a typo in the response
     link: string;
-  }
+  };
 }
 
 interface MatchInfoResponse {
   next: SiriusGame;
-  nextHome: SiriusGame
+  nextHome: SiriusGame;
 }
 
 export const cronRouter = createTRPCRouter({
   syncEvents: cronProcedure.mutation(async ({ ctx }) => {
     console.info("Syncing events");
     const { data: gqlRes } = await ctx.apolloClient.query({
-      query: GetAwayGamesDocument,
-    })
+      query: GetAwayGamesDocument
+    });
     console.info("Fetched events from WP", JSON.stringify(gqlRes, null, 2));
     const awayGames = gqlRes.awayGames.nodes
       // uncomment to filter out games that is older than a week
-      .filter(({ awayGame }) => isBefore(subDays(new Date(), 7), new Date(awayGame.date)))
+      .filter(({ awayGameFields }) =>
+        isBefore(subDays(new Date(), 7), new Date(awayGameFields.date))
+      )
       .sort((a, b) => {
-        const [dayA, monthA, yearA] = a.awayGame.date.split("/") as [
+        const [dayA, monthA, yearA] = a.awayGameFields.date.split("/") as [
           string,
           string,
           string
         ];
-        const [dayB, monthB, yearB] = b.awayGame.date.split("/") as [
+        const [dayB, monthB, yearB] = b.awayGameFields.date.split("/") as [
           string,
           string,
           string
@@ -80,8 +85,10 @@ export const cronRouter = createTRPCRouter({
     console.info("Syncing memberships");
     const { data } = await ctx.apolloClient.query({
       query: GetMembershipsDocument
-    })
-    const memberships = data.memberships.nodes.flatMap(wpMembershipToMembership);
+    });
+    const memberships = data.memberships.nodes.flatMap(
+      wpMembershipToMembership
+    );
     await Promise.all(
       memberships.map((membership) => upsertMembership(membership, ctx))
     );
@@ -90,19 +97,19 @@ export const cronRouter = createTRPCRouter({
   }),
   syncTicketSales: cronProcedure.mutation(async ({ ctx }) => {
     console.info("Syncing ticket sales");
-    const site = await fetch('https://www.siriusfotboll.se');
+    const site = await fetch("https://www.siriusfotboll.se");
     const siteHtml = await site.text();
     const securityToken = siteHtml.match(/data-nonce="(.*)"/)?.[1];
 
     if (!securityToken) {
-      console.error('Could not find security token');
-      captureMessage('Could not find security token')
+      console.error("Could not find security token");
+      captureMessage("Could not find security token");
       return;
     }
 
     const res = await makeRequest<MatchInfoResponse>(
       `https://www.siriusfotboll.se/ajax/matchinfo/?security=${securityToken}`,
-      'GET'
+      "GET"
     );
 
     const { next, nextHome } = res;
@@ -114,13 +121,16 @@ export const cronRouter = createTRPCRouter({
     // Sirius API gives us a timezoned date instead of UTC, so we need to subtract
     // the difference before storing the date in DB
     const dateInMilliseconds = new Date(nextHome.start * 1000);
-    const diffInMilliseconds = getTimezoneOffset('Europe/Stockholm', dateInMilliseconds);
-    
+    const diffInMilliseconds = getTimezoneOffset(
+      "Europe/Stockholm",
+      dateInMilliseconds
+    );
+
     const utcDate = subMilliseconds(dateInMilliseconds, diffInMilliseconds);
 
     const existingGame = await ctx.prisma.fotballGame.findFirst({
       where: {
-        date: utcDate,
+        date: utcDate
       }
     });
 
@@ -132,7 +142,7 @@ export const cronRouter = createTRPCRouter({
           homeTeam: nextHome.home.name,
           awayTeam: nextHome.away.name,
           ticketLink: nextHome.tickets.link,
-          location: nextHome.place,
+          location: nextHome.place
         }
       });
 
@@ -140,7 +150,7 @@ export const cronRouter = createTRPCRouter({
       await ctx.prisma.ticketSalesRecord.create({
         data: {
           ticketsSold: nextHome.tickets.availible,
-          fotballGameId: game.id,
+          fotballGameId: game.id
         }
       });
       return "ok";
@@ -161,10 +171,10 @@ export const cronRouter = createTRPCRouter({
     await ctx.prisma.ticketSalesRecord.create({
       data: {
         ticketsSold: nextHome.tickets.availible,
-        fotballGameId: existingGame.id,
+        fotballGameId: existingGame.id
       }
     });
 
     return "ok";
-  }),
+  })
 });

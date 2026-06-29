@@ -10,112 +10,131 @@ import { type AppRouter } from "~/server/api/root";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 
-type AwayGuide = inferRouterOutputs<AppRouter>['wordpress']['getAwayGuideBySlug']['awayGuide'];
+type AwayGuide =
+  inferRouterOutputs<AppRouter>["wordpress"]["getAwayGuideBySlug"]["awayGuideFields"];
 
 const AwayGuideTable = (awayGuide: AwayGuide) => {
-
   const rows = [
     {
-      label: 'Lag:',
+      label: "Lag:",
       value: awayGuide.lag
     },
     {
-      label: 'Bildad:',
+      label: "Bildad:",
       value: awayGuide.bildad
     },
     {
-      label: 'Sport:',
+      label: "Sport:",
       value: awayGuide.sport
     },
     {
-      label: 'Meriter:',
-      value: (
-        <p dangerouslySetInnerHTML={{ __html: awayGuide.meriter }} />
-      )
+      label: "Meriter:",
+      value: <p dangerouslySetInnerHTML={{ __html: awayGuide.meriter }} />
     },
-    ...(!!awayGuide.hemsida ? [{
-      label: 'Hemsida:',
-      value: (
-        <Link className="underline" href={awayGuide.hemsida}>{awayGuide.hemsida}</Link>
-      )
-    }] : []),
+    ...(!!awayGuide.hemsida
+      ? [
+          {
+            label: "Hemsida:",
+            value: (
+              <Link className="underline" href={awayGuide.hemsida}>
+                {awayGuide.hemsida}
+              </Link>
+            )
+          }
+        ]
+      : []),
     {
-      label: 'Avstånd:',
-      value: awayGuide.avstand,
-    },
-    {
-      label: 'Matcher:',
-      value: (
-        <p dangerouslySetInnerHTML={{ __html: awayGuide.matcher }} />
-      ),
+      label: "Avstånd:",
+      value: awayGuide.avstand
     },
     {
-      label: 'Division:',
-      value: awayGuide.division,
+      label: "Matcher:",
+      value: <p dangerouslySetInnerHTML={{ __html: awayGuide.matcher }} />
     },
     {
-      label: 'Färger:',
+      label: "Division:",
+      value: awayGuide.division
+    },
+    {
+      label: "Färger:",
       value: awayGuide.farger
     }
-  ]
-
+  ];
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2">
       <table className="order-2 xl:order-1">
         <tbody>
           {rows.map((row, index) => (
-            <tr key={row.label} className={`bg-slate-${index % 2 ? '600' : '700'}`}>
-              <td className="font-semibold w-24 p-2">{row.label}</td>
+            <tr
+              key={row.label}
+              className={`bg-slate-${index % 2 ? "600" : "700"}`}
+            >
+              <td className="w-24 p-2 font-semibold">{row.label}</td>
               <td>{row.value}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      {awayGuide.logo?.sourceUrl && (
-        <div className="flex items-center justify-center order-1 xl:order-2">
-          <Image src={awayGuide.logo.sourceUrl} width={200} height={200} alt={awayGuide.lag} />
+      {awayGuide.logo?.node?.sourceUrl && (
+        <div className="order-1 flex items-center justify-center xl:order-2">
+          <Image
+            src={awayGuide.logo.node.sourceUrl}
+            width={200}
+            height={200}
+            alt={awayGuide.lag}
+          />
         </div>
       )}
     </div>
-  )
+  );
 };
 
 export default function AwayGamePage() {
   const { id } = useRouter().query;
-  const { data } = api.wordpress.getAwayGuideBySlug.useQuery({ slug: id as string }, { enabled: !!id, staleTime: Infinity });
+  const { data } = api.wordpress.getAwayGuideBySlug.useQuery(
+    { slug: id as string },
+    { enabled: !!id, staleTime: Infinity }
+  );
   if (!data) {
     return null;
   }
-  const { date, awayGuide, awayGuideContent, slug, title } = data;
+  const { date, awayGuideFields, awayGuideContent, slug, title } = data;
   const { text } = awayGuideContent;
 
-  const textWithoutHtml = text.replace(/<[^>]*>?/gm, '');
+  const textWithoutHtml = text.replace(/<[^>]*>?/gm, "");
 
   const seoTitle = `Bortaguiden ${title} | Västra Sidan`;
-  const seoDescription = textWithoutHtml.length > 160 ? textWithoutHtml.substring(0, 160) : textWithoutHtml;
+  const seoDescription =
+    textWithoutHtml.length > 160
+      ? textWithoutHtml.substring(0, 160)
+      : textWithoutHtml;
 
   return (
     <>
-    <Head>
-      <title>{seoTitle}</title>
-      <meta name="title" key="title" content={seoTitle} />
-      <meta name="description" key="description" content={seoDescription} />
-      {awayGuide.logo?.sourceUrl && (
-        <meta property="image" key="image" content={awayGuide.logo.sourceUrl} />
-      )}
-    </Head>
+      <Head>
+        <title>{seoTitle}</title>
+        <meta name="title" key="title" content={seoTitle} />
+        <meta name="description" key="description" content={seoDescription} />
+        {awayGuideFields.logo?.node?.sourceUrl && (
+          <meta
+            property="image"
+            key="image"
+            content={awayGuideFields.logo.node.sourceUrl}
+          />
+        )}
+      </Head>
       <div>
-        <Card 
-          key={slug} 
+        <Card
+          key={slug}
           title={title}
           titleClassName="text-center !text-3xl"
-          className="w-full md:w-7/12 m-auto" 
+          className="m-auto w-full md:w-7/12"
           contentClassName="justify-start"
           titleAsH1
         >
           <p className="text-gray-400">{date}</p>
-          <AwayGuideTable {...awayGuide} />
+          <AwayGuideTable {...awayGuideFields} />
           <Wysiwyg content={awayGuideContent.text} />
         </Card>
       </div>
@@ -124,9 +143,10 @@ export default function AwayGamePage() {
 }
 
 export const getStaticPaths = async () => {
-
   const ssrHelper = await createSSRHelper();
-  const awayGames = await ssrHelper.wordpress.getAwayGuides.fetch({ limit: 10 });
+  const awayGames = await ssrHelper.wordpress.getAwayGuides.fetch({
+    limit: 10
+  });
   const paths = awayGames.slugs?.map((slug) => ({ params: { id: slug } }));
   return {
     paths,
@@ -134,14 +154,16 @@ export const getStaticPaths = async () => {
   };
 };
 
-export const getStaticProps = async (props: GetStaticPropsContext ) => {
+export const getStaticProps = async (props: GetStaticPropsContext) => {
   const slug = props.params?.id as string;
   if (!slug) {
     return { notFound: true };
   }
   const ssrHelper = await createSSRHelper();
   console.time(`fetchChronicle - ${slug}`);
-  const chronicle = await ssrHelper.wordpress.getAwayGuideBySlug.fetch({ slug });
+  const chronicle = await ssrHelper.wordpress.getAwayGuideBySlug.fetch({
+    slug
+  });
   console.timeEnd(`fetchChronicle - ${slug}`);
   if (!chronicle) {
     return { notFound: true };
@@ -149,8 +171,8 @@ export const getStaticProps = async (props: GetStaticPropsContext ) => {
 
   return {
     props: {
-      trpcState: ssrHelper.dehydrate(),
+      trpcState: ssrHelper.dehydrate()
     },
-    revalidate: 3600 * 24,
+    revalidate: 3600 * 24
   };
 };

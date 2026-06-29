@@ -1,6 +1,6 @@
 query GetAwayGuidesSlugs {
   awayguides {
-  nodes {
+    nodes {
       id
       slug
     }
@@ -8,12 +8,11 @@ query GetAwayGuidesSlugs {
 }
 
 query GetAwayGuides($after: String, $limit: Int = 100) {
-  awayguides(first: $limit, after: $after, where:  {
-     orderby: [ {
-        field: DATE,
-        order: DESC
-     }]
-  }) {
+  awayguides(
+    first: $limit
+    after: $after
+    where: { orderby: [{ field: DATE, order: DESC }] }
+  ) {
     pageInfo {
       hasNextPage
       endCursor
@@ -21,7 +20,7 @@ query GetAwayGuides($after: String, $limit: Int = 100) {
     nodes {
       id
       title
-      awayGuide {
+      awayGuideFields {
         sport
         division
       }
@@ -35,7 +34,7 @@ query GetAwayGuideBySlug($slug: ID!) {
     id
     title
     date
-    awayGuide {
+    awayGuideFields {
       sport
       division
       farger
@@ -46,7 +45,9 @@ query GetAwayGuideBySlug($slug: ID!) {
       lag
       bildad
       logo {
-        sourceUrl
+        node {
+          sourceUrl
+        }
       }
     }
     awayGuideContent {

@@ -1,9 +1,9 @@
 query GetAwayGames {
-  awayGames: awaygames(where: { stati: [PUBLISH, PRIVATE, DRAFT]}) {
+  awayGames: awaygames(where: { stati: [PUBLISH, PRIVATE, DRAFT] }) {
     nodes {
       id: databaseId
       status
-      awayGame: awaygame {      
+      awayGameFields {
         date
         busInfo: businfo
         enemyTeam: enemyteam
@@ -13,10 +13,10 @@ query GetAwayGames {
         nonMemberPriceYouth: nonmemberpriceYouth
         buses {
           id
-          busName: busname
-          maxSeats: maxseats
-          requiredSeats: requiredseats
-          occupiedSeats: occupiedseats
+          busName
+          maxSeats
+          requiredSeats
+          occupiedSeats
         }
       }
     }

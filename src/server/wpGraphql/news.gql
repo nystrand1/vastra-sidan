@@ -1,10 +1,5 @@
 query GetNews($limit: Int = 100) {
-  newsPosts(first: $limit, where:  {
-     orderby: [ {
-        field: DATE,
-        order: DESC
-     }]
-  }) {
+  newsPosts(first: $limit, where: { orderby: [{ field: DATE, order: DESC }] }) {
     nodes {
       id
       date
@@ -13,8 +8,10 @@ query GetNews($limit: Int = 100) {
         title
         author
         newsImg {
-          sourceUrl
-          altText
+          node {
+            sourceUrl
+            altText
+          }
         }
       }
       slug
@@ -31,8 +28,10 @@ query GetNewsBySlug($slug: ID!) {
       title
       author
       newsImg {
-        sourceUrl
-        altText
+        node {
+          sourceUrl
+          altText
+        }
       }
     }
     slug
