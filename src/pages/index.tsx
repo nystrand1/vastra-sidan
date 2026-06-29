@@ -119,8 +119,7 @@ export default function Home() {
                         <p className="text-md font-semibold">
                           Bussen avgår{" "}
                           {formatSwedishTime(event.date, "dd MMMM HH:mm", {
-                            locale: sv,
-                            timeZone: "Europe"
+                            locale: sv
                           })}
                         </p>
                       </div>

@@ -14,6 +14,8 @@ import {
   type GetMembershipsQuery
 } from "~/types/wordpresstypes/graphql";
 import { type createTRPCContext } from "../api/trpc";
+import { formatSwedishTime } from "~/utils/formatSwedishTime";
+import { sv } from "date-fns/locale/sv";
 
 const apiKey = env.WORDPRESS_API_KEY;
 
@@ -78,7 +80,13 @@ export const awayGameToEvent = (
   return {
     event: {
       id: awayGame.id.toString(),
-      name: `${awayGame.enemyTeam} - ${awayGame.date.split(" ")[0] || ""}`,
+      name: `${awayGame.enemyTeam} - ${formatSwedishTime(
+        awayGame.date,
+        "dd MMMM",
+        {
+          locale: sv
+        }
+      )}`,
       description: awayGame.busInfo || "",
       date: fromZonedTime(awayGame.date, "Europe/Stockholm"),
       createdAt: new Date(),
