@@ -50,15 +50,18 @@ export const getStartPage = async () => {
     }
   });
 
-  const [memberCount, upcomingEvents, { data }, upcomingGame] =
-    await Promise.all([
+  const [memberCountData, upcomingEventsData, newsPostData, upcomingGameData] =
+    await Promise.allSettled([
       memberCountPromise,
       upcomingEventsPromise,
       newsPromise,
       upcomingGamePromise
     ]);
 
-  const [latestNewsPost] = data.newsPosts.nodes;
+  const [latestNewsPost] =
+    newsPostData.status === "fulfilled"
+      ? newsPostData.value.data.newsPosts.nodes
+      : [];
 
   let newsPost = null;
 
@@ -77,6 +80,9 @@ export const getStartPage = async () => {
     };
   }
 
+  const upcomingGame =
+    upcomingGameData.status === "fulfilled" ? upcomingGameData.value : null;
+
   const salesRecordsToday = upcomingGame?.ticketSalesRecords.filter((record) =>
     isToday(record.createdAt)
   );
@@ -88,6 +94,11 @@ export const getStartPage = async () => {
   if (firstRecord && lastRecord) {
     ticketsSoldToday = firstRecord.ticketsSold - lastRecord.ticketsSold;
   }
+
+  const memberCount =
+    memberCountData.status === "fulfilled" ? memberCountData.value : 0;
+  const upcomingEvents =
+    upcomingEventsData.status === "fulfilled" ? upcomingEventsData.value : [];
 
   return {
     member: {
