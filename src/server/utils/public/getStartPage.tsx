@@ -76,7 +76,7 @@ export const getStartPage = async () => {
           .splice(0, 1)
           .join(" ") + ".",
       date: parseDateString(latestNewsPost.date),
-      image: latestNewsPost.newsContent.newsImg
+      image: latestNewsPost.newsContent.newsImg?.node
     };
   }
 

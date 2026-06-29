@@ -4,7 +4,6 @@ import Card from "~/components/atoms/CardLink/CardLink";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 
-
 export const AboutUsPage = () => {
   const { data } = api.wordpress.getAboutUsPage.useQuery();
 
@@ -12,7 +11,8 @@ export const AboutUsPage = () => {
 
   const { documents, board, protocols } = data;
 
-  const seoDescription = "Västra Sidan är en supporterförening till IK Sirius. Vi är en ideell förening som arbetar för att skapa en bättre upplevelse för IK Sirius supportrar."
+  const seoDescription =
+    "Västra Sidan är en supporterförening till IK Sirius. Vi är en ideell förening som arbetar för att skapa en bättre upplevelse för IK Sirius supportrar.";
 
   return (
     <>
@@ -22,8 +22,8 @@ export const AboutUsPage = () => {
         <meta name="description" key="description" content={seoDescription} />
       </Head>
       <div>
-        <h1 className="text-center mb-4 text-5xl">Om oss</h1>
-        <div className="flex flex-col md:flex-row justify-center md:space-x-5 py-6 text-lg underline underline-offset-4">
+        <h1 className="mb-4 text-center text-5xl">Om oss</h1>
+        <div className="flex flex-col justify-center py-6 text-lg underline underline-offset-4 md:flex-row md:space-x-5">
           <Link className="hover:text-gray-200" href="/omoss/stadgar">
             Stadgar
           </Link>
@@ -35,26 +35,46 @@ export const AboutUsPage = () => {
           </Link>
         </div>
         <div className="flex justify-center space-x-5 pb-6 text-lg">
-          <p className="md:hidden">Swishnummer: <Link target="_blank" className="hover:text-gray-200 underline underline-offset-4" href="https://app.swish.nu/1/p/sw/?sw=1232314342">123 231 43 42</Link></p>
-          <p className="hidden md:block">Swishnummer: <span className="underline underline-offset-4">123 231 43 42</span></p>
+          <p className="md:hidden">
+            Swishnummer:{" "}
+            <Link
+              target="_blank"
+              className="underline underline-offset-4 hover:text-gray-200"
+              href="https://app.swish.nu/1/p/sw/?sw=1232314342"
+            >
+              123 231 43 42
+            </Link>
+          </p>
+          <p className="hidden md:block">
+            Swishnummer:{" "}
+            <span className="underline underline-offset-4">123 231 43 42</span>
+          </p>
         </div>
-        <div className="grid md:grid-cols-2 gap-4 md:items-stretch flex-wrap justify-center w-full md:w-10/12 m-auto">
+        <div className="m-auto grid w-full flex-wrap justify-center gap-4 md:w-10/12 md:grid-cols-2 md:items-stretch">
           <Card
             title="Styrelsen"
             titleClassName="text-center !text-2xl"
             className="order-2 md:order-1"
           >
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid gap-4 md:grid-cols-2">
               {board.boardmembers.map((member) => (
                 <div key={member.details.name}>
                   <p className="font-semibold">{member.details.position}</p>
                   <p>{member.details.name}</p>
-                  <a className="underline" href={`mailto:${member.details.email}`}>{member.details.email}</a>
+                  <a
+                    className="underline"
+                    href={`mailto:${member.details.email}`}
+                  >
+                    {member.details.email}
+                  </a>
                 </div>
               ))}
             </div>
             <div>
-              Styrelsen kontaktas i första hand via mejl: <a className="underline" href="mailto:info@vastrasidan.se">info@vastrasidan.se</a>
+              Styrelsen kontaktas i första hand via mejl:{" "}
+              <a className="underline" href="mailto:info@vastrasidan.se">
+                info@vastrasidan.se
+              </a>
             </div>
           </Card>
           <Card
@@ -65,17 +85,33 @@ export const AboutUsPage = () => {
             <div className="grid grid-cols-2">
               <div>
                 <p className="font-semibold">Dokument</p>
-                <div className="grid gap-2 !mt-0">
+                <div className="!mt-0 grid gap-2">
                   {documents.map((doc) => (
-                    <a key={doc.file.title} className="text-sm underline overflow-hidden text-ellipsis" href={doc.file.mediaItemUrl} target="_blank" download>{doc.file.title}</a>
+                    <a
+                      key={doc.file.node.title}
+                      className="overflow-hidden text-ellipsis text-sm underline"
+                      href={doc.file.node.mediaItemUrl}
+                      target="_blank"
+                      download
+                    >
+                      {doc.file.node.title}
+                    </a>
                   ))}
                 </div>
               </div>
               <div>
                 <p className="font-semibold">Protokoll</p>
-                <div className="grid gap-2 !mt-0">
+                <div className="!mt-0 grid gap-2">
                   {protocols.map((protocol) => (
-                    <a key={protocol.file.title} className="text-sm underline overflow-hidden text-ellipsis" href={protocol.file.mediaItemUrl} target="_blank" download>{protocol.file.title}</a>
+                    <a
+                      key={protocol.file.node.title}
+                      className="overflow-hidden text-ellipsis text-sm underline"
+                      href={protocol.file.node.mediaItemUrl}
+                      target="_blank"
+                      download
+                    >
+                      {protocol.file.node.title}
+                    </a>
                   ))}
                 </div>
               </div>
@@ -84,8 +120,8 @@ export const AboutUsPage = () => {
         </div>
       </div>
     </>
-  )
-}
+  );
+};
 
 export default AboutUsPage;
 
@@ -96,8 +132,8 @@ export async function getStaticProps() {
 
   return {
     props: {
-      trpcState: ssrHelper.dehydrate(),
+      trpcState: ssrHelper.dehydrate()
     },
-    revalidate: 3600 * 24,
-  }
+    revalidate: 3600 * 24
+  };
 }

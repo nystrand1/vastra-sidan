@@ -12,17 +12,19 @@ export const sendMemberConfirmationEmail = async (
   const formattedMember = {
     name: `${member.firstName} ${member.lastName}`,
     email: member.email,
-    phone: member.phone,
-  }
+    phone: member.phone
+  };
 
   return await sendSesEmail({
     to: member.email,
     subject: `Tack för att du blivit medlem i Västra Sidan`,
-    body: await render(MemberSignup({ 
-      member: formattedMember, 
-      memberUrl,
-      membershipType: membership.type,
-      memberImageUrl: membership.imageUrl,
-    }))
-  })
+    body: await render(
+      MemberSignup({
+        member: formattedMember,
+        memberUrl,
+        membershipType: membership.type,
+        memberImageUrl: membership.imageUrl
+      })
+    )
+  });
 };

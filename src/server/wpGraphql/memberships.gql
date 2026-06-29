@@ -3,19 +3,23 @@ query GetMemberships {
     nodes {
       id
       title
-      membership {
-        startDate: startdate
-        endDate: enddate
-        familyPrice: familyprice
-        regularPrice: regularprice
-        youthPrice: youthprice
+      membershipFields {
+        startDate
+        endDate
+        familyPrice
+        regularPrice
+        youthPrice
         image {
-          sourceUrl
-          altText
+          node {
+            sourceUrl
+            altText
+          }
         }
         model {
-          id
-          mediaItemUrl
+          node {
+            id
+            mediaItemUrl
+          }
         }
       }
     }

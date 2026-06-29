@@ -4,13 +4,16 @@ import {
   type Prisma,
   type VastraEvent
 } from "@prisma/client";
+import { captureException } from "@sentry/nextjs";
 import { type inferAsyncReturnType } from "@trpc/server";
 import { parseISO } from "date-fns";
-import { env } from "~/env.mjs";
-import { type createTRPCContext } from "../api/trpc";
-import { captureException } from "@sentry/nextjs";
-import { type GetMembershipsQuery, type GetAwayGamesQuery } from "~/types/wordpresstypes/graphql";
 import { fromZonedTime } from "date-fns-tz";
+import { env } from "~/env.mjs";
+import {
+  type GetAwayGamesQuery,
+  type GetMembershipsQuery
+} from "~/types/wordpresstypes/graphql";
+import { type createTRPCContext } from "../api/trpc";
 
 const apiKey = env.WORDPRESS_API_KEY;
 
@@ -31,7 +34,7 @@ export const PATHS = {
 
 export const makeRequest = async <T>(
   url: string,
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  method: "GET" | "POST" | "PUT" | "DELETE",
   body?: BodyInit
 ): Promise<T> => {
   const headers = new Headers();
@@ -53,17 +56,17 @@ export const makeRequest = async <T>(
   }
 };
 
-type AwayGame = GetAwayGamesQuery['awayGames']['nodes'][0];
+type AwayGame = GetAwayGamesQuery["awayGames"]["nodes"][0];
 
-export const awayGameMapper = ({ awayGame, id, status }: AwayGame) => ({
-  ...awayGame,
+export const awayGameMapper = ({ awayGameFields, id, status }: AwayGame) => ({
+  ...awayGameFields,
   status,
   id,
-  maxSeats: awayGame.buses.reduce(
+  maxSeats: awayGameFields.buses.reduce(
     (acc, bus) => acc + Number(bus.maxSeats),
     0
   ),
-  bookedSeats: awayGame.buses.reduce(
+  bookedSeats: awayGameFields.buses.reduce(
     (acc, bus) => acc + Number(bus.occupiedSeats),
     0
   )
@@ -77,7 +80,7 @@ export const awayGameToEvent = (
       id: awayGame.id.toString(),
       name: `${awayGame.enemyTeam} - ${awayGame.date.split(" ")[0] || ""}`,
       description: awayGame.busInfo || "",
-      date: fromZonedTime(awayGame.date, 'Europe/Stockholm'),
+      date: fromZonedTime(awayGame.date, "Europe/Stockholm"),
       createdAt: new Date(),
       updatedAt: new Date(),
       defaultPrice: Number(awayGame.nonMemberPrice),
@@ -87,7 +90,7 @@ export const awayGameToEvent = (
       active: awayGame.status === "publish"
     },
     buses: awayGameToBuses(awayGame)
-  }
+  };
 };
 
 const awayGameToBuses = (
@@ -95,12 +98,15 @@ const awayGameToBuses = (
 ): Bus[] => {
   // If VSK game, use the legacy ID
   return awayGame.buses.map((bus) => ({
-    id: awayGame.id.toString() === '3473' ? `${awayGame.id}-${bus.busName}` : bus.id,
+    id:
+      awayGame.id.toString() === "3473"
+        ? `${awayGame.id}-${bus.busName}`
+        : bus.id,
     name: bus.busName,
     seats: Number(bus.maxSeats),
     createdAt: new Date(),
     updatedAt: new Date(),
-    eventId: awayGame.id.toString(),
+    eventId: awayGame.id.toString()
   }));
 };
 
@@ -151,12 +157,15 @@ export const upsertBus = async (
 };
 
 export const wpMembershipToMembership = (
-  wpMembership: GetMembershipsQuery['memberships']['nodes'][number]
+  wpMembership: GetMembershipsQuery["memberships"]["nodes"][number]
 ): MembershipPayload[] => {
   const prices = {
-    [MembershipType.FAMILY]: Number(wpMembership.membership.familyPrice) * 100,
-    [MembershipType.REGULAR]: Number(wpMembership.membership.regularPrice) * 100,
-    [MembershipType.YOUTH]: Number(wpMembership.membership.youthPrice) * 100
+    [MembershipType.FAMILY]:
+      Number(wpMembership.membershipFields.familyPrice) * 100,
+    [MembershipType.REGULAR]:
+      Number(wpMembership.membershipFields.regularPrice) * 100,
+    [MembershipType.YOUTH]:
+      Number(wpMembership.membershipFields.youthPrice) * 100
   };
   const memberships: MembershipPayload[] = [
     MembershipType.FAMILY,
@@ -165,12 +174,12 @@ export const wpMembershipToMembership = (
   ].map((membershipType) => ({
     wordpressId: wpMembership.id.toString(),
     name: wpMembership.title,
-    imageUrl: wpMembership.membership.image.sourceUrl,
-    textureUrl: wpMembership.membership.model.mediaItemUrl,
+    imageUrl: wpMembership.membershipFields.image.node.sourceUrl,
+    textureUrl: wpMembership.membershipFields.model.node.mediaItemUrl,
     type: membershipType,
     price: prices[membershipType],
-    startDate: parseISO(wpMembership.membership.startDate),
-    endDate: parseISO(wpMembership.membership.endDate),
+    startDate: parseISO(wpMembership.membershipFields.startDate),
+    endDate: parseISO(wpMembership.membershipFields.endDate),
     updatedAt: new Date()
   }));
 

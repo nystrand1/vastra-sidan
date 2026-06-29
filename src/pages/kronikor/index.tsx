@@ -6,12 +6,17 @@ import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 
 export default function ChroniclesPage() {
-  const { data: chronicles } = api.wordpress.getChronicles.useQuery(undefined, { staleTime: Infinity });
+  const { data: chronicles } = api.wordpress.getChronicles.useQuery(undefined, {
+    staleTime: Infinity
+  });
   if (!chronicles) {
-    return <p className="text-center text-xl">Finns inga kronikor för tillfället!</p>
+    return (
+      <p className="text-center text-xl">Finns inga kronikor för tillfället!</p>
+    );
   }
 
-  const seoDescription = "Läs Martin Erlandsson Lampa's krönikor om allt som rör Västra Sidan.";
+  const seoDescription =
+    "Läs Martin Erlandsson Lampa's krönikor om allt som rör Västra Sidan.";
 
   return (
     <>
@@ -20,13 +25,19 @@ export default function ChroniclesPage() {
         <meta name="description" key="description" content={seoDescription} />
       </Head>
       <div>
-        <h1 className="text-center mb-4 text-5xl">Krönikor</h1>
-        <div className="grid md:grid-cols-3 gap-4 md:items-stretch">
-          {chronicles?.map(({ slug, chronicle, date, excerpt }) => (
-            <Card title={chronicle.title} key={slug} contentClassName="justify-start">
+        <h1 className="mb-4 text-center text-5xl">Krönikor</h1>
+        <div className="grid gap-4 md:grid-cols-3 md:items-stretch">
+          {chronicles?.map(({ slug, chronicleFields, date, excerpt }) => (
+            <Card
+              title={chronicleFields.title}
+              key={slug}
+              contentClassName="justify-start"
+            >
               <p className="text-gray-400">{date}</p>
               <Wysiwyg content={excerpt} />
-              <ButtonLink className="justify-end" href={`/kronikor/${slug}`}>Läs mer</ButtonLink>
+              <ButtonLink className="justify-end" href={`/kronikor/${slug}`}>
+                Läs mer
+              </ButtonLink>
             </Card>
           ))}
         </div>
@@ -41,8 +52,8 @@ export const getStaticProps = async () => {
 
   return {
     props: {
-      trpcState: ssrHelper.dehydrate(),
+      trpcState: ssrHelper.dehydrate()
     },
-    revalidate: 3600 * 24,
-  }
+    revalidate: 3600 * 24
+  };
 };

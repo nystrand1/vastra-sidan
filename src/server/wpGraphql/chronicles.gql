@@ -3,7 +3,7 @@ query GetChronicles {
     nodes {
       id
       date
-      chronicle {
+      chronicleFields {
         title
         text
       }
@@ -15,7 +15,7 @@ query GetChronicles {
 query GetChronicle($slug: ID!) {
   chronicle(id: $slug, idType: SLUG) {
     date
-    chronicle {
+    chronicleFields {
       title
       text
     }

@@ -3,7 +3,7 @@ query GetAboutUs {
     orgChart {
       chart: stadgar {
         text
-        title: titel 
+        title: titel
       }
     }
     board {
@@ -14,7 +14,7 @@ query GetAboutUs {
           position
           email
         }
-      } 
+      }
     }
     wallOfFame {
       awardInfo
@@ -30,9 +30,11 @@ query GetAboutUs {
     protocols {
       protocols {
         file: protocol {
-          mediaItemUrl
-          title
-          date
+          node {
+            mediaItemUrl
+            title
+            date
+          }
         }
       }
     }
@@ -41,9 +43,11 @@ query GetAboutUs {
     documents {
       document: dokument {
         file: document {
-          mediaItemUrl
-          title
-          date
+          node {
+            mediaItemUrl
+            title
+            date
+          }
         }
       }
     }
