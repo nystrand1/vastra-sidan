@@ -88,13 +88,13 @@ export const AboutUsPage = () => {
                 <div className="!mt-0 grid gap-2">
                   {documents.map((doc) => (
                     <a
-                      key={doc.file.node.title}
+                      key={doc.file?.node?.title}
                       className="overflow-hidden text-ellipsis text-sm underline"
-                      href={doc.file.node.mediaItemUrl}
+                      href={doc.file?.node?.mediaItemUrl}
                       target="_blank"
                       download
                     >
-                      {doc.file.node.title}
+                      {doc.file?.node?.title}
                     </a>
                   ))}
                 </div>
@@ -104,13 +104,13 @@ export const AboutUsPage = () => {
                 <div className="!mt-0 grid gap-2">
                   {protocols.map((protocol) => (
                     <a
-                      key={protocol.file.node.title}
+                      key={protocol.file?.node?.title}
                       className="overflow-hidden text-ellipsis text-sm underline"
-                      href={protocol.file.node.mediaItemUrl}
+                      href={protocol.file?.node?.mediaItemUrl}
                       target="_blank"
                       download
                     >
-                      {protocol.file.node.title}
+                      {protocol.file?.node?.title}
                     </a>
                   ))}
                 </div>
