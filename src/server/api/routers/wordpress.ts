@@ -265,18 +265,18 @@ export const wordpressRouter = createTRPCRouter({
 
     const { documentPage, aboutUsPage } = data;
     const nonNullDocuments = documentPage.documents.document.filter(
-      (doc) => doc.file.node !== null
+      (doc) => doc.file?.node !== null
     );
     const nonNullProtocols = aboutUsPage.protocols.protocols.filter(
-      (protocol) => protocol.file.node !== null
+      (protocol) => protocol.file?.node !== null
     );
     return {
       documents: nonNullDocuments.sort((a, b) =>
-        b.file.node.date.localeCompare(a.file.node.date)
+        b.file?.node?.date.localeCompare(a.file?.node?.date)
       ),
       ...aboutUsPage,
       protocols: nonNullProtocols.sort((a, b) =>
-        b.file.node.date.localeCompare(a.file.node.date)
+        b.file?.node?.date.localeCompare(a.file?.node?.date)
       )
     };
   }),
