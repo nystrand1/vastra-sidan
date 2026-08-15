@@ -2,6 +2,7 @@ import { Role } from "@prisma/client";
 import { type GetServerSidePropsContext } from "next";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
+import { AddPassengerModal } from "~/components/admin/PassengerTable/AddPassengerModal";
 import { columns } from "~/components/admin/PassengerTable/Columns";
 import { DownloadPassengerListCsv } from "~/components/admin/PassengerTable/DownloadPassengerListCsv";
 import { PassengerTable } from "~/components/admin/PassengerTable/PassengerTable";
@@ -40,7 +41,10 @@ export const AdminEventPage = () => {
       <Card>
         <CardHeader>
           <p className="text-3xl">{event.title}</p>
-          <DownloadPassengerListCsv passengers={event.participants} title={event.title} />
+          <div className="flex flex-row gap-2">
+            <DownloadPassengerListCsv passengers={event.participants} title={event.title} />
+            <AddPassengerModal eventId={event.id} buses={event.buses} />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex flex-row gap-4 mb-2">
