@@ -24,6 +24,18 @@ export const eventSignupSchema = z.object({
   participants: participantSchema.array()
 });
 
+export const adminAddParticipantSchema = z.object({
+  eventId: z.string(),
+  firstName: z.string({ required_error: "Ange förnamn" }).min(1, { message: "Ange förnamn" }),
+  lastName: z.string({ required_error: "Ange efternamn" }).min(1, { message: "Ange efternamn" }),
+  email: z.string({ required_error: "Ange email" }).email({ message: "Felaktig email" }),
+  phone: z.string({ required_error: "Ange telefonnummer" }).min(1, { message: "Ange telefonnummer" }),
+  note: z.string().optional(),
+  busId: z.string({ required_error: "Välj buss" }).min(1, { message: "Välj buss" }),
+  member: z.boolean(),
+  youth: z.boolean()
+});
+
 const StripePaymentStatuses: [StripePaymentStatus, ...StripePaymentStatus[]] = [
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   Object.values(StripePaymentStatus)[0]!,

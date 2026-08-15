@@ -1,4 +1,4 @@
-import { type Prisma } from "@prisma/client";
+import { StripePaymentStatus, type Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { adminProcedure, createTRPCRouter } from "~/server/api/trpc";
@@ -24,6 +24,7 @@ import { sendEventConfirmationEmail } from "~/server/utils/email/sendEventConfir
 import { sendMemberConfirmationEmail } from "~/server/utils/email/sendMemberConfirmationEmail";
 import {
   addFamilyMemberSchema,
+  adminAddParticipantSchema,
   updateMemberSchema,
   updateParticipantSchema
 } from "~/utils/zodSchemas";
@@ -223,5 +224,66 @@ export const adminRouter = createTRPCRouter({
     .input(addFamilyMemberSchema)
     .mutation(async ({ input }) => {
       await addFamilyMember(input);
+    }),
+  addParticipant: adminProcedure
+    .input(adminAddParticipantSchema)
+    .mutation(async ({ input, ctx }) => {
+      const { firstName, lastName, eventId, ...rest } = input;
+
+      const bus = await ctx.prisma.bus.findFirst({
+        where: {
+          id: rest.busId
+        },
+        include: busesWithPaidPassengers.buses.include
+      });
+
+      if (!bus) {
+        captureMessage("Bus not found");
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Bus not found"
+        });
+      }
+
+      const availableSeats = bus.seats - bus._count.passengers;
+
+      if (!availableSeats) {
+        captureMessage("Bus is full");
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Bus is full"
+        });
+      }
+
+      const participant = await ctx.prisma.participant.create({
+        data: {
+          ...rest,
+          name: `${firstName} ${lastName}`,
+          userEmail: rest.email,
+          payAmount: 0,
+          eventId
+        }
+      });
+
+      await ctx.prisma.stripePayment.create({
+        data: {
+          stripePaymentId: `admin-comp-${participant.id}`,
+          amount: 0,
+          status: StripePaymentStatus.SUCCEEDED,
+          participants: {
+            connect: [{ id: participant.id }]
+          }
+        }
+      });
+
+      const participantWithRelations = await ctx.prisma.participant.findUniqueOrThrow({
+        where: { id: participant.id },
+        include: {
+          event: true,
+          bus: true
+        }
+      });
+
+      await sendEventConfirmationEmail(participantWithRelations);
     })
 });
