@@ -23,7 +23,6 @@ This project started from the [T3 Stack](https://create.t3.gg/) scaffold and has
 
 - **WordPress (headless CMS)** — editorial content (news, chronicles, away-game guides, season history) is fetched from a WordPress GraphQL endpoint via [Apollo Client](https://www.apollographql.com/docs/react). GraphQL documents live in `src/server/wpGraphql/*.gql`, with types generated into `src/types/wordpresstypes/graphql.ts` via [GraphQL Code Generator](https://the-guild.dev/graphql/codegen).
 - **Stripe** — handles checkout and payments for memberships and away-game trips, including webhook-driven payment/refund tracking (`StripePayment`, `StripeRefund` models).
-- **CardSkipper** — external membership system integration (credentials configured via env vars).
 - **AWS SES** — transactional email delivery, with templates authored using [React Email](https://react.email).
 - **Sentry** — error monitoring and performance tracing (client, server, and edge configs).
 - **Google Analytics** — optional, toggled via a feature flag.
@@ -61,7 +60,6 @@ Copy `.env.example` to `.env` and fill in the values. The full schema (and which
 - WordPress (`WORDPRESS_API_KEY`, `NEXT_PUBLIC_WORDPRESS_URL`)
 - Stripe (`STRIPE_API_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_API_KEY`)
 - AWS SES (`AWS_CLIENT_ID`, `AWS_CLIENT_SECRET`, `ENABLE_AWS_SES_EMAILS`)
-- CardSkipper (`CARDSKIPPER_USERNAME`, `CARDSKIPPER_PASSWORD`, `CARDSKIPPER_ORG_NUMBER`)
 - Misc (`CRON_KEY`, `CANCELLATION_URL`, `MEMBERSHIP_URL`, `API_URL`, `BOOKING_EMAIL`, `WEBSITE_URL`)
 
 Set `SKIP_ENV_VALIDATION=true` if you need to build without all variables present (e.g. for Docker builds).
