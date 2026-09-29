@@ -1,6 +1,7 @@
 import { Role } from "@prisma/client";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
+import { AddMemberModal } from "~/components/admin/MemberTable/AddMemberModal";
 import { columns } from "~/components/admin/MemberTable/Columns";
 import { DownloadMemberListButton } from "~/components/admin/MemberTable/DownloadMemberListButton";
 import { MemberTable } from "~/components/admin/MemberTable/MemberTable";
@@ -43,7 +44,10 @@ export default function Admin() {
         <CardHeader className="flex gap-8 md:flex-row md:justify-start">
           <div className="space-y-4">
             <p className="text-3xl">Medlemsregister</p>
-            <DownloadMemberListButton members={members} />
+            <div className="flex flex-row gap-2">
+              <DownloadMemberListButton members={members} />
+              <AddMemberModal />
+            </div>
           </div>
           <div>
             <p>

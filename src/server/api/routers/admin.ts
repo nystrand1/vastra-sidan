@@ -1,4 +1,4 @@
-import { StripePaymentStatus, type Prisma } from "@prisma/client";
+import { MembershipType, StripePaymentStatus, type Prisma } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { adminProcedure, createTRPCRouter } from "~/server/api/trpc";
@@ -22,8 +22,11 @@ import {
 import { adminEventFormatter, getEvents } from "~/server/utils/admin/getEvents";
 import { sendEventConfirmationEmail } from "~/server/utils/email/sendEventConfirmationEmail";
 import { sendMemberConfirmationEmail } from "~/server/utils/email/sendMemberConfirmationEmail";
+import { findOrCreateMember } from "~/server/utils/member/findOrCreateMember";
+import { findOrCreateFamilyMembers } from "~/server/utils/member/findOrCreateFamilyMembers";
 import {
   addFamilyMemberSchema,
+  adminAddMemberSchema,
   adminAddParticipantSchema,
   updateMemberSchema,
   updateParticipantSchema
@@ -285,5 +288,80 @@ export const adminRouter = createTRPCRouter({
       });
 
       await sendEventConfirmationEmail(participantWithRelations);
+    }),
+  getAvailableMemberships: adminProcedure.query(async ({ ctx }) => {
+    const today = new Date();
+    return ctx.prisma.membership.findMany({
+      where: {
+        endDate: { gt: today },
+        startDate: { lte: today }
+      },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        price: true,
+        imageUrl: true
+      },
+      orderBy: {
+        endDate: "desc"
+      }
+    });
+  }),
+  addMember: adminProcedure
+    .input(adminAddMemberSchema)
+    .mutation(async ({ input, ctx }) => {
+      const membership = await ctx.prisma.membership.findUnique({
+        where: { id: input.membershipId }
+      });
+
+      if (!membership) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Medlemskap hittades inte"
+        });
+      }
+
+      const memberInput = { ...input, acceptedTerms: true as const };
+
+      const members =
+        membership.type === MembershipType.FAMILY
+          ? await findOrCreateFamilyMembers(memberInput)
+          : [await findOrCreateMember(memberInput)];
+
+      const memberWithExistingMembership = members.find((member) =>
+        member.memberships.some((x) => x.id === membership.id)
+      );
+
+      if (memberWithExistingMembership) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Har redan detta medlemskap"
+        });
+      }
+
+      await ctx.prisma.stripePayment.create({
+        data: {
+          stripePaymentId: `admin-comp-${members[0]!.id}`,
+          amount: 0,
+          status: StripePaymentStatus.SUCCEEDED,
+          members: {
+            connect: members.map((member) => ({ id: member.id }))
+          }
+        }
+      });
+
+      await ctx.prisma.membership.update({
+        where: { id: membership.id },
+        data: {
+          members: {
+            connect: members.map((member) => ({ id: member.id }))
+          }
+        }
+      });
+
+      await Promise.all(
+        members.map((member) => sendMemberConfirmationEmail(member, membership))
+      );
     })
 });
