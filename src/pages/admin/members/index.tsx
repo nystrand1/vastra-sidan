@@ -44,7 +44,7 @@ export default function Admin() {
         <CardHeader className="flex gap-8 md:flex-row md:justify-start">
           <div className="space-y-4">
             <p className="text-3xl">Medlemsregister</p>
-            <div className="flex flex-row gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <DownloadMemberListButton members={members} />
               <AddMemberModal />
             </div>
