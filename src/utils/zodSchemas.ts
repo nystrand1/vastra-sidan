@@ -195,6 +195,35 @@ export const updateParticipantSchema = z.object({
   phone: z.string().optional()
 });
 
+export const adminAddMemberSchema = z
+  .object({
+    firstName: z.string({ required_error: "Ange förnamn" }).min(1, { message: "Ange förnamn" }),
+    lastName: z.string({ required_error: "Ange efternamn" }).min(1, { message: "Ange efternamn" }),
+    email: z.string({ required_error: "Ange email" }).email({ message: "Felaktig email" }),
+    phone: z.string({ required_error: "Ange telefonnummer" }).min(1, { message: "Ange telefonnummer" }),
+    membershipType: z.nativeEnum(MembershipType),
+    membershipId: z.string({ required_error: "Välj medlemskap" }).min(1, { message: "Välj medlemskap" }),
+    additionalMembers: z
+      .array(
+        z.object({
+          firstName: z.string({ required_error: "Ange förnamn" }).min(1, { message: "Ange förnamn" }),
+          lastName: z.string({ required_error: "Ange efternamn" }).min(1, { message: "Ange efternamn" }),
+          phone: z.string().optional(),
+          email: z.string({ required_error: "Ange email" }).email({ message: "Felaktig email" })
+        })
+      )
+      .optional()
+  })
+  .refine(
+    (x) => {
+      if (x.membershipType === MembershipType.FAMILY) {
+        return x.additionalMembers && x.additionalMembers.length > 0;
+      }
+      return true;
+    },
+    { message: "Familjemedlemskap kräver minst en familjemedlem" }
+  );
+
 export const addFamilyMemberSchema = z.object({
   ownerId: z.string(),
   member: z.object({
