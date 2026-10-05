@@ -48,7 +48,7 @@ export const cronRouter = createTRPCRouter({
     });
     console.info("Fetched events from WP", JSON.stringify(gqlRes, null, 2));
     const awayGames = gqlRes.awayGames.nodes
-      // uncomment to filter out games that is older than a week
+      // filter out games that are older than a week
       .filter(({ awayGameFields }) =>
         isBefore(subDays(new Date(), 7), new Date(awayGameFields.date))
       )
