@@ -52,22 +52,11 @@ export const cronRouter = createTRPCRouter({
       .filter(({ awayGameFields }) =>
         isBefore(subDays(new Date(), 7), new Date(awayGameFields.date))
       )
-      .sort((a, b) => {
-        const [dayA, monthA, yearA] = a.awayGameFields.date.split("/") as [
-          string,
-          string,
-          string
-        ];
-        const [dayB, monthB, yearB] = b.awayGameFields.date.split("/") as [
-          string,
-          string,
-          string
-        ];
-        return (
-          new Date(`${yearA}-${monthA}-${dayA}`).getTime() -
-          new Date(`${yearB}-${monthB}-${dayB}`).getTime()
-        );
-      })
+      .sort(
+        (a, b) =>
+          new Date(a.awayGameFields.date).getTime() -
+          new Date(b.awayGameFields.date).getTime()
+      )
       .map(awayGameMapper)
       .map(awayGameToEvent);
     // Upsert events in database
