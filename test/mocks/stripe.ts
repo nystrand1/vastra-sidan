@@ -49,6 +49,7 @@ interface FakeRefund {
   charge: string;
   payment_intent: string;
   reason: string | null;
+  metadata: Metadata;
   status: "pending" | "succeeded" | "failed";
   failure_reason?: string;
 }
@@ -73,6 +74,7 @@ export interface StripeApiRequest {
   method: string;
   path: string;
   body: Record<string, unknown>;
+  idempotencyKey: string | null;
 }
 
 interface WebhookEvent {
@@ -90,7 +92,9 @@ const createState = () => ({
   refunds: new Map<string, FakeRefund>(),
   balanceTransactions: new Map<string, FakeBalanceTransaction>(),
   requests: [] as StripeApiRequest[],
-  events: [] as WebhookEvent[]
+  events: [] as WebhookEvent[],
+  refundsByIdempotencyKey: new Map<string, FakeRefund>(),
+  completeRefundsImmediately: false
 });
 
 let state = createState();
@@ -133,7 +137,12 @@ const recordRequest = async (request: Request) => {
     request.method === "GET"
       ? Object.fromEntries(url.searchParams)
       : parseForm(await request.text());
-  state.requests.push({ method: request.method, path: url.pathname, body });
+  state.requests.push({
+    method: request.method,
+    path: url.pathname,
+    body,
+    idempotencyKey: request.headers.get("idempotency-key")
+  });
   return body;
 };
 
@@ -212,6 +221,11 @@ export const stripeHandlers = [
 
   http.post(`${API}/refunds`, async ({ request }) => {
     const body = await recordRequest(request);
+    const idempotencyKey = request.headers.get("idempotency-key");
+    const earlier = idempotencyKey ? state.refundsByIdempotencyKey.get(idempotencyKey) : undefined;
+    if (earlier) {
+      return HttpResponse.json(earlier);
+    }
     const amount = Number(body.amount);
     if (!/^\d+$/.test(String(body.amount)) || amount < 1) {
       return stripeError(`Invalid integer: ${String(body.amount)}`);
@@ -241,9 +255,16 @@ export const stripeHandlers = [
       charge: charge.id,
       payment_intent: paymentIntent.id,
       reason: (body.reason as string | undefined) ?? null,
+      metadata: (body.metadata ?? {}) as Metadata,
       status: "pending"
     };
     state.refunds.set(refund.id, refund);
+    if (idempotencyKey) state.refundsByIdempotencyKey.set(idempotencyKey, refund);
+    if (state.completeRefundsImmediately) {
+      // Card refunds often succeed at once: the webhook can arrive before the API response.
+      const res = await fakeStripe.completeRefund(refund.id);
+      if (res.status !== 201) throw new Error(`fakeStripe: webhook failed with ${res.status}`);
+    }
     return HttpResponse.json(refund);
   }),
 
@@ -425,12 +446,26 @@ export const fakeStripe = {
     return deliver(createEvent("refund.updated", refund));
   },
 
-  /** A refund fails (e.g. the card was closed): sends `refund.failed`. */
-  failRefund: (refundId: string, failureReason = "expired_or_canceled_card") => {
+  /** From now on, refunds created through the API succeed (and send webhooks) before the API responds. */
+  completeRefundsImmediately: () => {
+    state.completeRefundsImmediately = true;
+  },
+
+  /**
+   * A refund fails (e.g. the card was closed), possibly after it first succeeded.
+   * Stripe reports it with both `refund.failed` and `refund.updated`; this sends one of them.
+   */
+  failRefund: (
+    refundId: string,
+    {
+      event = "refund.failed",
+      failureReason = "expired_or_canceled_card"
+    }: { event?: "refund.failed" | "refund.updated"; failureReason?: string } = {}
+  ) => {
     const refund = getRefund(refundId);
     refund.status = "failed";
     refund.failure_reason = failureReason;
-    return deliver(createEvent("refund.failed", refund));
+    return deliver(createEvent(event, refund));
   },
 
   /** An admin refunds a payment from the Stripe dashboard (defaults to the full amount). */
@@ -443,6 +478,7 @@ export const fakeStripe = {
       charge: charge.id,
       payment_intent: paymentIntentId,
       reason: null,
+      metadata: {},
       status: "pending"
     };
     state.refunds.set(refund.id, refund);

@@ -1,11 +1,15 @@
 import { StripePaymentStatus, StripeRefundStatus } from "@prisma/client";
+import { captureMessage } from "@sentry/nextjs";
 import { addHours } from "date-fns";
+import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { adminCaller, publicCaller } from "../helpers/caller";
 import { prisma } from "../helpers/db";
 import { createEvent, createParticipant, participantInput } from "../helpers/factories";
 import { availableSeats, bookAndPay } from "../helpers/flows";
+import { server } from "../mocks/server";
 import { fakeStripe } from "../mocks/stripe";
+
 
 /**
  * A member (300 SEK) and a non-member (400 SEK) book together: one payment of
@@ -36,7 +40,13 @@ describe("cancelling a booking", () => {
     // 30000 öre - floor(1500 * 30000 / 70000) = 30000 - 642
     expect(fakeStripe.requestsTo("POST", "/refunds")).toEqual([
       expect.objectContaining({
-        body: { payment_intent: paymentIntent.id, amount: "29358", reason: "requested_by_customer" }
+        body: {
+          payment_intent: paymentIntent.id,
+          amount: "29358",
+          reason: "requested_by_customer",
+          metadata: { participantId: member.id, stripeRefundRowId: expect.any(String) as unknown }
+        },
+        idempotencyKey: `cancel-${member.id}-0`
       })
     ]);
     const succeededPayment = await prisma.stripePayment.findFirstOrThrow({
@@ -198,6 +208,11 @@ describe("cancelling a booking", () => {
     expect(await availableSeats(event.id, busId)).toBe(8);
 
     await cancel(member.cancellationToken);
+    // A new idempotency key, or Stripe would hand back the failed refund
+    expect(fakeStripe.requestsTo("POST", "/refunds").map((r) => r.idempotencyKey)).toEqual([
+      `cancel-${member.id}-0`,
+      `cancel-${member.id}-1`
+    ]);
     const retry = fakeStripe.refunds()[1]!;
     await fakeStripe.completeRefund(retry.id);
 
@@ -206,4 +221,90 @@ describe("cancelling a booking", () => {
     ).toMatchObject({ stripeRefundId: retry.id, participantId: member.id });
     expect(await availableSeats(event.id, busId)).toBe(9);
   });
+
+  it("handles two cancellations at the same time (a double-click) as one", async () => {
+    const { member } = await bookTwoTravellers();
+
+    const results = await Promise.allSettled([
+      cancel(member.cancellationToken),
+      cancel(member.cancellationToken)
+    ]);
+
+    expect(results.map((r) => r.status).sort()).toEqual(["fulfilled", "rejected"]);
+    expect(results.find((r) => r.status === "rejected")).toMatchObject({
+      reason: { code: "BAD_REQUEST" }
+    });
+    expect(fakeStripe.refunds()).toHaveLength(1);
+    expect(await prisma.stripeRefund.count()).toBe(1);
+  });
+
+  it("handles the refund webhook arriving before Stripe's API response", async () => {
+    const { event, busId, member } = await bookTwoTravellers();
+    fakeStripe.completeRefundsImmediately();
+
+    await cancel(member.cancellationToken);
+
+    const [refund] = fakeStripe.refunds();
+    expect(refund!.status).toBe("succeeded");
+    expect(await prisma.stripeRefund.findMany()).toEqual([
+      expect.objectContaining({
+        stripeRefundId: refund!.id,
+        amount: refund!.amount,
+        status: StripeRefundStatus.REFUNDED,
+        participantId: member.id
+      })
+    ]);
+    const cancelled = await prisma.participant.findUniqueOrThrow({ where: { id: member.id } });
+    expect(cancelled.cancellationDate).toBeInstanceOf(Date);
+    expect(await availableSeats(event.id, busId)).toBe(9);
+  });
+
+  it("marks the refund as failed when Stripe refuses it, so the traveller can try again", async () => {
+    const { member } = await bookTwoTravellers();
+    server.use(
+      http.post(
+        "https://api.stripe.com/v1/refunds",
+        () =>
+          HttpResponse.json(
+            { error: { type: "invalid_request_error", message: "Charge has been disputed" } },
+            { status: 400 }
+          ),
+        { once: true }
+      )
+    );
+
+    await expect(cancel(member.cancellationToken)).rejects.toThrow("Charge has been disputed");
+
+    expect(await prisma.stripeRefund.findMany()).toEqual([
+      expect.objectContaining({
+        status: StripeRefundStatus.ERROR,
+        errorMessage: "Charge has been disputed",
+        participantId: member.id
+      })
+    ]);
+    await expect(cancel(member.cancellationToken)).resolves.toBeTruthy();
+    expect(fakeStripe.refunds()).toHaveLength(1);
+  });
+
+  it.each(["refund.failed", "refund.updated"] as const)(
+    "keeps a completed refund and reports it when Stripe later sends %s with a failure",
+    async (failureEvent) => {
+      const { event, busId, member } = await bookTwoTravellers();
+      await cancel(member.cancellationToken);
+      const [refund] = fakeStripe.refunds();
+      await fakeStripe.completeRefund(refund!.id);
+
+      const res = await fakeStripe.failRefund(refund!.id, { event: failureEvent });
+
+      expect(res.status).toBe(201);
+      expect(await prisma.stripeRefund.findMany()).toEqual([
+        expect.objectContaining({ stripeRefundId: refund!.id, status: StripeRefundStatus.REFUNDED })
+      ]);
+      expect(await availableSeats(event.id, busId)).toBe(9);
+      expect(captureMessage).toHaveBeenCalledWith(
+        `Stripe refund ${refund!.id} failed after it succeeded`,
+        expect.objectContaining({ level: "error" })
+      );
+    }
+  );
 });

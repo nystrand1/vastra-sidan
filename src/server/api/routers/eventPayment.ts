@@ -86,6 +86,10 @@ const participantFormatter = (
   const hasCancelled = participant.stripeRefunds.some(
     (x) => x.status === StripeRefundStatus.REFUNDED
   );
+  // Cancelled, but Stripe hasn't confirmed the refund yet
+  const refundPending =
+    !hasCancelled &&
+    participant.stripeRefunds.some((x) => x.status === StripeRefundStatus.CREATED);
 
   const res = {
     name: participant.name,
@@ -100,7 +104,8 @@ const participantFormatter = (
       : null,
     note: participant.note,
     cancellationDisabled: !isCancelable,
-    hasCancelled
+    hasCancelled,
+    refundPending
   };
   return res;
 };
@@ -337,85 +342,138 @@ export const eventPaymentRouter = createTRPCRouter({
         });
       }
 
-      if (participant.cancellationDate) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Resenären har redan avbokats"
-        });
-      }
-
-      // A failed refund (ERROR) may be retried, a pending or completed one may not
-      const hasActiveRefund = participant.stripeRefunds.some(
-        (r) =>
-          r.status === StripeRefundStatus.CREATED ||
-          r.status === StripeRefundStatus.REFUNDED
-      );
-      if (hasActiveRefund) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Avbokningen behandlas redan"
-        });
-      }
-
       // payAmount is what the participant paid, in SEK (older bookings may lack it).
       // Convert to cents (öre) to be synced with Stripe.
       const paidAmount =
         participant.payAmount ?? getParticipantCost(participant, event);
-      const participantCost = paidAmount * 100;
+      const participantCost = Math.round(paidAmount * 100);
 
       // Free bookings (e.g. added by an admin) have nothing to refund through Stripe
-      if (participantCost <= 0 || stripePayment.amount <= 0) {
-        const [refund] = await ctx.prisma.$transaction([
-          ctx.prisma.stripeRefund.create({
-            data: {
-              stripeRefundId: `no-refund-${participant.id}`,
-              amount: 0,
-              status: StripeRefundStatus.REFUNDED,
-              participantId: participant.id,
-              originalPaymentId: stripePayment.id
+      const isFree = participantCost <= 0 || stripePayment.amount <= 0;
+
+      const stripeFee = stripePayment.amount - stripePayment.netAmount;
+
+      // How big is the fee for this participant
+      const participantFeeFraction = isFree ? 0 : participantCost / stripePayment.amount;
+      const participantFee = Math.floor(stripeFee * participantFeeFraction);
+
+      // So, this is the amount that the participant will get back after the Stripe fees.
+      const participantPayAmount = participantCost - participantFee;
+
+      const { refund, attempt } = await ctx.prisma.$transaction(async (tx) => {
+        // Lock the participant so that two cancellations at once (e.g. a double-click)
+        // are handled one after the other, and the second one is rejected.
+        await tx.$queryRaw`SELECT id FROM Participant WHERE id = ${participant.id} FOR UPDATE`;
+        const current = await tx.participant.findUniqueOrThrow({
+          where: {
+            id: participant.id
+          },
+          select: {
+            cancellationDate: true,
+            stripeRefunds: {
+              select: {
+                status: true
+              }
             }
-          }),
-          ctx.prisma.participant.update({
+          }
+        });
+
+        if (current.cancellationDate) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Resenären har redan avbokats"
+          });
+        }
+
+        // A failed refund (ERROR) may be retried, a pending or completed one may not
+        const hasActiveRefund = current.stripeRefunds.some(
+          (r) =>
+            r.status === StripeRefundStatus.CREATED ||
+            r.status === StripeRefundStatus.REFUNDED
+        );
+        if (hasActiveRefund) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Avbokningen behandlas redan"
+          });
+        }
+
+        const attempt = current.stripeRefunds.filter(
+          (r) => r.status === StripeRefundStatus.ERROR
+        ).length;
+
+        if (isFree) {
+          await tx.participant.update({
             where: {
               id: participant.id
             },
             data: {
               cancellationDate: new Date()
             }
-          })
-        ]);
-        return refund.originalPaymentId;
-      }
+          });
+        }
 
-      const stripeFee = stripePayment.amount - stripePayment.netAmount;
-
-      // How big is the fee for this participant
-      const participantFeeFraction = participantCost / stripePayment.amount;
-      const participantFee = Math.floor(stripeFee * participantFeeFraction);
-
-      // So, this is the amount that the participant will get back after the Stripe fees.
-      const participantPayAmount = participantCost - participantFee;
-
-      try {
-        const stripeRefundIntent = await createRefundIntent({
-          paymentIntentId: stripePayment.stripePaymentId,
-          amount: participantPayAmount
-        });
-
-        const refundIntent = await ctx.prisma.stripeRefund.create({
+        // Saved before calling Stripe, so the webhook finds it even if the refund
+        // completes before Stripe has answered us.
+        const refund = await tx.stripeRefund.create({
           data: {
-            stripeRefundId: stripeRefundIntent.id,
-            amount: participantPayAmount,
-            status: StripeRefundStatus.CREATED,
+            stripeRefundId: isFree
+              ? `no-refund-${participant.id}`
+              : `pending-${participant.id}-${attempt}`,
+            amount: isFree ? 0 : participantPayAmount,
+            status: isFree ? StripeRefundStatus.REFUNDED : StripeRefundStatus.CREATED,
             participantId: participant.id,
             originalPaymentId: stripePayment.id
           }
         });
+        return { refund, attempt };
+      });
 
-        return refundIntent.originalPaymentId;
+      if (isFree) {
+        return refund.originalPaymentId;
+      }
+
+      try {
+        const stripeRefund = await createRefundIntent({
+          paymentIntentId: stripePayment.stripePaymentId,
+          amount: participantPayAmount,
+          idempotencyKey: `cancel-${participant.id}-${attempt}`,
+          metadata: {
+            participantId: participant.id,
+            stripeRefundRowId: refund.id
+          }
+        });
+
+        // Unless the webhook already matched the refund through its metadata
+        await ctx.prisma.stripeRefund.updateMany({
+          where: {
+            id: refund.id,
+            stripeRefundId: refund.stripeRefundId
+          },
+          data: {
+            stripeRefundId: stripeRefund.id
+          }
+        });
+
+        return refund.originalPaymentId;
       } catch (err) {
         console.error("Error creating refund request");
         console.error(err);
+        captureException(err);
+        // If Stripe couldn't be reached the refund may still have been created, so keep it
+        // pending: the webhook resolves it. Otherwise Stripe refused it and it can be retried.
+        if ((err as { type?: string }).type !== "StripeConnectionError") {
+          await ctx.prisma.stripeRefund.updateMany({
+            where: {
+              id: refund.id,
+              status: StripeRefundStatus.CREATED
+            },
+            data: {
+              status: StripeRefundStatus.ERROR,
+              errorMessage: (err as Error).message
+            }
+          });
+        }
         throw err;
       }
     }),

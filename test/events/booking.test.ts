@@ -328,6 +328,20 @@ describe("public event booking", () => {
       })
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
+
+  it("reuses the Stripe customer when the email is typed with different case", async () => {
+    const event = await createEvent();
+    const busId = event.buses[0]!.id;
+
+    for (const email of ["Anna@Test.se", "anna@test.se", "ANNA@TEST.SE"]) {
+      await publicCaller().eventPayment.requestStripePayment({
+        eventId: event.id,
+        participants: [participantInput(busId, { email })]
+      });
+    }
+
+    expect(fakeStripe.customers()).toEqual([expect.objectContaining({ email: "anna@test.se" })]);
+  });
 });
 
 describe("admin: add participant", () => {

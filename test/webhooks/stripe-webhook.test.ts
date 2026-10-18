@@ -1,11 +1,32 @@
 import { StripePaymentStatus, StripeRefundStatus } from "@prisma/client";
+import { captureException, captureMessage } from "@sentry/nextjs";
+import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { publicCaller } from "../helpers/caller";
 import { prisma } from "../helpers/db";
 import { createEvent, createSeason, familyMember, memberSignupInput, participantInput } from "../helpers/factories";
 import { bookAndPay, signUpAndPay } from "../helpers/flows";
 import { getSentEmails } from "../mocks/ses";
+import { server } from "../mocks/server";
 import { fakeStripe, postToWebhook } from "../mocks/stripe";
+
+
+/** SES rejects the next email (a non-retryable error, so the SDK doesn't retry it). */
+const rejectNextEmail = () =>
+  server.use(
+    http.post(
+      "https://email.eu-north-1.amazonaws.com/",
+      () =>
+        new HttpResponse(
+          `<ErrorResponse xmlns="http://ses.amazonaws.com/doc/2010-12-01/">
+  <Error><Type>Sender</Type><Code>MessageRejected</Code><Message>Email address is not verified.</Message></Error>
+  <RequestId>test-request-id</RequestId>
+</ErrorResponse>`,
+          { status: 400, headers: { "content-type": "text/xml" } }
+        ),
+      { once: true }
+    )
+  );
 
 const startBooking = async () => {
   const event = await createEvent();
@@ -64,6 +85,62 @@ describe("Stripe webhook", () => {
         })
       ).toBe(1);
       expect(getSentEmails()).toHaveLength(1);
+    });
+
+    it("processes deliveries that arrive at the same time only once", async () => {
+      const paymentIntent = await startBooking();
+
+      const first = fakeStripe.succeedPayment(paymentIntent.id);
+      const [succeededEvent] = fakeStripe.events();
+      const responses = await Promise.all([first, fakeStripe.redeliver(succeededEvent!.id)]);
+
+      expect(responses.map((r) => r.status)).toEqual([201, 201]);
+      expect(
+        await prisma.stripePayment.count({
+          where: { stripePaymentId: paymentIntent.id, status: StripePaymentStatus.SUCCEEDED }
+        })
+      ).toBe(1);
+      expect(getSentEmails()).toHaveLength(1);
+    });
+
+    it("still gives members their membership when a confirmation email fails", async () => {
+      const { family } = await createSeason();
+      const input = memberSignupInput(family, { additionalMembers: [familyMember()] });
+      rejectNextEmail();
+
+      // signUpAndPay asserts the webhook succeeded, so Stripe won't retry it
+      const paymentIntent = await signUpAndPay(input);
+
+      const members = await prisma.member.findMany({ include: { memberships: true } });
+      expect(members).toHaveLength(2);
+      for (const member of members) {
+        expect(member.memberships).toEqual([expect.objectContaining({ id: family.id })]);
+      }
+      expect(getSentEmails()).toHaveLength(1);
+      expect(captureException).toHaveBeenCalledTimes(1);
+
+      const [succeededEvent] = fakeStripe.events();
+      await fakeStripe.redeliver(succeededEvent!.id);
+      expect(
+        await prisma.stripePayment.count({
+          where: { stripePaymentId: paymentIntent.id, status: StripePaymentStatus.SUCCEEDED }
+        })
+      ).toBe(1);
+    });
+
+    it("saves the booking even if the confirmation email fails", async () => {
+      const paymentIntent = await startBooking();
+      rejectNextEmail();
+
+      const res = await fakeStripe.succeedPayment(paymentIntent.id);
+
+      expect(res.status).toBe(201);
+      expect(
+        await prisma.stripePayment.count({
+          where: { stripePaymentId: paymentIntent.id, status: StripePaymentStatus.SUCCEEDED }
+        })
+      ).toBe(1);
+      expect(captureException).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -139,6 +216,39 @@ describe("Stripe webhook", () => {
           status: StripeRefundStatus.REFUNDED
         })
       ]);
+    });
+
+    it("reports a dashboard refund it can't record because older rows overstate the refunded amount", async () => {
+      const event = await createEvent();
+      const busId = event.buses[0]!.id;
+      const { paymentIntent, participants } = await bookAndPay(event.id, [
+        participantInput(busId),
+        participantInput(busId)
+      ]);
+      const payment = await prisma.stripePayment.findFirstOrThrow({
+        where: { stripePaymentId: paymentIntent.id, status: StripePaymentStatus.SUCCEEDED }
+      });
+      // How the old handler recorded a refund: the charge id and the full charge amount
+      const chargeId = fakeStripe.paymentIntents()[0]!.latest_charge!;
+      await prisma.stripeRefund.create({
+        data: {
+          stripeRefundId: chargeId,
+          amount: 80000,
+          status: StripeRefundStatus.REFUNDED,
+          participantId: participants[0]!.id,
+          originalPaymentId: payment.id
+        }
+      });
+
+      const res = await fakeStripe.refundFromDashboard(paymentIntent.id, 10000);
+
+      expect(res.status).toBe(201);
+      const [refund] = fakeStripe.refunds();
+      expect(await prisma.stripeRefund.count()).toBe(1);
+      expect(captureMessage).toHaveBeenCalledWith(
+        `Skipped recording Stripe refund ${refund!.id}: already counted as refunded`,
+        expect.objectContaining({ level: "warning" })
+      );
     });
 
     // `charge.refunded` carries a Charge, so the handler has to look up the Refund itself.
