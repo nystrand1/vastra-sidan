@@ -195,12 +195,18 @@ export const stripeHandlers = [
     const charge = paymentIntent?.latest_charge
       ? state.charges.get(paymentIntent.latest_charge)
       : undefined;
-    if (!paymentIntent || !charge) {
+    if (!paymentIntent) {
       return stripeError(`No such payment_intent: '${String(body.payment_intent)}'`, 404);
     }
-    if (amount > unrefundedAmount(charge)) {
+    if (!charge) {
       return stripeError(
-        `Refund amount (${amount}) is greater than unrefunded amount on charge (${unrefundedAmount(charge)})`
+        `This PaymentIntent (${paymentIntent.id}) does not have a successful charge to refund.`
+      );
+    }
+    const refundable = unrefundedAmount(charge);
+    if (amount > refundable) {
+      return stripeError(
+        `Refund amount (${amount}) is greater than unrefunded amount on charge (${refundable})`
       );
     }
     const refund: FakeRefund = {
@@ -316,7 +322,7 @@ export const fakeStripe = {
       status: "succeeded",
       payment_intent: paymentIntent.id,
       balance_transaction: transaction.id,
-      metadata: paymentIntent.metadata,
+      metadata: { ...paymentIntent.metadata },
       failure_code: null,
       failure_message: null
     };

@@ -28,7 +28,7 @@ export const bookAndPay = async (
   expect(res.status).toBe(201);
   const booked = await prisma.participant.findMany({
     where: { stripePayments: { some: { stripePaymentId: paymentIntent.id } } },
-    orderBy: { createdAt: "asc" }
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }]
   });
   return { paymentIntent, participants: booked };
 };

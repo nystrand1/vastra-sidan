@@ -35,7 +35,7 @@ describe("public event booking", () => {
 
     const booked = await prisma.participant.findMany({
       include: { stripePayments: true },
-      orderBy: { createdAt: "asc" }
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }]
     });
     expect(booked.map((p) => p.payAmount)).toEqual([400, 300, 200, 100]);
     expect(booked[3]).toMatchObject({

@@ -153,7 +153,7 @@ describe("cancelling a booking", () => {
     const event = await createEvent();
     const busId = event.buses[0]!.id;
     const { participants } = await bookAndPay(event.id, [participantInput(busId)]);
-    await prisma.vastraEvent.update({ where: { id: event.id }, data: { defaultPrice: 450 } });
+    await prisma.vastraEvent.update({ where: { id: event.id }, data: { defaultPrice: 350 } });
 
     await cancel(participants[0]!.cancellationToken);
 
