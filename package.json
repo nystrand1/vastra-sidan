@@ -7,6 +7,8 @@
     "dev": "next dev",
     "postinstall": "prisma generate",
     "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "start": "next start",
     "dev:email": "email dev -p 3001 --dir ./src/components/emails",
     "export:email": "email export",
@@ -78,6 +80,7 @@
     "@graphql-codegen/cli": "^5.0.0",
     "@graphql-codegen/typed-document-node": "^5.0.1",
     "@graphql-codegen/typescript-operations": "^4.0.1",
+    "@testcontainers/mariadb": "^12.2.1",
     "@types/eslint": "^8.56.10",
     "@types/node": "^22.8.6",
     "@types/prettier": "^3.0.0",
@@ -89,13 +92,16 @@
     "autoprefixer": "^10.4.14",
     "eslint": "^8.57.0",
     "eslint-config-next": "^15.0.2",
+    "msw": "^3.0.3",
     "postcss": "^8.4.21",
     "prettier": "3.3.3",
     "prettier-plugin-tailwindcss": "^0.6.8",
     "prisma": "^6.1.0",
     "react-email": "^3.0.1",
     "tailwindcss": "^3.3.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
   },
   "ct3aMetadata": {
     "initVersion": "7.15.0"

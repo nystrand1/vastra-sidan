@@ -92,11 +92,32 @@ The app will be available at [http://localhost:3000](http://localhost:3000).
 | --------------------- | ----------------------------------------------- |
 | `yarn build`          | Production build                                |
 | `yarn lint`           | Run ESLint                                      |
+| `yarn test`           | Run the integration tests (needs Docker)        |
 | `yarn compile`        | Generate TypeScript types from WordPress `.gql` files |
 | `yarn watch`          | Watch mode for GraphQL codegen                  |
 | `yarn dev:email`      | Preview React Email templates on port 3001      |
 | `npx prisma studio`   | Open Prisma Studio (database GUI)               |
 | `npx prisma generate` | Regenerate the Prisma client                    |
+
+## Integration tests
+
+The membership, event booking and Stripe flows are covered by integration tests in `test/`, run with [Vitest](https://vitest.dev):
+
+```bash
+yarn test
+```
+
+Docker must be running. Each run:
+
+- starts a throwaway MariaDB with [Testcontainers](https://testcontainers.com) (same image as `docker-compose.yaml`), pushes the Prisma schema and empties every table between tests;
+- calls the tRPC routers directly (`test/helpers/caller.ts`) as an anonymous visitor, a user or an admin;
+- intercepts all outgoing HTTP with [MSW](https://mswjs.io): a small stateful fake of the Stripe API (`test/mocks/stripe.ts`) and AWS SES (`test/mocks/ses.ts`). Any request that isn't mocked fails the test.
+
+The tests play the Stripe side with `fakeStripe` (`succeedPayment`, `failPayment`, `settleCharge`, `completeRefund`, `refundFromDashboard`, `redeliver`). These deliver signed webhook events to the real route in `src/app/api/payment/stripeWebhook`, so the whole flow from booking through payment, cancellation and refund runs as it does in production.
+
+Only `.env.test` is loaded, never `.env`, and the suite refuses to run against a non-local database.
+
+Tests named `[known bug] …` (`itKnownBug`) describe the intended behaviour of bugs we haven't fixed yet. They're expected to fail: once a bug is fixed, Vitest reports the test as unexpectedly passing, and it should be turned into a normal `it`. Run `KNOWN_BUGS=show yarn test` to see why each one fails.
 
 ## Deployment
 
