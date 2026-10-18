@@ -10,7 +10,6 @@ import {
   memberSignupInput
 } from "../helpers/factories";
 import { signUpAndPay } from "../helpers/flows";
-import { itKnownBug } from "../helpers/knownBug";
 import { getSentEmails } from "../mocks/ses";
 import { fakeStripe } from "../mocks/stripe";
 
@@ -103,9 +102,7 @@ describe("admin: add member", () => {
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
-  // Known bug: the public flow blocks any membership in the same season (wordpressId),
-  // the admin flow only blocks the exact same membership id.
-  itKnownBug("rejects a member who already has another membership this season", async () => {
+  it("rejects a member who already has another membership this season", async () => {
     const { regular, family } = await createSeason();
     const input = memberSignupInput(regular);
     await signUpAndPay(input);
@@ -121,8 +118,7 @@ describe("admin: add member", () => {
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
-  // Known bug: adminAddMemberSchema has no upper limit on family members.
-  itKnownBug("rejects more than four family members", async () => {
+  it("rejects more than four family members", async () => {
     const { family } = await createSeason();
     const input = adminAddMemberInput(family, {
       additionalMembers: [familyMember(), familyMember(), familyMember(), familyMember(), familyMember()]
@@ -131,8 +127,7 @@ describe("admin: add member", () => {
     await expect(adminCaller().admin.addMember(input)).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
-  // Known bug: adminAddMemberSchema doesn't have the unique-email refinement of memberSignupSchema.
-  itKnownBug("rejects duplicate emails within a family", async () => {
+  it("rejects duplicate emails within a family", async () => {
     const { family } = await createSeason();
     const input = adminAddMemberInput(family);
 
@@ -194,8 +189,7 @@ describe("admin: add family member to an existing family", () => {
     ).rejects.toThrow("Owner does not have a family membership");
   });
 
-  // Known bug: addFamilyMember doesn't check the 1 + 4 limit.
-  itKnownBug("rejects a fifth family member", async () => {
+  it("rejects a fifth family member", async () => {
     const { owner } = await createFamily(4);
 
     await expect(
@@ -203,8 +197,7 @@ describe("admin: add family member to an existing family", () => {
     ).rejects.toThrow();
   });
 
-  // Known bug: the `where` only filters the owner; `owner.memberships[0]` can be last season's.
-  itKnownBug("attaches the current season's membership when the owner was also a member last season", async () => {
+  it("attaches the current season's membership when the owner was also a member last season", async () => {
     const lastSeason = await createExpiredSeason();
     const thisSeason = await createSeason();
     const input = memberSignupInput(lastSeason.family);

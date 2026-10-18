@@ -23,7 +23,8 @@ import { adminEventFormatter, getEvents } from "~/server/utils/admin/getEvents";
 import { sendEventConfirmationEmail } from "~/server/utils/email/sendEventConfirmationEmail";
 import { sendMemberConfirmationEmail } from "~/server/utils/email/sendMemberConfirmationEmail";
 import { findOrCreateMember } from "~/server/utils/member/findOrCreateMember";
-import { findOrCreateFamilyMembers } from "~/server/utils/member/findOrCreateFamilyMembers";
+import { findOrCreateFamilyMembers, linkFamilyMembers } from "~/server/utils/member/findOrCreateFamilyMembers";
+import { parseForMembershipType } from "~/server/utils/member/parseForMembershipType";
 import {
   addFamilyMemberSchema,
   adminAddMemberSchema,
@@ -322,15 +323,19 @@ export const adminRouter = createTRPCRouter({
         });
       }
 
-      const memberInput = { ...input, acceptedTerms: true as const };
+      const memberInput = {
+        ...parseForMembershipType(adminAddMemberSchema, input, membership.type),
+        acceptedTerms: true as const
+      };
 
       const members =
         membership.type === MembershipType.FAMILY
           ? await findOrCreateFamilyMembers(memberInput)
           : [await findOrCreateMember(memberInput)];
 
+      // Same rule as the public signup: one membership per season
       const memberWithExistingMembership = members.find((member) =>
-        member.memberships.some((x) => x.id === membership.id)
+        member.memberships.some((x) => x.wordpressId === membership.wordpressId)
       );
 
       if (memberWithExistingMembership) {
@@ -338,6 +343,10 @@ export const adminRouter = createTRPCRouter({
           code: "BAD_REQUEST",
           message: "Har redan detta medlemskap"
         });
+      }
+
+      if (membership.type === MembershipType.FAMILY) {
+        await linkFamilyMembers(members);
       }
 
       await ctx.prisma.stripePayment.create({

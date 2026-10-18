@@ -4,6 +4,7 @@ import {
   StripeRefundStatus
 } from "@prisma/client";
 import { z } from "zod";
+import { MAX_FAMILY_MEMBERS } from "~/utils/constants";
 
 export const participantSchema = z.object({
   firstName: z.string({ required_error: "Ange förnamn" }).min(1, { message: "Ange förnamn" }),
@@ -142,6 +143,7 @@ export const memberSignupSchema = z
             .email({ message: "Felaktig email" })
         })
       )
+      .max(MAX_FAMILY_MEMBERS, { message: `Max ${MAX_FAMILY_MEMBERS} familjemedlemmar` })
       .optional()
   })
   .refine(
@@ -156,7 +158,7 @@ export const memberSignupSchema = z
   ).refine((x) => {
     // All emails must be unique
     if (x.membershipType === MembershipType.FAMILY) {
-      const emails = [x.email, ...x.additionalMembers!.map((m) => m.email)];
+      const emails = [x.email, ...(x.additionalMembers ?? []).map((m) => m.email)];
       return new Set(emails).size === emails.length;
     }
     return true;
@@ -212,6 +214,7 @@ export const adminAddMemberSchema = z
           email: z.string({ required_error: "Ange email" }).email({ message: "Felaktig email" })
         })
       )
+      .max(MAX_FAMILY_MEMBERS, { message: `Max ${MAX_FAMILY_MEMBERS} familjemedlemmar` })
       .optional()
   })
   .refine(
@@ -222,7 +225,14 @@ export const adminAddMemberSchema = z
       return true;
     },
     { message: "Familjemedlemskap kräver minst en familjemedlem" }
-  );
+  ).refine((x) => {
+    // All emails must be unique
+    if (x.membershipType === MembershipType.FAMILY) {
+      const emails = [x.email, ...(x.additionalMembers ?? []).map((m) => m.email)];
+      return new Set(emails).size === emails.length;
+    }
+    return true;
+  }, { message: 'Alla emailadresser måste vara unika' });
 
 export const addFamilyMemberSchema = z.object({
   ownerId: z.string(),

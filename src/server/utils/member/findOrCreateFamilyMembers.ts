@@ -48,3 +48,27 @@ export const findOrCreateFamilyMembers = async (input: CreateFamilyMembersInput)
 
   return [membershipOwner, ...familyMembers];
 };
+
+type FamilyMembers = Awaited<ReturnType<typeof findOrCreateFamilyMembers>>;
+
+/**
+ * Point every family member at the owner. Existing members can still belong to
+ * a family from an earlier season, so only call this once the members have been
+ * checked against memberships in the current season.
+ */
+export const linkFamilyMembers = async ([membershipOwner, ...familyMembers]: FamilyMembers) => {
+  if (!membershipOwner) {
+    return;
+  }
+
+  await prisma.$transaction([
+    prisma.member.update({
+      where: { id: membershipOwner.id },
+      data: { familyMemberShipOwnerId: null }
+    }),
+    prisma.member.updateMany({
+      where: { id: { in: familyMembers.map((member) => member.id) } },
+      data: { familyMemberShipOwnerId: membershipOwner.id }
+    })
+  ]);
+};

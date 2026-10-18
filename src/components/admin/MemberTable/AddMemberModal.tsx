@@ -31,6 +31,7 @@ import {
   SelectValue
 } from "~/components/ui/select";
 import { api } from "~/utils/api";
+import { MAX_FAMILY_MEMBERS } from "~/utils/constants";
 import { adminAddMemberSchema } from "~/utils/zodSchemas";
 
 type AdditionalMember = NonNullable<
@@ -272,7 +273,7 @@ export const AddMemberModal = () => {
                     />
                   </div>
                 ))}
-                {additionalMembers.fields.length < 4 && (
+                {additionalMembers.fields.length < MAX_FAMILY_MEMBERS && (
                   <Button
                     className="w-full"
                     type="button"

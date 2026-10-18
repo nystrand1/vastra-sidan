@@ -9,7 +9,6 @@ import {
   memberSignupInput
 } from "../helpers/factories";
 import { signUpAndPay } from "../helpers/flows";
-import { itKnownBug } from "../helpers/knownBug";
 import { getSentEmails } from "../mocks/ses";
 import { fakeStripe } from "../mocks/stripe";
 
@@ -233,8 +232,7 @@ describe("public membership signup", () => {
       ).rejects.toMatchObject({ code: "BAD_REQUEST", message: "Du har redan detta medlemskap" });
     });
 
-    // Known bug: the 1 + 4 limit is only enforced by the signup form, not by memberSignupSchema.
-    itKnownBug("rejects more than four family members", async () => {
+    it("rejects more than four family members", async () => {
       const { family } = await createSeason();
       const input = memberSignupInput(family, {
         additionalMembers: [familyMember(), familyMember(), familyMember(), familyMember(), familyMember()]
@@ -245,9 +243,7 @@ describe("public membership signup", () => {
       });
     });
 
-    // Known bug: the schema validates the client-supplied `membershipType`, while the
-    // router branches on the membership's real type, so the family rules can be skipped.
-    itKnownBug("enforces family rules even if the client sends the wrong membershipType", async () => {
+    it("enforces family rules even if the client sends the wrong membershipType", async () => {
       const { family } = await createSeason();
       const input = memberSignupInput(family, {
         membershipType: MembershipType.REGULAR,
@@ -259,9 +255,7 @@ describe("public membership signup", () => {
       });
     });
 
-    // Known bug: findOrCreateFamilyMembers upserts with `update: {}`, so a member keeps
-    // pointing at last season's family owner while joining a new family.
-    itKnownBug("moves a member from last season's family to the new family", async () => {
+    it("moves a member from last season's family to the new family", async () => {
       const lastSeason = await createExpiredSeason();
       const thisSeason = await createSeason();
       const kid = familyMember();

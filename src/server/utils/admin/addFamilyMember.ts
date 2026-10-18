@@ -1,6 +1,7 @@
 import { MembershipType } from "@prisma/client";
 import { type z } from "zod";
 import { prisma } from "~/server/db";
+import { MAX_FAMILY_MEMBERS } from "~/utils/constants";
 import { type addFamilyMemberSchema } from "~/utils/zodSchemas";
 
 
@@ -12,7 +13,18 @@ export const addFamilyMember = async ({ ownerId, member } : AddFamilyMember) => 
   const today = new Date();
   const owner = await prisma.member.findUniqueOrThrow({
     include: {
-      memberships: true,
+      // The owner can have memberships from earlier seasons, only the active family one counts
+      memberships: {
+        where: {
+          type: MembershipType.FAMILY,
+          endDate: {
+            gte: today
+          },
+          startDate: {
+            lte: today
+          }
+        }
+      },
       stripePayments: true,
       stripeRefunds: true
     },
@@ -35,6 +47,21 @@ export const addFamilyMember = async ({ ownerId, member } : AddFamilyMember) => 
 
   if (ownerMembership?.type !== MembershipType.FAMILY) {
     throw new Error('Owner does not have a family membership');
+  }
+
+  const familyMemberCount = await prisma.member.count({
+    where: {
+      familyMemberShipOwnerId: owner.id,
+      memberships: {
+        some: {
+          id: ownerMembership.id
+        }
+      }
+    }
+  });
+
+  if (familyMemberCount >= MAX_FAMILY_MEMBERS) {
+    throw new Error(`Family already has ${MAX_FAMILY_MEMBERS} members`);
   }
 
   const [stripePayment] = owner.stripePayments;

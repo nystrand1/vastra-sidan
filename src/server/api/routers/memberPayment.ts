@@ -6,13 +6,14 @@ import { findOrCreateMember } from "~/server/utils/member/findOrCreateMember";
 import { createPaymentIntent } from "~/utils/stripeHelpers";
 import { memberSignupSchema } from "~/utils/zodSchemas";
 import { createTRPCRouter, membershipProcedure } from "../trpc";
-import { findOrCreateFamilyMembers } from "~/server/utils/member/findOrCreateFamilyMembers";
+import { findOrCreateFamilyMembers, linkFamilyMembers } from "~/server/utils/member/findOrCreateFamilyMembers";
+import { parseForMembershipType } from "~/server/utils/member/parseForMembershipType";
 
 export const memberPaymentRouter = createTRPCRouter({
   requestPayment: membershipProcedure
     .input(memberSignupSchema)
-    .mutation(async ({ input, ctx }) => {
-      const { membershipId } = input;
+    .mutation(async ({ input: clientInput, ctx }) => {
+      const { membershipId } = clientInput;
 
       const membership = await ctx.prisma.membership.findUnique({
         where: {
@@ -26,6 +27,8 @@ export const memberPaymentRouter = createTRPCRouter({
           message: "Felaktigt medlemskap"
         });
       }
+
+      const input = parseForMembershipType(memberSignupSchema, clientInput, membership.type);
 
       let members = [] as Awaited<ReturnType<typeof findOrCreateMember>>[];
 
@@ -45,6 +48,10 @@ export const memberPaymentRouter = createTRPCRouter({
           code: "BAD_REQUEST",
           message: "Du har redan detta medlemskap"
         });
+      }
+
+      if (membership.type === "FAMILY") {
+        await linkFamilyMembers(members);
       }
 
       try {
