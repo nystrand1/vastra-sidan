@@ -5,7 +5,6 @@ import { adminCaller, publicCaller } from "../helpers/caller";
 import { prisma } from "../helpers/db";
 import { createEvent, createParticipant, participantInput } from "../helpers/factories";
 import { availableSeats, bookAndPay } from "../helpers/flows";
-import { itKnownBug } from "../helpers/knownBug";
 import { fakeStripe } from "../mocks/stripe";
 
 /**
@@ -136,9 +135,7 @@ describe("cancelling a booking", () => {
     expect(fakeStripe.requests()).toHaveLength(0);
   });
 
-  // Known bug: nothing stops a traveller from cancelling again, which refunds them twice
-  // (paid for by the rest of the group's share of the charge).
-  itKnownBug("does not refund the same traveller twice", async () => {
+  it("does not refund the same traveller twice", async () => {
     const { member } = await bookTwoTravellers();
     await cancel(member.cancellationToken);
     await fakeStripe.completeRefund(fakeStripe.refunds()[0]!.id);
@@ -147,9 +144,7 @@ describe("cancelling a booking", () => {
     expect(fakeStripe.refunds()).toHaveLength(1);
   });
 
-  // Known bug: the refund is based on the event's current price, not `payAmount`,
-  // so a price change synced from WordPress changes what travellers get back.
-  itKnownBug("refunds what the traveller paid, even if the price changed afterwards", async () => {
+  it("refunds what the traveller paid, even if the price changed afterwards", async () => {
     const event = await createEvent();
     const busId = event.buses[0]!.id;
     const { participants } = await bookAndPay(event.id, [participantInput(busId)]);
@@ -160,16 +155,55 @@ describe("cancelling a booking", () => {
     expect(fakeStripe.refunds()).toEqual([expect.objectContaining({ amount: 40000 })]);
   });
 
-  // Known bug: a free (admin-added) booking has a 0 SEK payment, so the fee split divides
-  // by zero and `amount=NaN` is sent to Stripe.
-  itKnownBug("cancels a free admin booking without sending an invalid refund to Stripe", async () => {
+  it("cancels a free admin booking without sending an invalid refund to Stripe", async () => {
     const event = await createEvent();
-    const { consent: _consent, ...input } = participantInput(event.buses[0]!.id);
+    const busId = event.buses[0]!.id;
+    const { consent: _consent, ...input } = participantInput(busId);
     await adminCaller().admin.addParticipant({ ...input, eventId: event.id });
     const participant = await prisma.participant.findFirstOrThrow();
 
-    await cancel(participant.cancellationToken).catch(() => undefined);
+    await cancel(participant.cancellationToken);
 
     expect(fakeStripe.requestsTo("POST", "/refunds")).toHaveLength(0);
+    const cancelled = await prisma.participant.findUniqueOrThrow({ where: { id: participant.id } });
+    expect(cancelled.cancellationDate).toBeInstanceOf(Date);
+    expect(await availableSeats(event.id, busId)).toBe(event.buses[0]!.seats);
+  });
+
+  it("rejects cancelling again while the refund is pending", async () => {
+    const { member } = await bookTwoTravellers();
+    await cancel(member.cancellationToken);
+
+    await expect(cancel(member.cancellationToken)).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(fakeStripe.refunds()).toHaveLength(1);
+  });
+
+  it("lets the traveller cancel again after Stripe reports the refund failed", async () => {
+    const { event, busId, member } = await bookTwoTravellers();
+    await cancel(member.cancellationToken);
+    const [failed] = fakeStripe.refunds();
+
+    const res = await fakeStripe.failRefund(failed!.id);
+
+    expect(res.status).toBe(201);
+    expect(await prisma.stripeRefund.findMany()).toEqual([
+      expect.objectContaining({
+        stripeRefundId: failed!.id,
+        status: StripeRefundStatus.ERROR,
+        errorCode: "expired_or_canceled_card"
+      })
+    ]);
+    const stillBooked = await prisma.participant.findUniqueOrThrow({ where: { id: member.id } });
+    expect(stillBooked.cancellationDate).toBeNull();
+    expect(await availableSeats(event.id, busId)).toBe(8);
+
+    await cancel(member.cancellationToken);
+    const retry = fakeStripe.refunds()[1]!;
+    await fakeStripe.completeRefund(retry.id);
+
+    expect(
+      await prisma.stripeRefund.findFirst({ where: { status: StripeRefundStatus.REFUNDED } })
+    ).toMatchObject({ stripeRefundId: retry.id, participantId: member.id });
+    expect(await availableSeats(event.id, busId)).toBe(9);
   });
 });

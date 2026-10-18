@@ -7,6 +7,7 @@ import {
   handleChargeUpdate,
   handleFailedPayment,
   handleRefund,
+  handleRefundUpdate,
   handleSuccessfulPayment
 } from "./utils";
 import { captureException } from "@sentry/nextjs";
@@ -20,7 +21,12 @@ const endpointSecret =
 const handleStripeEvent = async (event: Stripe.Event) => {
   switch (event.type) {
     case "payment_intent.succeeded":
-      const { participants, members } = await handleSuccessfulPayment(event);
+      const payment = await handleSuccessfulPayment(event);
+      if (!payment) {
+        // Already handled in an earlier delivery of this event
+        break;
+      }
+      const { participants, members } = payment;
       if (event.data.object.metadata.type === "EVENT") {
         const emailPromises = participants.map(sendEventConfirmationEmail);
         await Promise.all(emailPromises);
@@ -46,6 +52,10 @@ const handleStripeEvent = async (event: Stripe.Event) => {
       break;
     case "charge.refunded":
       await handleRefund(event);
+      break;
+    case "refund.updated":
+    case "refund.failed":
+      await handleRefundUpdate(event);
       break;
     default:
       console.log("Unhandled event", event);

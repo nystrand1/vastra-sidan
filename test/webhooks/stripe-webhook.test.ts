@@ -4,7 +4,6 @@ import { publicCaller } from "../helpers/caller";
 import { prisma } from "../helpers/db";
 import { createEvent, createSeason, familyMember, memberSignupInput, participantInput } from "../helpers/factories";
 import { bookAndPay, signUpAndPay } from "../helpers/flows";
-import { itKnownBug } from "../helpers/knownBug";
 import { getSentEmails } from "../mocks/ses";
 import { fakeStripe, postToWebhook } from "../mocks/stripe";
 
@@ -50,9 +49,8 @@ describe("Stripe webhook", () => {
       expect(res.status).toBe(400);
     });
 
-    // Known bug: every delivery inserts another SUCCEEDED row and sends the emails again.
     // Stripe delivers at-least-once, so the handler must be idempotent.
-    itKnownBug("ignores a redelivered event", async () => {
+    it("ignores a redelivered event", async () => {
       const event = await createEvent();
       const { paymentIntent } = await bookAndPay(event.id, [participantInput(event.buses[0]!.id)]);
       const [succeededEvent] = fakeStripe.events();
@@ -124,9 +122,27 @@ describe("Stripe webhook", () => {
       }
     });
 
-    // Known bug: `charge.refunded` carries a Charge, but the handler reads it as if it were
-    // the Refund: it stores the charge id as `stripeRefundId` and the full charge amount.
-    itKnownBug("stores Stripe's refund id and the refunded amount", async () => {
+    it("records a dashboard refund once, even if the event is redelivered", async () => {
+      const event = await createEvent();
+      const { paymentIntent } = await bookAndPay(event.id, [participantInput(event.buses[0]!.id)]);
+      await fakeStripe.refundFromDashboard(paymentIntent.id, 10000);
+      const chargeRefunded = fakeStripe.events().find((e) => e.type === "charge.refunded");
+
+      const res = await fakeStripe.redeliver(chargeRefunded!.id);
+
+      expect(res.status).toBe(201);
+      const [refund] = fakeStripe.refunds();
+      expect(await prisma.stripeRefund.findMany()).toEqual([
+        expect.objectContaining({
+          stripeRefundId: refund!.id,
+          amount: 10000,
+          status: StripeRefundStatus.REFUNDED
+        })
+      ]);
+    });
+
+    // `charge.refunded` carries a Charge, so the handler has to look up the Refund itself.
+    it("stores Stripe's refund id and the refunded amount", async () => {
       const event = await createEvent();
       const busId = event.buses[0]!.id;
       const { participants } = await bookAndPay(event.id, [participantInput(busId), participantInput(busId)]);

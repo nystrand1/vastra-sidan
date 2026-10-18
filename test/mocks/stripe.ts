@@ -50,6 +50,7 @@ interface FakeRefund {
   payment_intent: string;
   reason: string | null;
   status: "pending" | "succeeded" | "failed";
+  failure_reason?: string;
 }
 
 interface FakeBalanceTransaction {
@@ -246,6 +247,15 @@ export const stripeHandlers = [
     return HttpResponse.json(refund);
   }),
 
+  http.get(`${API}/refunds`, async ({ request }) => {
+    const query = await recordRequest(request);
+    // Newest first, like Stripe
+    const refunds = [...state.refunds.values()]
+      .filter((r) => !query.charge || r.charge === query.charge)
+      .reverse();
+    return list(refunds, "/v1/refunds");
+  }),
+
   http.get(`${API}/balance_transactions/:id`, async ({ request, params }) => {
     await recordRequest(request);
     const transaction = state.balanceTransactions.get(String(params.id));
@@ -298,6 +308,12 @@ const getPaymentIntent = (id: string) => {
   const paymentIntent = state.paymentIntents.get(id);
   if (!paymentIntent) throw new Error(`fakeStripe: unknown payment intent ${id}`);
   return paymentIntent;
+};
+
+const getRefund = (id: string) => {
+  const refund = state.refunds.get(id);
+  if (!refund) throw new Error(`fakeStripe: unknown refund ${id}`);
+  return refund;
 };
 
 const getChargeFor = (paymentIntentId: string) => {
@@ -394,15 +410,27 @@ export const fakeStripe = {
     return deliver(createEvent("charge.updated", charge));
   },
 
-  /** A refund created through the API goes through: sends `charge.refunded`. */
-  completeRefund: (refundId: string) => {
-    const refund = state.refunds.get(refundId);
-    if (!refund) throw new Error(`fakeStripe: unknown refund ${refundId}`);
+  /**
+   * A refund goes through: sends `charge.refunded`, then `refund.updated` (Stripe sends both,
+   * in no guaranteed order). Returns the first failed response, or the last one.
+   */
+  completeRefund: async (refundId: string) => {
+    const refund = getRefund(refundId);
     const charge = state.charges.get(refund.charge)!;
     refund.status = "succeeded";
     charge.amount_refunded += refund.amount;
     charge.refunded = charge.amount_refunded >= charge.amount;
-    return deliver(createEvent("charge.refunded", charge));
+    const chargeRefunded = await deliver(createEvent("charge.refunded", charge));
+    if (chargeRefunded.status !== 201) return chargeRefunded;
+    return deliver(createEvent("refund.updated", refund));
+  },
+
+  /** A refund fails (e.g. the card was closed): sends `refund.failed`. */
+  failRefund: (refundId: string, failureReason = "expired_or_canceled_card") => {
+    const refund = getRefund(refundId);
+    refund.status = "failed";
+    refund.failure_reason = failureReason;
+    return deliver(createEvent("refund.failed", refund));
   },
 
   /** An admin refunds a payment from the Stripe dashboard (defaults to the full amount). */

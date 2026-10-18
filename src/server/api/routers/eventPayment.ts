@@ -284,6 +284,11 @@ export const eventPaymentRouter = createTRPCRouter({
         },
         include: {
           event: true,
+          stripeRefunds: {
+            select: {
+              status: true
+            }
+          },
           stripePayments: {
             select: {
               id: true,
@@ -332,27 +337,64 @@ export const eventPaymentRouter = createTRPCRouter({
         });
       }
 
-      let eventCost = event.defaultPrice;
-
-      if (participant.youth && participant.member) {
-        eventCost = event.youthMemberPrice;
-      } else if (participant.member) {
-        eventCost = event.memberPrice;
-      } else if (participant.youth) {
-        eventCost = event.youthPrice;
+      if (participant.cancellationDate) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Resenären har redan avbokats"
+        });
       }
 
-      // Eventcost is in SEK, we need to convert it to cents (öre) to be synced with Stripe
-      eventCost = eventCost * 100;
+      // A failed refund (ERROR) may be retried, a pending or completed one may not
+      const hasActiveRefund = participant.stripeRefunds.some(
+        (r) =>
+          r.status === StripeRefundStatus.CREATED ||
+          r.status === StripeRefundStatus.REFUNDED
+      );
+      if (hasActiveRefund) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Avbokningen behandlas redan"
+        });
+      }
+
+      // payAmount is what the participant paid, in SEK (older bookings may lack it).
+      // Convert to cents (öre) to be synced with Stripe.
+      const paidAmount =
+        participant.payAmount ?? getParticipantCost(participant, event);
+      const participantCost = paidAmount * 100;
+
+      // Free bookings (e.g. added by an admin) have nothing to refund through Stripe
+      if (participantCost <= 0 || stripePayment.amount <= 0) {
+        const [refund] = await ctx.prisma.$transaction([
+          ctx.prisma.stripeRefund.create({
+            data: {
+              stripeRefundId: `no-refund-${participant.id}`,
+              amount: 0,
+              status: StripeRefundStatus.REFUNDED,
+              participantId: participant.id,
+              originalPaymentId: stripePayment.id
+            }
+          }),
+          ctx.prisma.participant.update({
+            where: {
+              id: participant.id
+            },
+            data: {
+              cancellationDate: new Date()
+            }
+          })
+        ]);
+        return refund.originalPaymentId;
+      }
 
       const stripeFee = stripePayment.amount - stripePayment.netAmount;
 
       // How big is the fee for this participant
-      const eventCostFeeFraction = eventCost / stripePayment.amount;
-      const eventCostFee = Math.floor(stripeFee * eventCostFeeFraction);
+      const participantFeeFraction = participantCost / stripePayment.amount;
+      const participantFee = Math.floor(stripeFee * participantFeeFraction);
 
       // So, this is the amount that the participant will get back after the Stripe fees.
-      const participantPayAmount = eventCost - eventCostFee;
+      const participantPayAmount = participantCost - participantFee;
 
       try {
         const stripeRefundIntent = await createRefundIntent({
@@ -364,7 +406,7 @@ export const eventPaymentRouter = createTRPCRouter({
           data: {
             stripeRefundId: stripeRefundIntent.id,
             amount: participantPayAmount,
-            status: StripePaymentStatus.CREATED,
+            status: StripeRefundStatus.CREATED,
             participantId: participant.id,
             originalPaymentId: stripePayment.id
           }
