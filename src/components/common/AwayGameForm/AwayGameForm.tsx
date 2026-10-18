@@ -29,6 +29,7 @@ export const AwayGameForm = () => {
   const { id } = query as { id: string };
   const { data: awayGame, isLoading } = api.public.getAwayGame.useQuery({ id: id });
   const { mutateAsync: createPaymentIntent, data: clientSecret } = api.eventPayment.requestStripePayment.useMutation();
+  const { mutate: releasePendingBooking } = api.eventPayment.releasePendingBooking.useMutation();
 
   const firstAvailableBus = awayGame?.buses.find((bus) => bus.availableSeats > 0);
   const form = useForm<z.infer<typeof eventSignupSchema>>({
@@ -105,10 +106,14 @@ export const AwayGameForm = () => {
   return (
     <>
       {clientSecret && (
-        <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'night' }, locale: 'sv' }}>
+        <Elements key={clientSecret} stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'night' }, locale: 'sv' }}>
           <StripeWidget
             isOpen={modalOpen}
-            onClose={() => setModalOpen(false)}
+            onClose={() => {
+              setModalOpen(false);
+              // Give the seats back; paying again creates a new booking
+              releasePendingBooking({ clientSecret });
+            }}
             clientSecret={clientSecret}
             title={awayGame ? `${awayGame.name}: ${totalPrice} kr` : 'Betalning för bortaresa'}
             subTitle={`${passengers.fields.length} passagerare`}

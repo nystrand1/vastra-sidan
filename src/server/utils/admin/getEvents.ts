@@ -1,4 +1,5 @@
 import { prisma } from "~/server/db";
+import { busesWithBookedSeats } from "../busCapacity";
 import { paidPassengerQuery } from "../queryConstants/paidPassengerQuery";
 
 
@@ -22,11 +23,7 @@ export const getEvents = async () => {
   const events = await prisma.vastraEvent.findMany({
     include: {
       participants: paidPassengerQuery,
-      buses: {
-        include: {
-          passengers: paidPassengerQuery
-        }
-      }
+      ...busesWithBookedSeats()
     },
     orderBy: {
       date: "desc"

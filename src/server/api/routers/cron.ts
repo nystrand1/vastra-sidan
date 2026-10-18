@@ -2,6 +2,7 @@ import { captureMessage } from "@sentry/nextjs";
 import { isBefore, subDays, subMilliseconds } from "date-fns";
 import { getTimezoneOffset } from "date-fns-tz";
 import { createTRPCRouter, cronProcedure } from "~/server/api/trpc";
+import { releaseExpiredSeatHolds } from "~/server/utils/busCapacity";
 import {
   awayGameMapper,
   awayGameToEvent,
@@ -41,6 +42,10 @@ interface MatchInfoResponse {
 }
 
 export const cronRouter = createTRPCRouter({
+  releaseExpiredSeatHolds: cronProcedure.mutation(async ({ ctx }) => {
+    const released = await releaseExpiredSeatHolds(ctx.prisma, ctx.stripe);
+    return { released };
+  }),
   syncEvents: cronProcedure.mutation(async ({ ctx }) => {
     console.info("Syncing events");
     const { data: gqlRes } = await ctx.apolloClient.query({

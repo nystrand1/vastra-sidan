@@ -1,10 +1,9 @@
 import { StripePaymentStatus, StripeRefundStatus } from "@prisma/client";
-import { subMinutes } from "date-fns";
 import { describe, expect, it } from "vitest";
-import { adminCaller, publicCaller, userCaller } from "../helpers/caller";
+import { adminCaller, cronCaller, publicCaller, userCaller } from "../helpers/caller";
 import { prisma } from "../helpers/db";
 import { createEvent, createParticipant, fillSeats, participantInput } from "../helpers/factories";
-import { availableSeats, bookAndPay } from "../helpers/flows";
+import { availableSeats, book, bookAndPay, expireSeatHolds } from "../helpers/flows";
 import { getSentEmails } from "../mocks/ses";
 import { fakeStripe } from "../mocks/stripe";
 
@@ -200,23 +199,35 @@ describe("public event booking", () => {
     ).rejects.toMatchObject({ message: "BUS_FULL" });
   });
 
-  it("gives back the seat of an abandoned booking after 15 minutes and cancels its payment", async () => {
+  it("holds the seat of a pending booking for two concurrent requests", async () => {
     const event = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
     const busId = event.buses[0]!.id;
-    const clientSecret = await publicCaller().eventPayment.requestStripePayment({
-      eventId: event.id,
-      participants: [participantInput(busId)]
-    });
-    const abandoned = fakeStripe.paymentIntentByClientSecret(clientSecret);
 
-    await prisma.stripePayment.updateMany({ data: { createdAt: subMinutes(new Date(), 14) } });
+    const results = await Promise.allSettled([
+      book(event.id, [participantInput(busId)]),
+      book(event.id, [participantInput(busId)])
+    ]);
+
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(results.find((r) => r.status === "rejected")).toMatchObject({
+      reason: { message: "BUS_FULL" }
+    });
+    expect(await prisma.participant.count()).toBe(1);
+  });
+
+  it("cancels an unpaid booking after 15 minutes and gives its seat back", async () => {
+    const event = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
+    const busId = event.buses[0]!.id;
+    const { paymentIntent: abandoned } = await book(event.id, [participantInput(busId)]);
+
+    await expireSeatHolds();
+    // Still held until it's cancelled: the customer may be paying right now
     expect(await availableSeats(event.id, busId)).toBe(0);
 
-    await prisma.stripePayment.updateMany({ data: { createdAt: subMinutes(new Date(), 16) } });
-    expect(await availableSeats(event.id, busId)).toBe(1);
+    await expect(cronCaller().cron.releaseExpiredSeatHolds()).resolves.toEqual({ released: 1 });
 
-    await bookAndPay(event.id, [participantInput(busId)]);
     expect(abandoned.status).toBe("canceled");
+    expect(await availableSeats(event.id, busId)).toBe(1);
     const abandonedParticipant = await prisma.participant.findFirstOrThrow({
       where: { stripePayments: { some: { stripePaymentId: abandoned.id } } },
       include: { stripePayments: true }
@@ -225,26 +236,83 @@ describe("public event booking", () => {
       StripePaymentStatus.CANCELED,
       StripePaymentStatus.CREATED
     ]);
+    // A late payment is refused, so the seat can safely go to someone else
+    await expect(fakeStripe.succeedPayment(abandoned.id)).rejects.toThrow("canceled");
+    await bookAndPay(event.id, [participantInput(busId)]);
     expect(await availableSeats(event.id, busId)).toBe(0);
   });
 
-  it("keeps the seat of an expired booking whose payment went through", async () => {
+  it("cancels an expired booking before checking for free seats", async () => {
     const event = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
     const busId = event.buses[0]!.id;
-    const clientSecret = await publicCaller().eventPayment.requestStripePayment({
-      eventId: event.id,
-      participants: [participantInput(busId)]
-    });
-    await prisma.stripePayment.updateMany({ data: { createdAt: subMinutes(new Date(), 16) } });
-    await fakeStripe.succeedPayment(fakeStripe.paymentIntentByClientSecret(clientSecret).id);
+    const { paymentIntent: abandoned } = await book(event.id, [participantInput(busId)]);
+    await expireSeatHolds();
 
+    await bookAndPay(event.id, [participantInput(busId)]);
+
+    expect(abandoned.status).toBe("canceled");
+  });
+
+  it("only cron can release expired bookings", async () => {
+    await expect(publicCaller().cron.releaseExpiredSeatHolds()).rejects.toMatchObject({
+      code: "UNAUTHORIZED"
+    });
+  });
+
+  it("keeps the seat of an expired booking that was paid before the webhook arrived", async () => {
+    const event = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
+    const busId = event.buses[0]!.id;
+    const { paymentIntent } = await book(event.id, [participantInput(busId)]);
+    const succeeded = fakeStripe.succeedPaymentWithoutWebhook(paymentIntent.id);
+    await expireSeatHolds();
+
+    await expect(cronCaller().cron.releaseExpiredSeatHolds()).resolves.toEqual({ released: 0 });
     await expect(
       publicCaller().eventPayment.requestStripePayment({
         eventId: event.id,
         participants: [participantInput(busId)]
       })
     ).rejects.toMatchObject({ message: "BUS_FULL" });
-    expect(fakeStripe.requests().filter((r) => r.path.endsWith("/cancel"))).toHaveLength(0);
+    expect(await prisma.stripePayment.count({ where: { status: StripePaymentStatus.CANCELED } })).toBe(0);
+
+    expect((await fakeStripe.redeliver(succeeded.id)).status).toBe(201);
+    expect(await availableSeats(event.id, busId)).toBe(0);
+  });
+
+  it("keeps the seat of an expired booking whose payment is processing", async () => {
+    const event = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
+    const busId = event.buses[0]!.id;
+    const { paymentIntent } = await book(event.id, [participantInput(busId)]);
+    fakeStripe.startProcessing(paymentIntent.id);
+    await expireSeatHolds();
+
+    await expect(cronCaller().cron.releaseExpiredSeatHolds()).resolves.toEqual({ released: 0 });
+    await expect(
+      publicCaller().eventPayment.requestStripePayment({
+        eventId: event.id,
+        participants: [participantInput(busId)]
+      })
+    ).rejects.toMatchObject({ message: "BUS_FULL" });
+    expect(paymentIntent.status).toBe("processing");
+  });
+
+  it("gives the seats back when the customer closes the payment window", async () => {
+    const event = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
+    const busId = event.buses[0]!.id;
+    const { clientSecret, paymentIntent } = await book(event.id, [participantInput(busId)]);
+
+    await expect(
+      publicCaller().eventPayment.releasePendingBooking({
+        clientSecret: `${paymentIntent.id}_secret_wrong`
+      })
+    ).resolves.toEqual({ released: false });
+    expect(await availableSeats(event.id, busId)).toBe(0);
+
+    await expect(
+      publicCaller().eventPayment.releasePendingBooking({ clientSecret })
+    ).resolves.toEqual({ released: true });
+    expect(paymentIntent.status).toBe("canceled");
+    expect(await availableSeats(event.id, busId)).toBe(1);
   });
 
   it("rejects a bus that belongs to another event", async () => {
@@ -308,6 +376,21 @@ describe("admin: add participant", () => {
       message: "Bus is full"
     });
     expect(await prisma.participant.count()).toBe(1);
+  });
+
+  it("counts unpaid bookings, and frees the seats of expired ones", async () => {
+    const event = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
+    const busId = event.buses[0]!.id;
+    const { paymentIntent } = await book(event.id, [participantInput(busId)]);
+
+    await expect(adminCaller().admin.addParticipant(adminInput(event.id, busId))).rejects.toMatchObject({
+      message: "Bus is full"
+    });
+
+    await expireSeatHolds();
+    await adminCaller().admin.addParticipant(adminInput(event.id, busId));
+    expect(paymentIntent.status).toBe("canceled");
+    expect(await availableSeats(event.id, busId)).toBe(0);
   });
 
   it("rejects an overbooked bus", async () => {

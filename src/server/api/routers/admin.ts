@@ -21,8 +21,8 @@ import {
 } from "~/server/utils/admin/getEventParticipantById";
 import { adminEventFormatter, getEvents } from "~/server/utils/admin/getEvents";
 import {
-  busesWithBookedSeats,
-  releaseExpiredSeatHolds
+  releaseExpiredSeatHolds,
+  withFreeSeat
 } from "~/server/utils/busCapacity";
 import { sendEventConfirmationEmail } from "~/server/utils/email/sendEventConfirmationEmail";
 import { sendMemberConfirmationEmail } from "~/server/utils/email/sendMemberConfirmationEmail";
@@ -35,7 +35,6 @@ import {
   updateMemberSchema,
   updateParticipantSchema
 } from "~/utils/zodSchemas";
-import { captureMessage } from "@sentry/nextjs";
 
 export type AdminUserProfile = Prisma.UserGetPayload<{
   select: {
@@ -123,42 +122,22 @@ export const adminRouter = createTRPCRouter({
         });
       }
 
+      if (participant.busId === input.busId) {
+        return "ok";
+      }
+
       await releaseExpiredSeatHolds(ctx.prisma, ctx.stripe, participant.eventId);
 
-      const bus = await ctx.prisma.bus.findFirst({
-        where: {
-          id: input.busId,
-          eventId: participant.eventId
-        },
-        include: busesWithBookedSeats().buses.include
-      });
-
-      if (!bus) {
-        captureMessage("Bus not found");
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Bus not found"
-        });
-      }
-
-      const availableSeats = bus.seats - bus._count.passengers;
-
-      if (availableSeats <= 0) {
-        captureMessage("Bus is full");
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Bus is full"
-        });
-      }
-
-      await ctx.prisma.participant.update({
-        where: {
-          id: participant.id
-        },
-        data: {
-          busId: input.busId
-        }
-      });
+      await withFreeSeat(ctx.prisma, participant.eventId, input.busId, (tx) =>
+        tx.participant.update({
+          where: {
+            id: participant.id
+          },
+          data: {
+            busId: input.busId
+          }
+        })
+      );
 
       return "ok";
     }),
@@ -241,52 +220,34 @@ export const adminRouter = createTRPCRouter({
 
       await releaseExpiredSeatHolds(ctx.prisma, ctx.stripe, eventId);
 
-      const bus = await ctx.prisma.bus.findFirst({
-        where: {
-          id: rest.busId,
-          eventId
-        },
-        include: busesWithBookedSeats().buses.include
-      });
+      const participant = await withFreeSeat(
+        ctx.prisma,
+        eventId,
+        rest.busId,
+        async (tx) => {
+          const created = await tx.participant.create({
+            data: {
+              ...rest,
+              name: `${firstName} ${lastName}`,
+              userEmail: rest.email,
+              payAmount: 0,
+              eventId
+            }
+          });
 
-      if (!bus) {
-        captureMessage("Bus not found");
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Bus not found"
-        });
-      }
-
-      const availableSeats = bus.seats - bus._count.passengers;
-
-      if (availableSeats <= 0) {
-        captureMessage("Bus is full");
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Bus is full"
-        });
-      }
-
-      const participant = await ctx.prisma.participant.create({
-        data: {
-          ...rest,
-          name: `${firstName} ${lastName}`,
-          userEmail: rest.email,
-          payAmount: 0,
-          eventId
+          await tx.stripePayment.create({
+            data: {
+              stripePaymentId: `admin-comp-${created.id}`,
+              amount: 0,
+              status: StripePaymentStatus.SUCCEEDED,
+              participants: {
+                connect: [{ id: created.id }]
+              }
+            }
+          });
+          return created;
         }
-      });
-
-      await ctx.prisma.stripePayment.create({
-        data: {
-          stripePaymentId: `admin-comp-${participant.id}`,
-          amount: 0,
-          status: StripePaymentStatus.SUCCEEDED,
-          participants: {
-            connect: [{ id: participant.id }]
-          }
-        }
-      });
+      );
 
       const participantWithRelations = await ctx.prisma.participant.findUniqueOrThrow({
         where: { id: participant.id },
