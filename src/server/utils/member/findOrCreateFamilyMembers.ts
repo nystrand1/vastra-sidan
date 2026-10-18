@@ -1,3 +1,4 @@
+import { type Prisma } from "@prisma/client";
 import { type z } from "zod";
 import { prisma } from "~/server/db";
 import { type memberSignupSchema } from "~/utils/zodSchemas";
@@ -49,26 +50,26 @@ export const findOrCreateFamilyMembers = async (input: CreateFamilyMembersInput)
   return [membershipOwner, ...familyMembers];
 };
 
-type FamilyMembers = Awaited<ReturnType<typeof findOrCreateFamilyMembers>>;
-
 /**
  * Point every family member at the owner. Existing members can still belong to
  * a family from an earlier season, so only call this once the members have been
- * checked against memberships in the current season.
+ * checked against memberships in the current season (and, for public signups,
+ * once the payment has succeeded).
  */
-export const linkFamilyMembers = async ([membershipOwner, ...familyMembers]: FamilyMembers) => {
-  if (!membershipOwner) {
-    return;
-  }
+export const linkFamilyMembers = async (
+  ownerId: string,
+  memberIds: string[],
+  db: Prisma.TransactionClient = prisma
+) => {
+  // Emails are matched case-insensitively, so the owner can come back as one of their own family members
+  const familyMemberIds = [...new Set(memberIds)].filter((id) => id !== ownerId);
 
-  await prisma.$transaction([
-    prisma.member.update({
-      where: { id: membershipOwner.id },
-      data: { familyMemberShipOwnerId: null }
-    }),
-    prisma.member.updateMany({
-      where: { id: { in: familyMembers.map((member) => member.id) } },
-      data: { familyMemberShipOwnerId: membershipOwner.id }
-    })
-  ]);
+  await db.member.update({
+    where: { id: ownerId },
+    data: { familyMemberShipOwnerId: null }
+  });
+  await db.member.updateMany({
+    where: { id: { in: familyMemberIds, not: ownerId } },
+    data: { familyMemberShipOwnerId: ownerId }
+  });
 };

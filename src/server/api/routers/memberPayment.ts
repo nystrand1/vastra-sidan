@@ -6,8 +6,9 @@ import { findOrCreateMember } from "~/server/utils/member/findOrCreateMember";
 import { createPaymentIntent } from "~/utils/stripeHelpers";
 import { memberSignupSchema } from "~/utils/zodSchemas";
 import { createTRPCRouter, membershipProcedure } from "../trpc";
-import { findOrCreateFamilyMembers, linkFamilyMembers } from "~/server/utils/member/findOrCreateFamilyMembers";
+import { findOrCreateFamilyMembers } from "~/server/utils/member/findOrCreateFamilyMembers";
 import { parseForMembershipType } from "~/server/utils/member/parseForMembershipType";
+import { isMembershipOnSale } from "~/server/utils/membership";
 
 export const memberPaymentRouter = createTRPCRouter({
   requestPayment: membershipProcedure
@@ -25,6 +26,13 @@ export const memberPaymentRouter = createTRPCRouter({
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Felaktigt medlemskap"
+        });
+      }
+
+      if (!isMembershipOnSale(membership)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Medlemskapet går inte att köpa just nu"
         });
       }
 
@@ -48,10 +56,6 @@ export const memberPaymentRouter = createTRPCRouter({
           code: "BAD_REQUEST",
           message: "Du har redan detta medlemskap"
         });
-      }
-
-      if (membership.type === "FAMILY") {
-        await linkFamilyMembers(members);
       }
 
       try {

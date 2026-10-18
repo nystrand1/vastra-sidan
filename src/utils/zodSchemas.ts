@@ -118,6 +118,7 @@ export const memberSignupSchema = z
       .min(1, { message: "Ange efternamn" }),
     email: z
       .string({ required_error: "Ange email" })
+      .toLowerCase()
       .email({ message: "Felaktig email" }),
     acceptedTerms: z.literal<boolean>(true, {
       message: "Du måste acceptera villkoren",
@@ -140,6 +141,7 @@ export const memberSignupSchema = z
           phone: z.string().optional(),
           email: z
             .string({ required_error: "Ange email" })
+            .toLowerCase()
             .email({ message: "Felaktig email" })
         })
       )
@@ -201,7 +203,7 @@ export const adminAddMemberSchema = z
   .object({
     firstName: z.string({ required_error: "Ange förnamn" }).min(1, { message: "Ange förnamn" }),
     lastName: z.string({ required_error: "Ange efternamn" }).min(1, { message: "Ange efternamn" }),
-    email: z.string({ required_error: "Ange email" }).email({ message: "Felaktig email" }),
+    email: z.string({ required_error: "Ange email" }).toLowerCase().email({ message: "Felaktig email" }),
     phone: z.string({ required_error: "Ange telefonnummer" }).min(1, { message: "Ange telefonnummer" }),
     membershipType: z.nativeEnum(MembershipType),
     membershipId: z.string({ required_error: "Välj medlemskap" }).min(1, { message: "Välj medlemskap" }),
@@ -211,7 +213,7 @@ export const adminAddMemberSchema = z
           firstName: z.string({ required_error: "Ange förnamn" }).min(1, { message: "Ange förnamn" }),
           lastName: z.string({ required_error: "Ange efternamn" }).min(1, { message: "Ange efternamn" }),
           phone: z.string().optional(),
-          email: z.string({ required_error: "Ange email" }).email({ message: "Felaktig email" })
+          email: z.string({ required_error: "Ange email" }).toLowerCase().email({ message: "Felaktig email" })
         })
       )
       .max(MAX_FAMILY_MEMBERS, { message: `Max ${MAX_FAMILY_MEMBERS} familjemedlemmar` })
@@ -224,7 +226,7 @@ export const adminAddMemberSchema = z
       }
       return true;
     },
-    { message: "Familjemedlemskap kräver minst en familjemedlem" }
+    { message: "Familjemedlemskap kräver minst en familjemedlem", path: ["additionalMembers"] }
   ).refine((x) => {
     // All emails must be unique
     if (x.membershipType === MembershipType.FAMILY) {
@@ -232,14 +234,14 @@ export const adminAddMemberSchema = z
       return new Set(emails).size === emails.length;
     }
     return true;
-  }, { message: 'Alla emailadresser måste vara unika' });
+  }, { message: 'Alla emailadresser måste vara unika', path: ['additionalMembers'] });
 
 export const addFamilyMemberSchema = z.object({
   ownerId: z.string(),
   member: z.object({
     firstName: z.string().min(1),
     lastName: z.string().min(1),
-    email: z.string().email(),
+    email: z.string().toLowerCase().email(),
     phone: z.string().optional()
   })
 });

@@ -6,6 +6,7 @@ import {
   adminAddMemberInput,
   createExpiredSeason,
   createSeason,
+  endSeason,
   familyMember,
   memberSignupInput
 } from "../helpers/factories";
@@ -140,6 +141,50 @@ describe("admin: add member", () => {
   });
 });
 
+describe("admin: add member, family and season rules", () => {
+  it("rejects a membership that isn't on sale", async () => {
+    const lastSeason = await createExpiredSeason();
+
+    await expect(
+      adminCaller().admin.addMember(adminAddMemberInput(lastSeason.regular))
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: "Medlemskapet går inte att lägga till just nu"
+    });
+    expect(await prisma.member.count()).toBe(0);
+  });
+
+  it("rejects family emails that only differ in case", async () => {
+    const { family } = await createSeason();
+
+    await expect(
+      adminCaller().admin.addMember(
+        adminAddMemberInput(family, {
+          email: "case@test.se",
+          additionalMembers: [familyMember({ email: "Case@test.se" })]
+        })
+      )
+    ).rejects.toMatchObject({ code: "BAD_REQUEST", message: expect.stringContaining("Alla emailadresser måste vara unika") });
+    expect(await prisma.member.count()).toBe(0);
+  });
+
+  it("moves a member from last season's family straight away", async () => {
+    const lastSeason = await createSeason();
+    const kid = familyMember();
+    await signUpAndPay(memberSignupInput(lastSeason.family, { additionalMembers: [kid] }));
+    await endSeason(lastSeason);
+    const thisSeason = await createSeason();
+    const input = adminAddMemberInput(thisSeason.family, { additionalMembers: [kid] });
+
+    await adminCaller().admin.addMember(input);
+
+    const newOwner = await findMember(input.email);
+    const member = await findMember(kid.email);
+    expect(member?.familyMemberShipOwnerId).toBe(newOwner?.id);
+    expect(newOwner?.familyMemberShipOwnerId).toBeNull();
+  });
+});
+
 describe("admin: add family member to an existing family", () => {
   const createFamily = async (kidCount = 1) => {
     const season = await createSeason();
@@ -194,14 +239,15 @@ describe("admin: add family member to an existing family", () => {
 
     await expect(
       adminCaller().admin.addFamilyMember({ ownerId: owner.id, member: familyMember() })
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({ code: "BAD_REQUEST", message: "Familjen har redan 4 familjemedlemmar" });
   });
 
   it("attaches the current season's membership when the owner was also a member last season", async () => {
-    const lastSeason = await createExpiredSeason();
-    const thisSeason = await createSeason();
+    const lastSeason = await createSeason();
     const input = memberSignupInput(lastSeason.family);
     await signUpAndPay(input);
+    await endSeason(lastSeason);
+    const thisSeason = await createSeason();
     await signUpAndPay({ ...input, membershipId: thisSeason.family.id });
     const owner = await findMember(input.email);
     const kid = familyMember();

@@ -25,6 +25,7 @@ import { sendMemberConfirmationEmail } from "~/server/utils/email/sendMemberConf
 import { findOrCreateMember } from "~/server/utils/member/findOrCreateMember";
 import { findOrCreateFamilyMembers, linkFamilyMembers } from "~/server/utils/member/findOrCreateFamilyMembers";
 import { parseForMembershipType } from "~/server/utils/member/parseForMembershipType";
+import { isMembershipOnSale } from "~/server/utils/membership";
 import {
   addFamilyMemberSchema,
   adminAddMemberSchema,
@@ -323,6 +324,13 @@ export const adminRouter = createTRPCRouter({
         });
       }
 
+      if (!isMembershipOnSale(membership)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Medlemskapet går inte att lägga till just nu"
+        });
+      }
+
       const memberInput = {
         ...parseForMembershipType(adminAddMemberSchema, input, membership.type),
         acceptedTerms: true as const
@@ -345,28 +353,33 @@ export const adminRouter = createTRPCRouter({
         });
       }
 
-      if (membership.type === MembershipType.FAMILY) {
-        await linkFamilyMembers(members);
-      }
+      const [membershipOwner] = members;
+      const memberIds = members.map((member) => member.id);
 
-      await ctx.prisma.stripePayment.create({
-        data: {
-          stripePaymentId: `admin-comp-${members[0]!.id}`,
-          amount: 0,
-          status: StripePaymentStatus.SUCCEEDED,
-          members: {
-            connect: members.map((member) => ({ id: member.id }))
-          }
+      await ctx.prisma.$transaction(async (tx) => {
+        if (membership.type === MembershipType.FAMILY) {
+          await linkFamilyMembers(membershipOwner!.id, memberIds, tx);
         }
-      });
 
-      await ctx.prisma.membership.update({
-        where: { id: membership.id },
-        data: {
-          members: {
-            connect: members.map((member) => ({ id: member.id }))
+        await tx.stripePayment.create({
+          data: {
+            stripePaymentId: `admin-comp-${membershipOwner!.id}`,
+            amount: 0,
+            status: StripePaymentStatus.SUCCEEDED,
+            members: {
+              connect: memberIds.map((id) => ({ id }))
+            }
           }
-        }
+        });
+
+        await tx.membership.update({
+          where: { id: membership.id },
+          data: {
+            members: {
+              connect: memberIds.map((id) => ({ id }))
+            }
+          }
+        });
       });
 
       await Promise.all(

@@ -1,4 +1,5 @@
 import { MembershipType } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 import { type z } from "zod";
 import { prisma } from "~/server/db";
 import { MAX_FAMILY_MEMBERS } from "~/utils/constants";
@@ -61,7 +62,10 @@ export const addFamilyMember = async ({ ownerId, member } : AddFamilyMember) => 
   });
 
   if (familyMemberCount >= MAX_FAMILY_MEMBERS) {
-    throw new Error(`Family already has ${MAX_FAMILY_MEMBERS} members`);
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `Familjen har redan ${MAX_FAMILY_MEMBERS} familjemedlemmar`
+    });
   }
 
   const [stripePayment] = owner.stripePayments;
@@ -71,7 +75,7 @@ export const addFamilyMember = async ({ ownerId, member } : AddFamilyMember) => 
     throw new Error('Owner does not have a payment');
   }
 
-  const sameEmailAsOwner = member.email === owner.email;
+  const sameEmailAsOwner = member.email.toLowerCase() === owner.email.toLowerCase();
 
   const [ownerEmail, ownerDomain] = owner.email.split('@');
 
