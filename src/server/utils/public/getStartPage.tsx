@@ -2,7 +2,7 @@ import { featureFlags } from "~/utils/featureFlags";
 import { getMemberCount } from "../member/getMemberCount";
 import { getCardSkipperMemberCount } from "../cardSkipper";
 import { prisma } from "~/server/db";
-import { busesWithPaidPassengers } from "~/server/api/routers/public";
+import { busesWithBookedSeats } from "~/server/utils/busCapacity";
 import { isToday, subHours } from "date-fns";
 import { apolloClient } from "../apolloClient";
 import { GetNewsDocument } from "~/types/wordpresstypes/graphql";
@@ -15,7 +15,7 @@ export const getStartPage = async () => {
     : getCardSkipperMemberCount();
   const upcomingEventsPromise = featureFlags.ENABLE_AWAYGAMES
     ? prisma.vastraEvent.findMany({
-        include: busesWithPaidPassengers,
+        include: busesWithBookedSeats(),
         where: {
           date: {
             gte: subHours(new Date(), 0.5) // Show event for an additional 30 minutes

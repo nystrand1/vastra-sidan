@@ -22,7 +22,7 @@ interface FakePaymentIntent {
   description: string;
   customer: string;
   metadata: Metadata;
-  status: "requires_payment_method" | "succeeded";
+  status: "requires_payment_method" | "succeeded" | "canceled";
   client_secret: string;
   latest_charge: string | null;
 }
@@ -182,6 +182,30 @@ export const stripeHandlers = [
       latest_charge: null
     };
     state.paymentIntents.set(id, paymentIntent);
+    return HttpResponse.json(paymentIntent);
+  }),
+
+  http.get(`${API}/payment_intents/:id`, async ({ request, params }) => {
+    await recordRequest(request);
+    const paymentIntent = state.paymentIntents.get(String(params.id));
+    if (!paymentIntent) {
+      return stripeError(`No such payment_intent: '${String(params.id)}'`, 404);
+    }
+    return HttpResponse.json(paymentIntent);
+  }),
+
+  http.post(`${API}/payment_intents/:id/cancel`, async ({ request, params }) => {
+    await recordRequest(request);
+    const paymentIntent = state.paymentIntents.get(String(params.id));
+    if (!paymentIntent) {
+      return stripeError(`No such payment_intent: '${String(params.id)}'`, 404);
+    }
+    if (paymentIntent.status !== "requires_payment_method") {
+      return stripeError(
+        `You cannot cancel this PaymentIntent because it has a status of ${paymentIntent.status}.`
+      );
+    }
+    paymentIntent.status = "canceled";
     return HttpResponse.json(paymentIntent);
   }),
 

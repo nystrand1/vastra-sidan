@@ -3,7 +3,6 @@ import { adminCaller, publicCaller, userCaller } from "../helpers/caller";
 import { prisma } from "../helpers/db";
 import { createEvent, createParticipant, fillSeats } from "../helpers/factories";
 import { availableSeats } from "../helpers/flows";
-import { itKnownBug } from "../helpers/knownBug";
 
 const setup = async ({ targetSeats = 2 }: { targetSeats?: number } = {}) => {
   const event = await createEvent({
@@ -60,6 +59,15 @@ describe("changing bus (traveller)", () => {
     expect(await busOf(participant.id)).toBe(currentBus.id);
   });
 
+  it("counts seats held by unpaid bookings as taken", async () => {
+    const { event, targetBus, participant } = await setup({ targetSeats: 1 });
+    await createParticipant({ eventId: event.id, busId: targetBus.id, payment: "pending" });
+
+    await expect(changeBus(participant.cancellationToken, targetBus.id)).rejects.toMatchObject({
+      message: "Bus is full"
+    });
+  });
+
   it("rejects an unknown token or bus", async () => {
     const { targetBus, participant } = await setup();
 
@@ -71,8 +79,7 @@ describe("changing bus (traveller)", () => {
     });
   });
 
-  // Known bug: `if (!availableSeats)` lets a negative seat count through.
-  itKnownBug("rejects an overbooked bus", async () => {
+  it("rejects an overbooked bus", async () => {
     const { event, targetBus, participant } = await setup({ targetSeats: 1 });
     await fillSeats(event.id, targetBus.id, 2);
 
@@ -81,8 +88,7 @@ describe("changing bus (traveller)", () => {
     });
   });
 
-  // Known bug: the bus isn't checked against the traveller's event.
-  itKnownBug("rejects a bus that belongs to another event", async () => {
+  it("rejects a bus that belongs to another event", async () => {
     const { participant } = await setup();
     const otherEvent = await createEvent();
 
@@ -119,8 +125,7 @@ describe("changing bus (admin)", () => {
     expect(await busOf(participant.id)).toBe(currentBus.id);
   });
 
-  // Known bug: `if (!availableSeats)` lets a negative seat count through.
-  itKnownBug("rejects an overbooked bus", async () => {
+  it("rejects an overbooked bus", async () => {
     const { event, targetBus, participant } = await setup({ targetSeats: 1 });
     await fillSeats(event.id, targetBus.id, 2);
 

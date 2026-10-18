@@ -1,10 +1,10 @@
 import { StripePaymentStatus, StripeRefundStatus } from "@prisma/client";
+import { subMinutes } from "date-fns";
 import { describe, expect, it } from "vitest";
 import { adminCaller, publicCaller, userCaller } from "../helpers/caller";
 import { prisma } from "../helpers/db";
 import { createEvent, createParticipant, fillSeats, participantInput } from "../helpers/factories";
 import { availableSeats, bookAndPay } from "../helpers/flows";
-import { itKnownBug } from "../helpers/knownBug";
 import { getSentEmails } from "../mocks/ses";
 import { fakeStripe } from "../mocks/stripe";
 
@@ -183,9 +183,7 @@ describe("public event booking", () => {
     expect(await prisma.participant.count()).toBe(0);
   });
 
-  // Known bug: only paid passengers are counted, so two people can pay for the last seat.
-  // Intended: an unpaid booking holds its seat until the payment succeeds or fails.
-  itKnownBug("holds the seat of a pending booking until the payment completes", async () => {
+  it("holds the seat of a pending booking until the payment completes", async () => {
     const event = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
     const busId = event.buses[0]!.id;
     await publicCaller().eventPayment.requestStripePayment({
@@ -202,9 +200,54 @@ describe("public event booking", () => {
     ).rejects.toMatchObject({ message: "BUS_FULL" });
   });
 
-  // Known bug: the capacity check only looks at the event's own buses, so a bus id from
-  // another event (or a made-up one) skips it entirely.
-  itKnownBug("rejects a bus that belongs to another event", async () => {
+  it("gives back the seat of an abandoned booking after 15 minutes and cancels its payment", async () => {
+    const event = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
+    const busId = event.buses[0]!.id;
+    const clientSecret = await publicCaller().eventPayment.requestStripePayment({
+      eventId: event.id,
+      participants: [participantInput(busId)]
+    });
+    const abandoned = fakeStripe.paymentIntentByClientSecret(clientSecret);
+
+    await prisma.stripePayment.updateMany({ data: { createdAt: subMinutes(new Date(), 14) } });
+    expect(await availableSeats(event.id, busId)).toBe(0);
+
+    await prisma.stripePayment.updateMany({ data: { createdAt: subMinutes(new Date(), 16) } });
+    expect(await availableSeats(event.id, busId)).toBe(1);
+
+    await bookAndPay(event.id, [participantInput(busId)]);
+    expect(abandoned.status).toBe("canceled");
+    const abandonedParticipant = await prisma.participant.findFirstOrThrow({
+      where: { stripePayments: { some: { stripePaymentId: abandoned.id } } },
+      include: { stripePayments: true }
+    });
+    expect(abandonedParticipant.stripePayments.map((p) => p.status).sort()).toEqual([
+      StripePaymentStatus.CANCELED,
+      StripePaymentStatus.CREATED
+    ]);
+    expect(await availableSeats(event.id, busId)).toBe(0);
+  });
+
+  it("keeps the seat of an expired booking whose payment went through", async () => {
+    const event = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
+    const busId = event.buses[0]!.id;
+    const clientSecret = await publicCaller().eventPayment.requestStripePayment({
+      eventId: event.id,
+      participants: [participantInput(busId)]
+    });
+    await prisma.stripePayment.updateMany({ data: { createdAt: subMinutes(new Date(), 16) } });
+    await fakeStripe.succeedPayment(fakeStripe.paymentIntentByClientSecret(clientSecret).id);
+
+    await expect(
+      publicCaller().eventPayment.requestStripePayment({
+        eventId: event.id,
+        participants: [participantInput(busId)]
+      })
+    ).rejects.toMatchObject({ message: "BUS_FULL" });
+    expect(fakeStripe.requests().filter((r) => r.path.endsWith("/cancel"))).toHaveLength(0);
+  });
+
+  it("rejects a bus that belongs to another event", async () => {
     const event = await createEvent();
     const otherEvent = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
     const otherBusId = otherEvent.buses[0]!.id;
@@ -267,8 +310,7 @@ describe("admin: add participant", () => {
     expect(await prisma.participant.count()).toBe(1);
   });
 
-  // Known bug: `if (!availableSeats)` lets a negative seat count through.
-  itKnownBug("rejects an overbooked bus", async () => {
+  it("rejects an overbooked bus", async () => {
     const event = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
     const busId = event.buses[0]!.id;
     await fillSeats(event.id, busId, 2);
@@ -278,8 +320,7 @@ describe("admin: add participant", () => {
     });
   });
 
-  // Known bug: the bus isn't checked against `eventId`.
-  itKnownBug("rejects a bus that belongs to another event", async () => {
+  it("rejects a bus that belongs to another event", async () => {
     const event = await createEvent();
     const otherEvent = await createEvent();
 

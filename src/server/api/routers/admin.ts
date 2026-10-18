@@ -20,6 +20,10 @@ import {
   getEventParticipantById
 } from "~/server/utils/admin/getEventParticipantById";
 import { adminEventFormatter, getEvents } from "~/server/utils/admin/getEvents";
+import {
+  busesWithBookedSeats,
+  releaseExpiredSeatHolds
+} from "~/server/utils/busCapacity";
 import { sendEventConfirmationEmail } from "~/server/utils/email/sendEventConfirmationEmail";
 import { sendMemberConfirmationEmail } from "~/server/utils/email/sendMemberConfirmationEmail";
 import { findOrCreateMember } from "~/server/utils/member/findOrCreateMember";
@@ -31,7 +35,6 @@ import {
   updateMemberSchema,
   updateParticipantSchema
 } from "~/utils/zodSchemas";
-import { busesWithPaidPassengers } from "./public";
 import { captureMessage } from "@sentry/nextjs";
 
 export type AdminUserProfile = Prisma.UserGetPayload<{
@@ -120,11 +123,14 @@ export const adminRouter = createTRPCRouter({
         });
       }
 
+      await releaseExpiredSeatHolds(ctx.prisma, ctx.stripe, participant.eventId);
+
       const bus = await ctx.prisma.bus.findFirst({
         where: {
-          id: input.busId
+          id: input.busId,
+          eventId: participant.eventId
         },
-        include: busesWithPaidPassengers.buses.include
+        include: busesWithBookedSeats().buses.include
       });
 
       if (!bus) {
@@ -137,7 +143,7 @@ export const adminRouter = createTRPCRouter({
 
       const availableSeats = bus.seats - bus._count.passengers;
 
-      if (!availableSeats) {
+      if (availableSeats <= 0) {
         captureMessage("Bus is full");
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -233,11 +239,14 @@ export const adminRouter = createTRPCRouter({
     .mutation(async ({ input, ctx }) => {
       const { firstName, lastName, eventId, ...rest } = input;
 
+      await releaseExpiredSeatHolds(ctx.prisma, ctx.stripe, eventId);
+
       const bus = await ctx.prisma.bus.findFirst({
         where: {
-          id: rest.busId
+          id: rest.busId,
+          eventId
         },
-        include: busesWithPaidPassengers.buses.include
+        include: busesWithBookedSeats().buses.include
       });
 
       if (!bus) {
@@ -250,7 +259,7 @@ export const adminRouter = createTRPCRouter({
 
       const availableSeats = bus.seats - bus._count.passengers;
 
-      if (!availableSeats) {
+      if (availableSeats <= 0) {
         captureMessage("Bus is full");
         throw new TRPCError({
           code: "BAD_REQUEST",
