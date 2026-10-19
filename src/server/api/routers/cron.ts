@@ -3,6 +3,7 @@ import { isBefore, subDays, subMilliseconds } from "date-fns";
 import { getTimezoneOffset } from "date-fns-tz";
 import { createTRPCRouter, cronProcedure } from "~/server/api/trpc";
 import { releaseExpiredSeatHolds } from "~/server/utils/busCapacity";
+import { awayGamePaths, revalidatePages } from "~/server/utils/revalidate";
 import {
   awayGameMapper,
   awayGameToEvent,
@@ -44,6 +45,14 @@ interface MatchInfoResponse {
 export const cronRouter = createTRPCRouter({
   releaseExpiredSeatHolds: cronProcedure.mutation(async ({ ctx }) => {
     const released = await releaseExpiredSeatHolds(ctx.prisma, ctx.stripe);
+    if (released > 0) {
+      // The released seats are back on sale
+      const events = await ctx.prisma.vastraEvent.findMany({
+        where: { date: { gt: new Date() }, active: true },
+        select: { id: true }
+      });
+      await revalidatePages(awayGamePaths(events.map((e) => e.id)));
+    }
     return { released };
   }),
   syncEvents: cronProcedure.mutation(async ({ ctx }) => {
@@ -65,12 +74,19 @@ export const cronRouter = createTRPCRouter({
       .map(awayGameMapper)
       .map(awayGameToEvent);
     // Upsert events in database
-    await Promise.all(
+    const changed = await Promise.all(
       awayGames.map(async ({ event: awayGame, buses }) => {
-        await upsertEvent(awayGame, ctx);
-        await Promise.all(buses.map((bus) => upsertBus(bus, ctx)));
+        const eventChanged = await upsertEvent(awayGame, ctx);
+        const busesChanged = await Promise.all(buses.map((bus) => upsertBus(bus, ctx)));
+        return eventChanged || busesChanged.some(Boolean);
       })
     );
+    const changedEventIds = awayGames
+      .filter((_, i) => changed[i])
+      .map(({ event }) => event.id);
+    if (changedEventIds.length > 0) {
+      await revalidatePages(awayGamePaths(changedEventIds));
+    }
 
     console.info(`Synced ${awayGames.length} events`);
     return "ok";
@@ -83,9 +99,12 @@ export const cronRouter = createTRPCRouter({
     const memberships = data.memberships.nodes.flatMap(
       wpMembershipToMembership
     );
-    await Promise.all(
+    const changed = await Promise.all(
       memberships.map((membership) => upsertMembership(membership, ctx))
     );
+    if (changed.some(Boolean)) {
+      await revalidatePages(["/bli-medlem"]);
+    }
     console.info(`Synced ${memberships.length} memberships`);
     return "ok";
   }),

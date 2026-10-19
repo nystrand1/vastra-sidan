@@ -1,7 +1,7 @@
 import { env } from "~/env.mjs";
 import { type ParticipantWithBusAndEvent } from "../../api/routers/eventPayment";
 import EventSignUp from "~/components/emails/EventSignUp";
-import { render } from "@react-email/components";
+import { render } from "react-email";
 import { sendSesEmail } from "./sendSesEmail";
 
 export const sendEventConfirmationEmail = async (

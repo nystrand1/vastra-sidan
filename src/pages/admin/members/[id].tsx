@@ -22,7 +22,7 @@ export default function AdminMemberPage() {
   const { query } = useRouter();
   const { data: member, refetch } = api.admin.getMemberById.useQuery(
     { id: query.id as string },
-    { enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN && !!query.id }
+    { enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN && !!query.id, staleTime: 0 }
   );
   const { mutateAsync: sendMemberLink, isPending } = api.admin.sendMemberLink.useMutation();
   const { mutateAsync: updateMember, isPending: isUpdatingMember } = api.admin.updateMember.useMutation();

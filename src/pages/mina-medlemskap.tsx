@@ -1,13 +1,20 @@
 import { useSession } from "next-auth/react";
+import Error from "next/error";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { api } from "~/utils/api";
 import { featureFlags } from "~/utils/featureFlags";
 import LoginPage from "./loggain";
 
 
+const isEnabled = featureFlags.ENABLE_LOGIN && featureFlags.ENABLE_MEMBERSHIPS;
+
 export const ProfilePage = () => {
   const session = useSession();
-  const { data } = api.user.getProfile.useQuery(undefined, { enabled: !!session.data?.user });
+  const { data } = api.user.getProfile.useQuery(undefined, { enabled: isEnabled && !!session.data?.user });
+
+  if (!isEnabled) {
+    return <Error statusCode={404} />
+  }
 
   if (!session.data?.user) {
     return <LoginPage />
@@ -31,17 +38,3 @@ export const ProfilePage = () => {
 
 
 export default ProfilePage;
-
-
-export const getStaticProps = () => {
-  if (!featureFlags.ENABLE_LOGIN || !featureFlags.ENABLE_MEMBERSHIPS) {
-    return {
-      notFound: true,
-    }
-  }
-
-  return {
-    props: {},
-    revalidate: 60,
-  };
-}

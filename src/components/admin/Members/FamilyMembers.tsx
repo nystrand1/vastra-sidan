@@ -32,6 +32,7 @@ export const FamilyMembers = ({ members, ownerId }: FamilyMembersProps) => {
   const { query } = useRouter();
   const { refetch } = api.admin.getMemberById.useQuery(
     { id: query.id as string },
+    { staleTime: 0 }
   );
   const { mutateAsync: addFamilyMember } = api.admin.addFamilyMember.useMutation();
 

@@ -4,7 +4,11 @@ import { useRouter } from "next/router";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { Wysiwyg } from "~/components/atoms/Wysiwyg/Wysiwyg";
 import { api } from "~/utils/api";
-import { createSSRHelper } from "~/utils/createSSRHelper";
+import {
+  createSSRHelper,
+  isNotFoundError,
+  NOT_FOUND_REVALIDATE
+} from "~/utils/createSSRHelper";
 
 export default function SeasonChroniclePage() {
   const { id } = useRouter().query;
@@ -54,7 +58,7 @@ export const getStaticPaths = async () => {
     paths: [],
     fallback: "blocking"
   }
-  const ssrHelper = await createSSRHelper();
+  const ssrHelper = createSSRHelper();
   const chronicles = await ssrHelper.wordpress.getSeasonChronicles.fetch();
   const paths = chronicles.slugs?.map((slug) => ({ params: { id: slug } }));
   return {
@@ -68,10 +72,14 @@ export const getStaticProps = async (props: GetStaticPropsContext) => {
   if (!slug) {
     return { notFound: true };
   }
-  const ssrHelper = await createSSRHelper();
-  const chronicle = await ssrHelper.wordpress.getSeasonChronicleBySlug.fetch({ slug });
-  if (!chronicle) {
-    return { notFound: true };
+  const ssrHelper = createSSRHelper();
+  try {
+    await ssrHelper.wordpress.getSeasonChronicleBySlug.fetch({ slug });
+  } catch (err) {
+    if (isNotFoundError(err)) {
+      return { notFound: true, revalidate: NOT_FOUND_REVALIDATE };
+    }
+    throw err;
   }
   return {
     props: {

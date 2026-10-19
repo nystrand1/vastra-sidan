@@ -1,5 +1,5 @@
 import { type Member, type Membership } from "@prisma/client";
-import { render } from "@react-email/components";
+import { render } from "react-email";
 import MemberSignup from "~/components/emails/MemberSignUp";
 import { env } from "~/env.mjs";
 import { sendSesEmail } from "./sendSesEmail";

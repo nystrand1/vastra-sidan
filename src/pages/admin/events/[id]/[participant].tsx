@@ -27,7 +27,7 @@ export const AdminParticipantPage = () => {
     refetch: refetchParticipant
   } = api.admin.getEventParticipantById.useQuery(
     { id: participantId },
-    { enabled: !!participantId }
+    { enabled: !!participantId, staleTime: 0 }
   );
 
   const { mutateAsync: sendConfirmationEmail } =

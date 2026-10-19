@@ -42,6 +42,16 @@ export const api = createTRPCNext<AppRouter>({
           url: `${getBaseUrl()}/api/trpc`,
         }),
       ],
+      /**
+       * Pages hydrate data from getStaticProps, so don't refetch it straight
+       * away on mount or on window focus. Pages that need live data set
+       * staleTime: 0 on their own queries.
+       */
+      queryClientConfig: {
+        defaultOptions: {
+          queries: { staleTime: 60_000, refetchOnWindowFocus: false },
+        },
+      },
     };
   },
   /**

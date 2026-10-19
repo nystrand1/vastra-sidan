@@ -157,6 +157,13 @@ const findSucceededPayment = async (paymentIntent: string | { id: string } | nul
     where: {
       stripePaymentId: idOf(paymentIntent),
       status: StripePaymentStatus.SUCCEEDED
+    },
+    include: {
+      participants: {
+        select: {
+          eventId: true
+        }
+      }
     }
   });
   if (!payment) {
@@ -287,6 +294,8 @@ const recordDashboardRefund = async (
 /**
  * `charge.refunded` is sent when more of a charge has been refunded. It carries the Charge,
  * not the Refund, so we look up all of the charge's refunds and record any we're missing.
+ *
+ * @returns the ids of the events the payment booked seats on.
  */
 export const handleRefund = async (event: Stripe.ChargeRefundedEvent) => {
   const charge = event.data.object;
@@ -339,13 +348,19 @@ export const handleRefund = async (event: Stripe.ChargeRefundedEvent) => {
       await recordDashboardRefund(tx, refund, payment.id, charge.metadata.membershipId);
     }
   });
+  return payment.participants.map((p) => p.eventId);
 };
 
-/** `refund.updated` / `refund.failed`: the only events that tell us a refund failed. */
+/**
+ * `refund.updated` / `refund.failed`: the only events that tell us a refund failed.
+ *
+ * @returns the ids of the events the payment booked seats on.
+ */
 export const handleRefundUpdate = async (
   event: Stripe.RefundUpdatedEvent | Stripe.RefundFailedEvent
 ) => {
   const refund = event.data.object;
   const payment = await findSucceededPayment(refund.payment_intent);
   await withPaymentLocked(payment.id, (tx) => recordRefundOutcome(tx, payment, refund));
+  return payment.participants.map((p) => p.eventId);
 };

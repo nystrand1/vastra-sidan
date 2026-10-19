@@ -9,7 +9,7 @@ import {
   useSphericalJoint
 } from "@react-three/rapier";
 import { MeshLineGeometry, MeshLineMaterial } from "meshline";
-import { type RefObject, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import * as THREE from "three";
 
@@ -46,14 +46,14 @@ export default function BandAndCard({
   textureUrl = "https://cmsdev.vastrasidan.se/wp-content/uploads/2024/12/membercard_tag_vss.glb",
   flipped = true
 }: BandAndCardProps) {
-  const band = useRef() as RefObject<
+  const band = useRef<
     THREE.Mesh & { geometry: { setPoints: (points: THREE.Vector3[]) => void } }
-  >;
-  const fixed = useRef() as RefObject<ExtendedRigidBody>;
-  const j1 = useRef() as RefObject<ExtendedRigidBody>;
-  const j2 = useRef() as RefObject<ExtendedRigidBody>;
-  const j3 = useRef() as RefObject<ExtendedRigidBody>;
-  const card = useRef() as RefObject<ExtendedRigidBody>;
+  >(null!);
+  const fixed = useRef<ExtendedRigidBody>(null!);
+  const j1 = useRef<ExtendedRigidBody>(null!);
+  const j2 = useRef<ExtendedRigidBody>(null!);
+  const j3 = useRef<ExtendedRigidBody>(null!);
+  const card = useRef<ExtendedRigidBody>(null!);
   const vec = new THREE.Vector3(0, 0, 0);
   const ang = new THREE.Vector3(0, 0, 0);
   const rot = new THREE.Vector3(0, 0, 0);
@@ -118,32 +118,32 @@ export default function BandAndCard({
       // Fix most of the jitter when over pulling the card
       [j1, j2].forEach((ref) => {
         if (!ref.current?.lerped)
-          ref.current!.lerped = new THREE.Vector3().copy(
-            ref.current!.translation()
+          ref.current.lerped = new THREE.Vector3().copy(
+            ref.current.translation()
           );
         const clampedDistance = Math.max(
           0.1,
           Math.min(
             1,
-            ref.current!.lerped.distanceTo(ref.current!.translation())
+            ref.current.lerped.distanceTo(ref.current.translation())
           )
         );
-        ref.current!.lerped.lerp(
-          ref.current!.translation(),
+        ref.current.lerped.lerp(
+          ref.current.translation(),
           delta * (minSpeed + clampedDistance * (maxSpeed - minSpeed))
         );
       });
       // Calculate catmul curve
-      curve.points[0]!.copy(j3.current!.translation());
+      curve.points[0]!.copy(j3.current.translation());
       if (j2.current?.lerped) curve.points[1]!.copy(j2.current.lerped);
       if (j1.current?.lerped) curve.points[2]!.copy(j1.current.lerped);
       curve.points[3]!.copy(fixed.current.translation());
-      band.current!.geometry.setPoints(curve.getPoints(32));
+      band.current.geometry.setPoints(curve.getPoints(32));
       // Tilt it back towards the screen
-      ang.copy(card.current!.angvel());
-      rot.copy(card.current!.rotation());
+      ang.copy(card.current.angvel());
+      rot.copy(card.current.rotation());
 
-      card.current!.setAngvel(
+      card.current.setAngvel(
         { x: ang.x, y: ang.y - rot.y * 0.25, z: ang.z },
         false
       );
@@ -209,7 +209,7 @@ export default function BandAndCard({
               drag(
                 new THREE.Vector3()
                   .copy(e.point)
-                  .sub(vec.copy(card.current!.translation()))
+                  .sub(vec.copy(card.current.translation()))
               );
             }}
           >
