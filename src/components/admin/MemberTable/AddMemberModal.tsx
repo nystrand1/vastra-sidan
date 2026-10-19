@@ -31,6 +31,7 @@ import {
   SelectValue
 } from "~/components/ui/select";
 import { api } from "~/utils/api";
+import { MAX_FAMILY_MEMBERS } from "~/utils/constants";
 import { adminAddMemberSchema } from "~/utils/zodSchemas";
 
 type AdditionalMember = NonNullable<
@@ -67,12 +68,15 @@ export const AddMemberModal = () => {
   const additionalMembers = useFieldArray({
     control: form.control,
     name: "additionalMembers",
-    rules: { maxLength: 4 }
+    rules: { maxLength: MAX_FAMILY_MEMBERS }
   });
 
   const membershipId = form.watch("membershipId");
   const selectedMembership = memberships?.find((m) => m.id === membershipId);
   const membershipType = selectedMembership?.type;
+  // Family-level errors (too few members, duplicate emails) belong to the array, not a single field
+  const familyErrors = form.formState.errors.additionalMembers;
+  const familyError = familyErrors?.root?.message ?? familyErrors?.message;
 
   if (membershipType && form.getValues("membershipType") !== membershipType) {
     form.setValue("membershipType", membershipType);
@@ -272,7 +276,10 @@ export const AddMemberModal = () => {
                     />
                   </div>
                 ))}
-                {additionalMembers.fields.length < 4 && (
+                {familyError && (
+                  <p className="text-sm font-medium text-destructive">{familyError}</p>
+                )}
+                {additionalMembers.fields.length < MAX_FAMILY_MEMBERS && (
                   <Button
                     className="w-full"
                     type="button"

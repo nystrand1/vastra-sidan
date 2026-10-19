@@ -1,15 +1,16 @@
 import { MembershipType, StripePaymentStatus } from "@prisma/client";
+import { addMonths } from "date-fns";
 import { describe, expect, it } from "vitest";
 import { publicCaller } from "../helpers/caller";
 import { prisma } from "../helpers/db";
 import {
   createExpiredSeason,
   createSeason,
+  endSeason,
   familyMember,
   memberSignupInput
 } from "../helpers/factories";
 import { signUpAndPay } from "../helpers/flows";
-import { itKnownBug } from "../helpers/knownBug";
 import { getSentEmails } from "../mocks/ses";
 import { fakeStripe } from "../mocks/stripe";
 
@@ -76,10 +77,11 @@ describe("public membership signup", () => {
     });
 
     it("lets last season's member renew without creating a duplicate member", async () => {
-      const lastSeason = await createExpiredSeason();
-      const thisSeason = await createSeason();
+      const lastSeason = await createSeason();
       const input = memberSignupInput(lastSeason.regular, { email: "anna@test.se" });
       await signUpAndPay(input);
+      await endSeason(lastSeason);
+      const thisSeason = await createSeason();
 
       await signUpAndPay({ ...input, membershipId: thisSeason.regular.id });
 
@@ -91,13 +93,33 @@ describe("public membership signup", () => {
     });
 
     it("treats emails case-insensitively, like production MariaDB", async () => {
-      const lastSeason = await createExpiredSeason();
-      const thisSeason = await createSeason();
+      const lastSeason = await createSeason();
       await signUpAndPay(memberSignupInput(lastSeason.regular, { email: "anna@test.se" }));
+      await endSeason(lastSeason);
+      const thisSeason = await createSeason();
 
       await signUpAndPay(memberSignupInput(thisSeason.regular, { email: "ANNA@test.se" }));
 
       expect(await prisma.member.count()).toBe(1);
+    });
+
+    it("rejects a membership that isn't on sale", async () => {
+      const lastSeason = await createExpiredSeason();
+      const nextSeason = await createSeason({
+        startDate: addMonths(new Date(), 1),
+        endDate: addMonths(new Date(), 13)
+      });
+
+      for (const membership of [lastSeason.regular, nextSeason.regular]) {
+        await expect(
+          publicCaller().memberPayment.requestPayment(memberSignupInput(membership))
+        ).rejects.toMatchObject({
+          code: "BAD_REQUEST",
+          message: "Medlemskapet går inte att köpa just nu"
+        });
+      }
+      expect(await prisma.member.count()).toBe(0);
+      expect(fakeStripe.paymentIntents()).toHaveLength(0);
     });
 
     it("rejects a member who already has any membership this season", async () => {
@@ -233,8 +255,7 @@ describe("public membership signup", () => {
       ).rejects.toMatchObject({ code: "BAD_REQUEST", message: "Du har redan detta medlemskap" });
     });
 
-    // Known bug: the 1 + 4 limit is only enforced by the signup form, not by memberSignupSchema.
-    itKnownBug("rejects more than four family members", async () => {
+    it("rejects more than four family members", async () => {
       const { family } = await createSeason();
       const input = memberSignupInput(family, {
         additionalMembers: [familyMember(), familyMember(), familyMember(), familyMember(), familyMember()]
@@ -245,9 +266,7 @@ describe("public membership signup", () => {
       });
     });
 
-    // Known bug: the schema validates the client-supplied `membershipType`, while the
-    // router branches on the membership's real type, so the family rules can be skipped.
-    itKnownBug("enforces family rules even if the client sends the wrong membershipType", async () => {
+    it("enforces family rules even if the client sends the wrong membershipType", async () => {
       const { family } = await createSeason();
       const input = memberSignupInput(family, {
         membershipType: MembershipType.REGULAR,
@@ -259,13 +278,46 @@ describe("public membership signup", () => {
       });
     });
 
-    // Known bug: findOrCreateFamilyMembers upserts with `update: {}`, so a member keeps
-    // pointing at last season's family owner while joining a new family.
-    itKnownBug("moves a member from last season's family to the new family", async () => {
-      const lastSeason = await createExpiredSeason();
+    it("rejects family emails that only differ in case", async () => {
+      const { family } = await createSeason();
+      const input = memberSignupInput(family, {
+        email: "case@test.se",
+        additionalMembers: [familyMember({ email: "Case@test.se" })]
+      });
+
+      await expect(publicCaller().memberPayment.requestPayment(input)).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+        message: expect.stringContaining("Alla emailadresser måste vara unika")
+      });
+      expect(await prisma.member.count()).toBe(0);
+    });
+
+    it("leaves existing family links alone until the new family is paid for", async () => {
+      const lastSeason = await createSeason();
+      const kid = familyMember();
+      const oldOwnerInput = memberSignupInput(lastSeason.family, { additionalMembers: [kid] });
+      await signUpAndPay(oldOwnerInput);
+      await endSeason(lastSeason);
       const thisSeason = await createSeason();
+      const oldOwner = await findMember(oldOwnerInput.email);
+
+      // Someone names both last season's owner and their kid, but never pays
+      await publicCaller().memberPayment.requestPayment(
+        memberSignupInput(thisSeason.family, {
+          additionalMembers: [kid, familyMember({ email: oldOwnerInput.email })]
+        })
+      );
+
+      expect((await findMember(oldOwnerInput.email))?.familyMemberShipOwnerId).toBeNull();
+      expect((await findMember(kid.email))?.familyMemberShipOwnerId).toBe(oldOwner?.id);
+    });
+
+    it("moves a member from last season's family to the new family", async () => {
+      const lastSeason = await createSeason();
       const kid = familyMember();
       await signUpAndPay(memberSignupInput(lastSeason.family, { additionalMembers: [kid] }));
+      await endSeason(lastSeason);
+      const thisSeason = await createSeason();
 
       const newOwnerInput = memberSignupInput(thisSeason.family, { additionalMembers: [kid] });
       await signUpAndPay(newOwnerInput);

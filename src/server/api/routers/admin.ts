@@ -23,7 +23,9 @@ import { adminEventFormatter, getEvents } from "~/server/utils/admin/getEvents";
 import { sendEventConfirmationEmail } from "~/server/utils/email/sendEventConfirmationEmail";
 import { sendMemberConfirmationEmail } from "~/server/utils/email/sendMemberConfirmationEmail";
 import { findOrCreateMember } from "~/server/utils/member/findOrCreateMember";
-import { findOrCreateFamilyMembers } from "~/server/utils/member/findOrCreateFamilyMembers";
+import { findOrCreateFamilyMembers, linkFamilyMembers } from "~/server/utils/member/findOrCreateFamilyMembers";
+import { parseForMembershipType } from "~/server/utils/member/parseForMembershipType";
+import { isMembershipOnSale } from "~/server/utils/membership";
 import {
   addFamilyMemberSchema,
   adminAddMemberSchema,
@@ -322,15 +324,26 @@ export const adminRouter = createTRPCRouter({
         });
       }
 
-      const memberInput = { ...input, acceptedTerms: true as const };
+      if (!isMembershipOnSale(membership)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Medlemskapet går inte att lägga till just nu"
+        });
+      }
+
+      const memberInput = {
+        ...parseForMembershipType(adminAddMemberSchema, input, membership.type),
+        acceptedTerms: true as const
+      };
 
       const members =
         membership.type === MembershipType.FAMILY
           ? await findOrCreateFamilyMembers(memberInput)
           : [await findOrCreateMember(memberInput)];
 
+      // Same rule as the public signup: one membership per season
       const memberWithExistingMembership = members.find((member) =>
-        member.memberships.some((x) => x.id === membership.id)
+        member.memberships.some((x) => x.wordpressId === membership.wordpressId)
       );
 
       if (memberWithExistingMembership) {
@@ -340,24 +353,33 @@ export const adminRouter = createTRPCRouter({
         });
       }
 
-      await ctx.prisma.stripePayment.create({
-        data: {
-          stripePaymentId: `admin-comp-${members[0]!.id}`,
-          amount: 0,
-          status: StripePaymentStatus.SUCCEEDED,
-          members: {
-            connect: members.map((member) => ({ id: member.id }))
-          }
-        }
-      });
+      const [membershipOwner] = members;
+      const memberIds = members.map((member) => member.id);
 
-      await ctx.prisma.membership.update({
-        where: { id: membership.id },
-        data: {
-          members: {
-            connect: members.map((member) => ({ id: member.id }))
-          }
+      await ctx.prisma.$transaction(async (tx) => {
+        if (membership.type === MembershipType.FAMILY) {
+          await linkFamilyMembers(membershipOwner!.id, memberIds, tx);
         }
+
+        await tx.stripePayment.create({
+          data: {
+            stripePaymentId: `admin-comp-${membershipOwner!.id}`,
+            amount: 0,
+            status: StripePaymentStatus.SUCCEEDED,
+            members: {
+              connect: memberIds.map((id) => ({ id }))
+            }
+          }
+        });
+
+        await tx.membership.update({
+          where: { id: membership.id },
+          data: {
+            members: {
+              connect: memberIds.map((id) => ({ id }))
+            }
+          }
+        });
       });
 
       await Promise.all(

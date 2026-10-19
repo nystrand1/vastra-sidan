@@ -59,6 +59,17 @@ export const createExpiredSeason = () =>
     endDate: subMonths(new Date(), 2)
   });
 
+/**
+ * Moves a season into the past. Memberships are only sold while they're
+ * current, so sign up for "last season" first and end it afterwards.
+ */
+export const endSeason = async ({ family }: { family: Membership }) => {
+  await prisma.membership.updateMany({
+    where: { wordpressId: family.wordpressId },
+    data: { startDate: subMonths(new Date(), 14), endDate: subMonths(new Date(), 2) }
+  });
+};
+
 type MemberSignupInput = z.infer<typeof memberSignupSchema>;
 type AdminAddMemberInput = z.infer<typeof adminAddMemberSchema>;
 type AdditionalMember = NonNullable<MemberSignupInput["additionalMembers"]>[number];

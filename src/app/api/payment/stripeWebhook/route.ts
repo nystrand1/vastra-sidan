@@ -28,7 +28,8 @@ const handleStripeEvent = async (event: Stripe.Event) => {
       if (event.data.object.metadata.type === "MEMBERSHIP") {
         const membership = await attachMembershipToMembers({
           members,
-          membershipId: event.data.object.metadata.membershipId
+          membershipId: event.data.object.metadata.membershipId,
+          membershipOwnerId: event.data.object.metadata.membershipOwnerId
         });
         // send membership confirmation email
         const emailPromises = members.map((m) =>
