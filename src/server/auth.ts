@@ -60,6 +60,36 @@ export const sha256 = (content: string) => {
   return createHash("sha256").update(content).digest("hex");
 };
 
+/** Loads a user with the fields we keep in the session token, plus their password hash. */
+const findSessionUser = async (where: { id: string } | { email: string }) => {
+  const user = await prisma.user.findFirst({
+    where,
+    include: {
+      memberShips: {
+        where: {
+          endDate: {
+            gte: new Date()
+          }
+        }
+      }
+    }
+  });
+  if (!user) return null;
+  return {
+    passwordHash: user.password,
+    sessionUser: {
+      id: user.id,
+      name: `${user.firstName} ${user.lastName}`,
+      email: user.email,
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      isMember: !!user.memberShips.length,
+      ...(user.phone && { phone: user.phone })
+    }
+  };
+};
+
 /**
  * Options for NextAuth.js used to configure adapters, providers, callbacks, etc.
  *
@@ -82,7 +112,7 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    jwt: ({ token, user, trigger, session }) => {
+    jwt: async ({ token, user, trigger }) => {
       if (user) {
         token.role = user.role;
         token.firstName = user.firstName;
@@ -90,12 +120,20 @@ export const authOptions: NextAuthOptions = {
         token.isMember = user.isMember;
         token.phone = user.phone;
       }
-      if (trigger === "update") {
-        const { user: sessionUser } = session as { user: typeof user };
-        token = {
-          ...token,
-          ...sessionUser,
-        } as typeof token
+      // `useSession().update(data)` lets the browser send anything as `data`, so it must
+      // never reach the token. Reload the user from the database instead (e.g. after a
+      // profile edit).
+      if (trigger === "update" && token.sub) {
+        const dbUser = (await findSessionUser({ id: token.sub }))?.sessionUser;
+        if (dbUser) {
+          token.name = dbUser.name;
+          token.email = dbUser.email;
+          token.role = dbUser.role;
+          token.firstName = dbUser.firstName;
+          token.lastName = dbUser.lastName;
+          token.isMember = dbUser.isMember;
+          token.phone = dbUser.phone;
+        }
       }
       return token;
     }
@@ -112,32 +150,10 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.username || !credentials?.password) {
           return null;
         }
-        const user = await prisma.user.findFirst({
-          where: {
-            email: credentials.username
-          },
-          include: {
-            memberShips: {
-              where: {
-                endDate: {
-                  gte: new Date()
-                },                
-              }
-            }
-          }
-        });
-        if (!user) return null;
-        if (user.password !== sha256(credentials.password)) return null;
-        return {
-          id: user.id,
-          name: `${user.firstName} ${user.lastName}`,
-          email: user.email,
-          role: user.role,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          isMember: !!user.memberShips.length,
-          ...(user.phone && { phone: user.phone })
-        };
+        const found = await findSessionUser({ email: credentials.username });
+        if (!found) return null;
+        if (found.passwordHash !== sha256(credentials.password)) return null;
+        return found.sessionUser;
       }
     })
   ],
