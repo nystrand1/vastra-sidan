@@ -95,6 +95,7 @@ export default function Home() {
                 <Button className="w-full">Köp biljett</Button>
               </Link>
               <Link
+                prefetch={false}
                 href={"/biljettstatistik"}
                 className="mt-2 flex flex-row items-center gap-2 text-sm text-gray-500"
               >
@@ -128,7 +129,7 @@ export default function Home() {
                         maxValue={event.maxSeats}
                         currentValue={event.bookedSeats}
                       />
-                      <Link href={`${PATHS.awayGames}${event.id}`}>
+                      <Link prefetch={false} href={`${PATHS.awayGames}${event.id}`}>
                         {expired ? (
                           <Button disabled className="w-full">
                             Bussen har avgått
@@ -154,7 +155,7 @@ export default function Home() {
 }
 
 export async function getStaticProps() {
-  const ssrHelper = await createSSRHelper();
+  const ssrHelper = createSSRHelper();
 
   await ssrHelper.public.getStartPage.prefetch();
 
@@ -162,6 +163,6 @@ export async function getStaticProps() {
     props: {
       trpcState: ssrHelper.dehydrate()
     },
-    revalidate: 60
+    revalidate: 3600
   };
 }

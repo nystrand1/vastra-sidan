@@ -8,7 +8,11 @@ import Card from "~/components/atoms/CardLink/CardLink";
 import { Wysiwyg } from "~/components/atoms/Wysiwyg/Wysiwyg";
 import { type AppRouter } from "~/server/api/root";
 import { api } from "~/utils/api";
-import { createSSRHelper } from "~/utils/createSSRHelper";
+import {
+  createSSRHelper,
+  isNotFoundError,
+  NOT_FOUND_REVALIDATE
+} from "~/utils/createSSRHelper";
 
 type AwayGuide =
   inferRouterOutputs<AppRouter>["wordpress"]["getAwayGuideBySlug"]["awayGuideFields"];
@@ -143,7 +147,7 @@ export default function AwayGamePage() {
 }
 
 export const getStaticPaths = async () => {
-  const ssrHelper = await createSSRHelper();
+  const ssrHelper = createSSRHelper();
   const awayGames = await ssrHelper.wordpress.getAwayGuides.fetch({
     limit: 10
   });
@@ -159,14 +163,14 @@ export const getStaticProps = async (props: GetStaticPropsContext) => {
   if (!slug) {
     return { notFound: true };
   }
-  const ssrHelper = await createSSRHelper();
-  console.time(`fetchChronicle - ${slug}`);
-  const chronicle = await ssrHelper.wordpress.getAwayGuideBySlug.fetch({
-    slug
-  });
-  console.timeEnd(`fetchChronicle - ${slug}`);
-  if (!chronicle) {
-    return { notFound: true };
+  const ssrHelper = createSSRHelper();
+  try {
+    await ssrHelper.wordpress.getAwayGuideBySlug.fetch({ slug });
+  } catch (err) {
+    if (isNotFoundError(err)) {
+      return { notFound: true, revalidate: NOT_FOUND_REVALIDATE };
+    }
+    throw err;
   }
 
   return {

@@ -16,7 +16,7 @@ export const AdminEventPage = () => {
   const { data: sessionData } = useSession();
   const { data: event, isLoading } = api.admin.getEvent.useQuery(
     { id: query.id as string },
-    { enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN && !!query.id }
+    { enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN && !!query.id, staleTime: 0 }
   );
 
   if (!event || isLoading) {

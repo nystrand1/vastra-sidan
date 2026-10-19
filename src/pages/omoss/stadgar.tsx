@@ -6,7 +6,7 @@ import { createSSRHelper } from "~/utils/createSSRHelper";
 
 
 export const Stadgar = () => {
-  const { data } = api.wordpress.getAboutUsPage.useQuery();
+  const { data } = api.wordpress.getAboutUsPage.useQuery(undefined, { staleTime: Infinity });
 
   if (!data) return null;
 
@@ -45,7 +45,7 @@ export const Stadgar = () => {
 export default Stadgar;
 
 export async function getStaticProps() {
-  const ssrHelper = await createSSRHelper();
+  const ssrHelper = createSSRHelper();
 
   await ssrHelper.wordpress.getAboutUsPage.prefetch();
 

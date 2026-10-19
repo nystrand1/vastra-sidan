@@ -99,14 +99,15 @@ export const StatisticsPage = () => {
 export default StatisticsPage;
 
 export const getStaticProps = async () => {
-  const ssg = await createSSRHelper();
+  const ssg = createSSRHelper();
 
   const homeGames = await ssg.public.getHomeGames.fetch();
 
-  const promises = homeGames.map((game) =>
-    ssg.public.getTicketStatistics.prefetch({ gameId: game.id })
-  );
-  await Promise.all(promises);
+  // Only the game shown first (the latest); others load when picked
+  const latestGame = homeGames[0];
+  if (latestGame) {
+    await ssg.public.getTicketStatistics.prefetch({ gameId: latestGame.id });
+  }
   return {
     props: {
       trpcState: ssg.dehydrate()
