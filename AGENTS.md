@@ -221,12 +221,24 @@ Always use `~/` imports for project files.
 | `npm run dev`         | Start development server                 |
 | `npm run build`       | Production build                         |
 | `npm run lint`        | Run ESLint                               |
+| `npm run test`        | Integration tests (Vitest, needs Docker) |
 | `npm run compile`     | Generate GraphQL types from `.gql` files |
 | `npm run watch`       | Watch mode for GraphQL codegen           |
 | `npm run dev:email`   | Preview email templates on port 3001     |
 | `npx prisma studio`   | Open Prisma Studio (database GUI)        |
 | `npx prisma db push`  | Push schema changes to database          |
 | `npx prisma generate` | Regenerate Prisma client                 |
+
+---
+
+## Testing
+
+Integration tests live in `test/` and run with `yarn test`. They use Vitest, a MariaDB started by Testcontainers, and MSW for Stripe and SES. See the "Integration tests" section in `README.md`.
+
+- Call routers through `publicCaller()` / `userCaller()` / `adminCaller()` from `test/helpers/caller.ts`, and seed data with `test/helpers/factories.ts`.
+- Drive Stripe with `fakeStripe` from `test/mocks/stripe.ts`. It sends signed webhooks to the real route. Never call the webhook handlers directly.
+- Assert on the database through `prisma` from `test/helpers/db.ts`.
+- Write a known, unfixed bug as `itKnownBug(...)` describing the intended behaviour. When you fix it, change it to `it(...)`.
 
 ---
 
