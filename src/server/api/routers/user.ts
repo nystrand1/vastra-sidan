@@ -4,7 +4,7 @@ import {
   StripeRefundStatus,
   type Prisma
 } from "@prisma/client";
-import { render } from "@react-email/components";
+import { render } from "react-email";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import UserSignup from "~/components/emails/UserSignup";

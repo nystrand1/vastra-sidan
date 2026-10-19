@@ -1,6 +1,4 @@
-import { Button } from '@react-email/button';
-import { Container, Head, Hr, Img, Section, Tailwind, Text } from "@react-email/components";
-import { Html } from '@react-email/html';
+import { Button, Container, Head, Hr, Html, Img, Section, Tailwind, Text } from "react-email";
 import { type ParticipantWithBusAndEvent } from "~/server/api/routers/eventPayment";
 import { formatSwedishTime } from '~/utils/formatSwedishTime';
 
