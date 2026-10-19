@@ -1,4 +1,4 @@
-import { withSentryConfig } from "@sentry/nextjs";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import { env } from "./src/env.mjs";
 
 /**
@@ -81,15 +81,19 @@ export default withSentryConfig(config, {
   // side errors will fail.
   // tunnelRoute: "/monitoring",
 
-  // Hides source maps from generated client bundles
-  hideSourceMaps: true,
+  // Source maps are deleted from the build output after upload (Sentry v9+ default)
 
   // Automatically tree-shake Sentry logger statements to reduce bundle size
-  disableLogger: true,
+  bundleSizeOptimizations: {
+    excludeDebugStatements: true
+  },
 
-  // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
-  // See the following for more information:
-  // https://docs.sentry.io/product/crons/
-  // https://vercel.com/docs/cron-jobs
-  automaticVercelMonitors: true
+  webpack: {
+    // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
+    // Only applies to webpack builds.
+    // See the following for more information:
+    // https://docs.sentry.io/product/crons/
+    // https://vercel.com/docs/cron-jobs
+    automaticVercelMonitors: true
+  }
 });

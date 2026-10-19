@@ -95,7 +95,7 @@ export const authOptions: NextAuthOptions = {
         token = {
           ...token,
           ...sessionUser,
-        } as typeof token
+        }
       }
       return token;
     }

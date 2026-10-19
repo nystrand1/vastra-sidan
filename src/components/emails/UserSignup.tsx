@@ -1,5 +1,4 @@
-import { Button, Container, Head, Hr, Section, Tailwind, Text } from "@react-email/components";
-import { Html } from '@react-email/html';
+import { Button, Container, Head, Hr, Html, Section, Tailwind, Text } from "react-email";
 
 interface UserSignupProps {
   token: string;
