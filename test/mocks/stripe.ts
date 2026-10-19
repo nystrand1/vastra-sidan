@@ -22,7 +22,7 @@ interface FakePaymentIntent {
   description: string;
   customer: string;
   metadata: Metadata;
-  status: "requires_payment_method" | "succeeded";
+  status: "requires_payment_method" | "processing" | "succeeded" | "canceled";
   client_secret: string;
   latest_charge: string | null;
 }
@@ -49,7 +49,9 @@ interface FakeRefund {
   charge: string;
   payment_intent: string;
   reason: string | null;
+  metadata: Metadata;
   status: "pending" | "succeeded" | "failed";
+  failure_reason?: string;
 }
 
 interface FakeBalanceTransaction {
@@ -72,6 +74,7 @@ export interface StripeApiRequest {
   method: string;
   path: string;
   body: Record<string, unknown>;
+  idempotencyKey: string | null;
 }
 
 interface WebhookEvent {
@@ -89,7 +92,9 @@ const createState = () => ({
   refunds: new Map<string, FakeRefund>(),
   balanceTransactions: new Map<string, FakeBalanceTransaction>(),
   requests: [] as StripeApiRequest[],
-  events: [] as WebhookEvent[]
+  events: [] as WebhookEvent[],
+  refundsByIdempotencyKey: new Map<string, FakeRefund>(),
+  completeRefundsImmediately: false
 });
 
 let state = createState();
@@ -132,7 +137,12 @@ const recordRequest = async (request: Request) => {
     request.method === "GET"
       ? Object.fromEntries(url.searchParams)
       : parseForm(await request.text());
-  state.requests.push({ method: request.method, path: url.pathname, body });
+  state.requests.push({
+    method: request.method,
+    path: url.pathname,
+    body,
+    idempotencyKey: request.headers.get("idempotency-key")
+  });
   return body;
 };
 
@@ -185,8 +195,37 @@ export const stripeHandlers = [
     return HttpResponse.json(paymentIntent);
   }),
 
+  http.get(`${API}/payment_intents/:id`, async ({ request, params }) => {
+    await recordRequest(request);
+    const paymentIntent = state.paymentIntents.get(String(params.id));
+    if (!paymentIntent) {
+      return stripeError(`No such payment_intent: '${String(params.id)}'`, 404);
+    }
+    return HttpResponse.json(paymentIntent);
+  }),
+
+  http.post(`${API}/payment_intents/:id/cancel`, async ({ request, params }) => {
+    await recordRequest(request);
+    const paymentIntent = state.paymentIntents.get(String(params.id));
+    if (!paymentIntent) {
+      return stripeError(`No such payment_intent: '${String(params.id)}'`, 404);
+    }
+    if (paymentIntent.status !== "requires_payment_method") {
+      return stripeError(
+        `You cannot cancel this PaymentIntent because it has a status of ${paymentIntent.status}.`
+      );
+    }
+    paymentIntent.status = "canceled";
+    return HttpResponse.json(paymentIntent);
+  }),
+
   http.post(`${API}/refunds`, async ({ request }) => {
     const body = await recordRequest(request);
+    const idempotencyKey = request.headers.get("idempotency-key");
+    const earlier = idempotencyKey ? state.refundsByIdempotencyKey.get(idempotencyKey) : undefined;
+    if (earlier) {
+      return HttpResponse.json(earlier);
+    }
     const amount = Number(body.amount);
     if (!/^\d+$/.test(String(body.amount)) || amount < 1) {
       return stripeError(`Invalid integer: ${String(body.amount)}`);
@@ -216,10 +255,26 @@ export const stripeHandlers = [
       charge: charge.id,
       payment_intent: paymentIntent.id,
       reason: (body.reason as string | undefined) ?? null,
+      metadata: (body.metadata ?? {}) as Metadata,
       status: "pending"
     };
     state.refunds.set(refund.id, refund);
+    if (idempotencyKey) state.refundsByIdempotencyKey.set(idempotencyKey, refund);
+    if (state.completeRefundsImmediately) {
+      // Card refunds often succeed at once: the webhook can arrive before the API response.
+      const res = await fakeStripe.completeRefund(refund.id);
+      if (res.status !== 201) throw new Error(`fakeStripe: webhook failed with ${res.status}`);
+    }
     return HttpResponse.json(refund);
+  }),
+
+  http.get(`${API}/refunds`, async ({ request }) => {
+    const query = await recordRequest(request);
+    // Newest first, like Stripe
+    const refunds = [...state.refunds.values()]
+      .filter((r) => !query.charge || r.charge === query.charge)
+      .reverse();
+    return list(refunds, "/v1/refunds");
   }),
 
   http.get(`${API}/balance_transactions/:id`, async ({ request, params }) => {
@@ -276,6 +331,12 @@ const getPaymentIntent = (id: string) => {
   return paymentIntent;
 };
 
+const getRefund = (id: string) => {
+  const refund = state.refunds.get(id);
+  if (!refund) throw new Error(`fakeStripe: unknown refund ${id}`);
+  return refund;
+};
+
 const getChargeFor = (paymentIntentId: string) => {
   const { latest_charge } = getPaymentIntent(paymentIntentId);
   const charge = latest_charge ? state.charges.get(latest_charge) : undefined;
@@ -302,8 +363,20 @@ export const fakeStripe = {
   },
 
   /** The customer completes the payment: creates the charge and sends `payment_intent.succeeded`. */
-  succeedPayment: (paymentIntentId: string) => {
+  succeedPayment: async (paymentIntentId: string) =>
+    deliver(fakeStripe.succeedPaymentWithoutWebhook(paymentIntentId)),
+
+  /**
+   * The payment goes through, but the `payment_intent.succeeded` webhook is
+   * delayed. Returns the event; deliver it later with `redeliver(event.id)`.
+   */
+  succeedPaymentWithoutWebhook: (paymentIntentId: string) => {
     const paymentIntent = getPaymentIntent(paymentIntentId);
+    if (paymentIntent.status === "canceled" || paymentIntent.status === "succeeded") {
+      throw new Error(
+        `fakeStripe: cannot pay payment intent ${paymentIntentId} with status ${paymentIntent.status}`
+      );
+    }
     const transaction: FakeBalanceTransaction = {
       id: nextId("txn"),
       object: "balance_transaction",
@@ -330,7 +403,12 @@ export const fakeStripe = {
     state.charges.set(charge.id, charge);
     paymentIntent.status = "succeeded";
     paymentIntent.latest_charge = charge.id;
-    return deliver(createEvent("payment_intent.succeeded", paymentIntent));
+    return createEvent("payment_intent.succeeded", paymentIntent);
+  },
+
+  /** The customer has submitted the payment and it's being processed (no webhook). */
+  startProcessing: (paymentIntentId: string) => {
+    getPaymentIntent(paymentIntentId).status = "processing";
   },
 
   /** The customer's payment fails: sends `payment_intent.payment_failed`. */
@@ -353,15 +431,41 @@ export const fakeStripe = {
     return deliver(createEvent("charge.updated", charge));
   },
 
-  /** A refund created through the API goes through: sends `charge.refunded`. */
-  completeRefund: (refundId: string) => {
-    const refund = state.refunds.get(refundId);
-    if (!refund) throw new Error(`fakeStripe: unknown refund ${refundId}`);
+  /**
+   * A refund goes through: sends `charge.refunded`, then `refund.updated` (Stripe sends both,
+   * in no guaranteed order). Returns the first failed response, or the last one.
+   */
+  completeRefund: async (refundId: string) => {
+    const refund = getRefund(refundId);
     const charge = state.charges.get(refund.charge)!;
     refund.status = "succeeded";
     charge.amount_refunded += refund.amount;
     charge.refunded = charge.amount_refunded >= charge.amount;
-    return deliver(createEvent("charge.refunded", charge));
+    const chargeRefunded = await deliver(createEvent("charge.refunded", charge));
+    if (chargeRefunded.status !== 201) return chargeRefunded;
+    return deliver(createEvent("refund.updated", refund));
+  },
+
+  /** From now on, refunds created through the API succeed (and send webhooks) before the API responds. */
+  completeRefundsImmediately: () => {
+    state.completeRefundsImmediately = true;
+  },
+
+  /**
+   * A refund fails (e.g. the card was closed), possibly after it first succeeded.
+   * Stripe reports it with both `refund.failed` and `refund.updated`; this sends one of them.
+   */
+  failRefund: (
+    refundId: string,
+    {
+      event = "refund.failed",
+      failureReason = "expired_or_canceled_card"
+    }: { event?: "refund.failed" | "refund.updated"; failureReason?: string } = {}
+  ) => {
+    const refund = getRefund(refundId);
+    refund.status = "failed";
+    refund.failure_reason = failureReason;
+    return deliver(createEvent(event, refund));
   },
 
   /** An admin refunds a payment from the Stripe dashboard (defaults to the full amount). */
@@ -374,6 +478,7 @@ export const fakeStripe = {
       charge: charge.id,
       payment_intent: paymentIntentId,
       reason: null,
+      metadata: {},
       status: "pending"
     };
     state.refunds.set(refund.id, refund);

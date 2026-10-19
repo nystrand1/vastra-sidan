@@ -1,8 +1,4 @@
-import {
-  MembershipType,
-  StripePaymentStatus,
-  StripeRefundStatus
-} from "@prisma/client";
+import { MembershipType } from "@prisma/client";
 import { subHours } from "date-fns";
 import { z } from "zod";
 import {
@@ -11,37 +7,13 @@ import {
   publicProcedure
 } from "~/server/api/trpc";
 import { toUTCDate } from "~/server/utils/helpers";
+import { busesWithBookedSeats } from "~/server/utils/busCapacity";
 import { getStartPage } from "~/server/utils/public/getStartPage";
-
-export const busesWithPaidPassengers = {
-  buses: {
-    include: {
-      _count: {
-        select: {
-          passengers: {
-            where: {
-              stripePayments: {
-                some: {
-                  status: StripePaymentStatus.SUCCEEDED
-                }
-              },
-              stripeRefunds: {
-                none: {
-                  status: StripeRefundStatus.REFUNDED
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-};
 
 export const publicRouter = createTRPCRouter({
   getAwayGames: publicProcedure.query(async ({ ctx }) => {
     const res = await ctx.prisma.vastraEvent.findMany({
-      include: busesWithPaidPassengers,
+      include: busesWithBookedSeats(),
       where: {
         date: {
           gte: subHours(new Date(), 8)
@@ -71,7 +43,7 @@ export const publicRouter = createTRPCRouter({
           id: input.id,
           active: true
         },
-        include: busesWithPaidPassengers
+        include: busesWithBookedSeats()
       });
 
       if (!res) {

@@ -16,6 +16,7 @@ import { Input } from "~/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { friendlyMembershipNames } from "~/server/utils/membership";
 import { api } from "~/utils/api";
+import { MAX_FAMILY_MEMBERS } from "~/utils/constants";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 import { featureFlags } from "~/utils/featureFlags";
 import getStripe from "~/utils/stripePromise";
@@ -279,7 +280,7 @@ export const MemberPage = () => {
                 )}
               />
               <div className='space-y-4'>
-                {membershipType === 'FAMILY' && additionalMembers.fields.length < 4 && (
+                {membershipType === 'FAMILY' && additionalMembers.fields.length < MAX_FAMILY_MEMBERS && (
                   <Button className='w-full' type="button" onClick={() => additionalMembers.append(defaultFamilyMember)}>Lägg till familjemedlem</Button>
                 )}
                 <Button

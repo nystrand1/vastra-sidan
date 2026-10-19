@@ -16,6 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "~/components/ui/input";
 import { type AppRouter } from "~/server/api/root";
 import { api } from "~/utils/api";
+import { MAX_FAMILY_MEMBERS } from "~/utils/constants";
 import { addFamilyMemberSchema } from "~/utils/zodSchemas";
 
 
@@ -62,6 +63,10 @@ export const FamilyMembers = ({ members, ownerId }: FamilyMembersProps) => {
     setOpen(false);
   });
 
+  // The list never includes the member being viewed (the owner sees their family members,
+  // a family member sees the owner and the others), so its length is the number of family members
+  const isFamilyFull = (members?.length ?? 0) >= MAX_FAMILY_MEMBERS;
+
   return (
     <Card title="Familjemedlemmar" className="w-96 h-fit">
       <ul className="space-y-4 divide-y border-b pb-4">
@@ -85,80 +90,82 @@ export const FamilyMembers = ({ members, ownerId }: FamilyMembersProps) => {
           </li>
         ))}
       </ul>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger>
-          <Button>
-            <UserPlus />
-            Lägg till familjemedlem
-          </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="text-left">Lägg till familjemedlem</DialogTitle>
-          </DialogHeader>
-          <Form {...form}>
-            <form className="flex flex-col gap-4">
-              <FormField
-                control={form.control}
-                name="member.firstName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Förnamn</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Förnamn..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="member.lastName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Efternamn</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Efternamn..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="member.email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Email..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="member.phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Mobilnummer</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Mobil..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button
-                type="submit"
-                onClick={handleSubmit}
-                disabled={!form.formState.isValid}
-              >Lägg till</Button>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      {!isFamilyFull && (
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger>
+            <Button>
+              <UserPlus />
+              Lägg till familjemedlem
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-left">Lägg till familjemedlem</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form className="flex flex-col gap-4">
+                <FormField
+                  control={form.control}
+                  name="member.firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Förnamn</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Förnamn..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="member.lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Efternamn</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Efternamn..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="member.email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Email..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="member.phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mobilnummer</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Mobil..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="submit"
+                  onClick={handleSubmit}
+                  disabled={!form.formState.isValid}
+                >Lägg till</Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      )}
     </Card>
   );
 }

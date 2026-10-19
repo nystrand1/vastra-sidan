@@ -1,4 +1,5 @@
 import { prisma } from "~/server/db";
+import { seatHoldingPassengerWhere } from "../busCapacity";
 import { paidPassengerQuery } from "../queryConstants/paidPassengerQuery";
 
 type Event = Awaited<ReturnType<typeof getEvent>>;
@@ -16,7 +17,8 @@ export const adminSingleEventFormatter = (event: Event) => {
       id: bus.id,
       name: bus.name,
       seats: bus.seats,
-      passengers: bus.passengers.length,
+      // Seats taken, including unpaid bookings waiting for their payment
+      passengers: bus._count.passengers,
     })),
     participants: event.buses
       .flatMap((bus) => bus.passengers)
@@ -45,6 +47,13 @@ export const getEvent = async (id: string) => {
       buses: {
         include: {
           passengers: paidPassengerQuery,
+          _count: {
+            select: {
+              passengers: {
+                where: seatHoldingPassengerWhere()
+              }
+            }
+          }
         },
         orderBy: {
           name: "asc"

@@ -7,11 +7,11 @@ import {
   handleChargeUpdate,
   handleFailedPayment,
   handleRefund,
+  handleRefundUpdate,
   handleSuccessfulPayment
 } from "./utils";
 import { captureException } from "@sentry/nextjs";
 import { sendMemberConfirmationEmail } from "~/server/utils/email/sendMemberConfirmationEmail";
-import { attachMembershipToMembers } from "./attachMembershipToMembers";
 
 const endpointSecret =
   env.STRIPE_WEBHOOK_SECRET ||
@@ -19,24 +19,29 @@ const endpointSecret =
 
 const handleStripeEvent = async (event: Stripe.Event) => {
   switch (event.type) {
-    case "payment_intent.succeeded":
-      const { participants, members } = await handleSuccessfulPayment(event);
-      if (event.data.object.metadata.type === "EVENT") {
-        const emailPromises = participants.map(sendEventConfirmationEmail);
-        await Promise.all(emailPromises);
+    case "payment_intent.succeeded": {
+      const payment = await handleSuccessfulPayment(event);
+      if (!payment) {
+        // Already handled in an earlier delivery of this event
+        break;
       }
-      if (event.data.object.metadata.type === "MEMBERSHIP") {
-        const membership = await attachMembershipToMembers({
-          members,
-          membershipId: event.data.object.metadata.membershipId
-        });
-        // send membership confirmation email
-        const emailPromises = members.map((m) =>
-          sendMemberConfirmationEmail(m, membership)
-        );
-        await Promise.all(emailPromises);
+      const { participants, members, membership } = payment;
+      const emails =
+        event.data.object.metadata.type === "MEMBERSHIP" && membership
+          ? members.map((m) => sendMemberConfirmationEmail(m, membership))
+          : event.data.object.metadata.type === "EVENT"
+            ? participants.map(sendEventConfirmationEmail)
+            : [];
+      // Emails are best effort: the payment is already saved, so failing the webhook would
+      // only make Stripe retry an event that is then skipped.
+      const results = await Promise.allSettled(emails);
+      for (const result of results) {
+        if (result.status === "rejected") {
+          captureException(result.reason);
+        }
       }
       break;
+    }
     case "payment_intent.payment_failed":
       await handleFailedPayment(event);
       break;
@@ -45,6 +50,10 @@ const handleStripeEvent = async (event: Stripe.Event) => {
       break;
     case "charge.refunded":
       await handleRefund(event);
+      break;
+    case "refund.updated":
+    case "refund.failed":
+      await handleRefundUpdate(event);
       break;
     default:
       console.log("Unhandled event", event);

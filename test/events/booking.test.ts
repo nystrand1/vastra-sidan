@@ -1,10 +1,9 @@
 import { StripePaymentStatus, StripeRefundStatus } from "@prisma/client";
 import { describe, expect, it } from "vitest";
-import { adminCaller, publicCaller, userCaller } from "../helpers/caller";
+import { adminCaller, cronCaller, publicCaller, userCaller } from "../helpers/caller";
 import { prisma } from "../helpers/db";
 import { createEvent, createParticipant, fillSeats, participantInput } from "../helpers/factories";
-import { availableSeats, bookAndPay } from "../helpers/flows";
-import { itKnownBug } from "../helpers/knownBug";
+import { availableSeats, book, bookAndPay, expireSeatHolds } from "../helpers/flows";
 import { getSentEmails } from "../mocks/ses";
 import { fakeStripe } from "../mocks/stripe";
 
@@ -183,9 +182,7 @@ describe("public event booking", () => {
     expect(await prisma.participant.count()).toBe(0);
   });
 
-  // Known bug: only paid passengers are counted, so two people can pay for the last seat.
-  // Intended: an unpaid booking holds its seat until the payment succeeds or fails.
-  itKnownBug("holds the seat of a pending booking until the payment completes", async () => {
+  it("holds the seat of a pending booking until the payment completes", async () => {
     const event = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
     const busId = event.buses[0]!.id;
     await publicCaller().eventPayment.requestStripePayment({
@@ -202,9 +199,123 @@ describe("public event booking", () => {
     ).rejects.toMatchObject({ message: "BUS_FULL" });
   });
 
-  // Known bug: the capacity check only looks at the event's own buses, so a bus id from
-  // another event (or a made-up one) skips it entirely.
-  itKnownBug("rejects a bus that belongs to another event", async () => {
+  it("holds the seat of a pending booking for two concurrent requests", async () => {
+    const event = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
+    const busId = event.buses[0]!.id;
+
+    const results = await Promise.allSettled([
+      book(event.id, [participantInput(busId)]),
+      book(event.id, [participantInput(busId)])
+    ]);
+
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(results.find((r) => r.status === "rejected")).toMatchObject({
+      reason: { message: "BUS_FULL" }
+    });
+    expect(await prisma.participant.count()).toBe(1);
+  });
+
+  it("cancels an unpaid booking after 15 minutes and gives its seat back", async () => {
+    const event = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
+    const busId = event.buses[0]!.id;
+    const { paymentIntent: abandoned } = await book(event.id, [participantInput(busId)]);
+
+    await expireSeatHolds();
+    // Still held until it's cancelled: the customer may be paying right now
+    expect(await availableSeats(event.id, busId)).toBe(0);
+
+    await expect(cronCaller().cron.releaseExpiredSeatHolds()).resolves.toEqual({ released: 1 });
+
+    expect(abandoned.status).toBe("canceled");
+    expect(await availableSeats(event.id, busId)).toBe(1);
+    const abandonedParticipant = await prisma.participant.findFirstOrThrow({
+      where: { stripePayments: { some: { stripePaymentId: abandoned.id } } },
+      include: { stripePayments: true }
+    });
+    expect(abandonedParticipant.stripePayments.map((p) => p.status).sort()).toEqual([
+      StripePaymentStatus.CANCELED,
+      StripePaymentStatus.CREATED
+    ]);
+    // A late payment is refused, so the seat can safely go to someone else
+    await expect(fakeStripe.succeedPayment(abandoned.id)).rejects.toThrow("canceled");
+    await bookAndPay(event.id, [participantInput(busId)]);
+    expect(await availableSeats(event.id, busId)).toBe(0);
+  });
+
+  it("cancels an expired booking before checking for free seats", async () => {
+    const event = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
+    const busId = event.buses[0]!.id;
+    const { paymentIntent: abandoned } = await book(event.id, [participantInput(busId)]);
+    await expireSeatHolds();
+
+    await bookAndPay(event.id, [participantInput(busId)]);
+
+    expect(abandoned.status).toBe("canceled");
+  });
+
+  it("only cron can release expired bookings", async () => {
+    await expect(publicCaller().cron.releaseExpiredSeatHolds()).rejects.toMatchObject({
+      code: "UNAUTHORIZED"
+    });
+  });
+
+  it("keeps the seat of an expired booking that was paid before the webhook arrived", async () => {
+    const event = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
+    const busId = event.buses[0]!.id;
+    const { paymentIntent } = await book(event.id, [participantInput(busId)]);
+    const succeeded = fakeStripe.succeedPaymentWithoutWebhook(paymentIntent.id);
+    await expireSeatHolds();
+
+    await expect(cronCaller().cron.releaseExpiredSeatHolds()).resolves.toEqual({ released: 0 });
+    await expect(
+      publicCaller().eventPayment.requestStripePayment({
+        eventId: event.id,
+        participants: [participantInput(busId)]
+      })
+    ).rejects.toMatchObject({ message: "BUS_FULL" });
+    expect(await prisma.stripePayment.count({ where: { status: StripePaymentStatus.CANCELED } })).toBe(0);
+
+    expect((await fakeStripe.redeliver(succeeded.id)).status).toBe(201);
+    expect(await availableSeats(event.id, busId)).toBe(0);
+  });
+
+  it("keeps the seat of an expired booking whose payment is processing", async () => {
+    const event = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
+    const busId = event.buses[0]!.id;
+    const { paymentIntent } = await book(event.id, [participantInput(busId)]);
+    fakeStripe.startProcessing(paymentIntent.id);
+    await expireSeatHolds();
+
+    await expect(cronCaller().cron.releaseExpiredSeatHolds()).resolves.toEqual({ released: 0 });
+    await expect(
+      publicCaller().eventPayment.requestStripePayment({
+        eventId: event.id,
+        participants: [participantInput(busId)]
+      })
+    ).rejects.toMatchObject({ message: "BUS_FULL" });
+    expect(paymentIntent.status).toBe("processing");
+  });
+
+  it("gives the seats back when the customer closes the payment window", async () => {
+    const event = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
+    const busId = event.buses[0]!.id;
+    const { clientSecret, paymentIntent } = await book(event.id, [participantInput(busId)]);
+
+    await expect(
+      publicCaller().eventPayment.releasePendingBooking({
+        clientSecret: `${paymentIntent.id}_secret_wrong`
+      })
+    ).resolves.toEqual({ released: false });
+    expect(await availableSeats(event.id, busId)).toBe(0);
+
+    await expect(
+      publicCaller().eventPayment.releasePendingBooking({ clientSecret })
+    ).resolves.toEqual({ released: true });
+    expect(paymentIntent.status).toBe("canceled");
+    expect(await availableSeats(event.id, busId)).toBe(1);
+  });
+
+  it("rejects a bus that belongs to another event", async () => {
     const event = await createEvent();
     const otherEvent = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
     const otherBusId = otherEvent.buses[0]!.id;
@@ -216,6 +327,20 @@ describe("public event booking", () => {
         participants: [participantInput(otherBusId)]
       })
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("reuses the Stripe customer when the email is typed with different case", async () => {
+    const event = await createEvent();
+    const busId = event.buses[0]!.id;
+
+    for (const email of ["Anna@Test.se", "anna@test.se", "ANNA@TEST.SE"]) {
+      await publicCaller().eventPayment.requestStripePayment({
+        eventId: event.id,
+        participants: [participantInput(busId, { email })]
+      });
+    }
+
+    expect(fakeStripe.customers()).toEqual([expect.objectContaining({ email: "anna@test.se" })]);
   });
 });
 
@@ -267,8 +392,22 @@ describe("admin: add participant", () => {
     expect(await prisma.participant.count()).toBe(1);
   });
 
-  // Known bug: `if (!availableSeats)` lets a negative seat count through.
-  itKnownBug("rejects an overbooked bus", async () => {
+  it("counts unpaid bookings, and frees the seats of expired ones", async () => {
+    const event = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
+    const busId = event.buses[0]!.id;
+    const { paymentIntent } = await book(event.id, [participantInput(busId)]);
+
+    await expect(adminCaller().admin.addParticipant(adminInput(event.id, busId))).rejects.toMatchObject({
+      message: "Bus is full"
+    });
+
+    await expireSeatHolds();
+    await adminCaller().admin.addParticipant(adminInput(event.id, busId));
+    expect(paymentIntent.status).toBe("canceled");
+    expect(await availableSeats(event.id, busId)).toBe(0);
+  });
+
+  it("rejects an overbooked bus", async () => {
     const event = await createEvent({ buses: [{ name: "Buss 1", seats: 1 }] });
     const busId = event.buses[0]!.id;
     await fillSeats(event.id, busId, 2);
@@ -278,8 +417,7 @@ describe("admin: add participant", () => {
     });
   });
 
-  // Known bug: the bus isn't checked against `eventId`.
-  itKnownBug("rejects a bus that belongs to another event", async () => {
+  it("rejects a bus that belongs to another event", async () => {
     const event = await createEvent();
     const otherEvent = await createEvent();
 

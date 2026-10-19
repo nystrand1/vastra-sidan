@@ -1,4 +1,5 @@
 import { captureException } from "@sentry/nextjs";
+import { TRPCClientError } from "@trpc/client";
 import { type inferRouterOutputs } from "@trpc/server";
 import { type GetServerSidePropsContext } from "next";
 import { useRouter } from "next/router";
@@ -25,6 +26,7 @@ export const ParticipantInfo = ({
     cancellationDisabled,
     cancellationToken,
     hasCancelled,
+    refundPending,
     busId,
     busOptions,
     cancellationDate,
@@ -44,22 +46,27 @@ export const ParticipantInfo = ({
     if (!cancellationToken) return null;
 
     const toastId = toast.loading("Avbokar...")
-    // Get the refund ID from cancel booking
-    // Use the refund ID to poll the refund status
-    const originalPaymentId = await cancelBooking({ token: cancellationToken })
 
     try {
-      await pollRefundStatus(originalPaymentId, checkRefundStatus);
-      toast.success("Avbokning slutförd", {
+      await cancelBooking({ token: cancellationToken })
+      // Wait for Stripe to confirm this traveller's own refund
+      const { success } = await pollRefundStatus(cancellationToken, checkRefundStatus);
+      toast.success(success ? "Avbokning slutförd" : "Avbokad, återbetalningen behandlas", {
         id: toastId
       });
       await refetchParticipant();
     } catch (e) {
-      captureException(e);
-      toast.error("Något gick fel, kontakta styrelsen", {
+      const isRejected =
+        e instanceof TRPCClientError &&
+        (e as TRPCClientError<AppRouter>).data?.code === "BAD_REQUEST";
+      if (!isRejected) {
+        captureException(e);
+      }
+      toast.error(isRejected ? e.message : "Något gick fel, kontakta styrelsen", {
         id: toastId
       });
       console.error(e);
+      await refetchParticipant();
     }
   }
 
@@ -92,7 +99,7 @@ export const ParticipantInfo = ({
         <p>Övrigt: {note}</p>
       )}
       <div className="space-y-6">
-        {!cancellationDisabled && !hasCancelled && (
+        {!cancellationDisabled && !hasCancelled && !refundPending && (
           <>
             <div className="space-y-2 pt-2">
               <SelectField
@@ -111,7 +118,10 @@ export const ParticipantInfo = ({
         {hasCancelled && cancellationDate && (
           <p className="rounded-md border p-2 text-center">{`Avbokad! (${cancellationDate})`}</p>
         )}
-        {cancellationDisabled && !hasCancelled && (
+        {refundPending && (
+          <p className="rounded-md border p-2 text-center">Avbokad, återbetalningen behandlas</p>
+        )}
+        {cancellationDisabled && !hasCancelled && !refundPending && (
           <p>Du kan inte avboka inom 36h från avgång</p>
         )}
       </div>

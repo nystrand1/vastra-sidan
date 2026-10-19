@@ -29,3 +29,9 @@ export const userCaller = () => callerWith(sessionFor(Role.USER));
 
 /** A logged-in admin. */
 export const adminCaller = () => callerWith(sessionFor(Role.ADMIN));
+
+/** The scheduled cron job, authenticated with the cron key. */
+export const cronCaller = () =>
+  createCaller(
+    createInnerTRPCContext({ session: null, cronKey: process.env.CRON_KEY ?? null, apolloClient: null })
+  );
