@@ -12,6 +12,7 @@ import {
 } from "./utils";
 import { captureException } from "@sentry/nextjs";
 import { sendMemberConfirmationEmail } from "~/server/utils/email/sendMemberConfirmationEmail";
+import { awayGamePaths, revalidatePages } from "~/server/utils/revalidate";
 
 const endpointSecret =
   env.STRIPE_WEBHOOK_SECRET ||
@@ -40,6 +41,12 @@ const handleStripeEvent = async (event: Stripe.Event) => {
           captureException(result.reason);
         }
       }
+      // Update the cached seat counts, or the member count on the start page
+      await revalidatePages(
+        event.data.object.metadata.type === "MEMBERSHIP"
+          ? ["/"]
+          : awayGamePaths(participants.map((p) => p.eventId))
+      );
       break;
     }
     case "payment_intent.payment_failed":
@@ -48,13 +55,18 @@ const handleStripeEvent = async (event: Stripe.Event) => {
     case "charge.updated":
       await handleChargeUpdate(event);
       break;
-    case "charge.refunded":
-      await handleRefund(event);
+    case "charge.refunded": {
+      // A refunded booking gives its seat back
+      const eventIds = await handleRefund(event);
+      await revalidatePages(awayGamePaths(eventIds));
       break;
+    }
     case "refund.updated":
-    case "refund.failed":
-      await handleRefundUpdate(event);
+    case "refund.failed": {
+      const eventIds = await handleRefundUpdate(event);
+      await revalidatePages(awayGamePaths(eventIds));
       break;
+    }
     default:
       console.log("Unhandled event", event);
       break;

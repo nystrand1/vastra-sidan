@@ -177,13 +177,13 @@ export async function getServerSideProps({ query } : GetServerSidePropsContext) 
     }
   }
 
-  const ssr = await createSSRHelper();
+  const ssr = createSSRHelper();
 
   await ssr.eventPayment.getManagableBooking.prefetch({ token: token as string });
 
   return {
     props: {
-      dehydratedState: ssr.dehydrate(),
+      trpcState: ssr.dehydrate(),
     }
   }
 }

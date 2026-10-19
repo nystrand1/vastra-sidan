@@ -47,13 +47,13 @@ export default function SeasonBySeasonPage() {
 }
 
 export const getStaticProps = async () => {
-  const ssrHelper = await createSSRHelper();
+  const ssrHelper = createSSRHelper();
   await ssrHelper.wordpress.getSeasonChronicles.prefetch();
 
   return {
     props: {
       trpcState: ssrHelper.dehydrate(),
     },
-    revalidate: 60,
+    revalidate: 3600,
   }
 };

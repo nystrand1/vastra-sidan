@@ -56,7 +56,7 @@ export const wordpressRouter = createTRPCRouter({
         variables: { slug: input.slug }
       });
 
-      if (!data) {
+      if (!data?.chronicle) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Chronicle not found"
@@ -130,7 +130,7 @@ export const wordpressRouter = createTRPCRouter({
         variables: { slug: input.slug }
       });
 
-      const guide = data.awayguide;
+      const guide = data?.awayguide;
 
       if (!guide) {
         throw new TRPCError({
@@ -170,7 +170,7 @@ export const wordpressRouter = createTRPCRouter({
         variables: { slug: input.slug }
       });
 
-      if (!data) {
+      if (!data?.newsPost) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "News not found"
@@ -240,7 +240,7 @@ export const wordpressRouter = createTRPCRouter({
         variables: { slug: input.slug }
       });
 
-      if (!data) {
+      if (!data?.seasonChronicle) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Season Chronicle not found"

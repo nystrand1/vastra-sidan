@@ -18,6 +18,7 @@ import {
 import { isEventCancelable } from "~/server/utils/event";
 import { checkRefundStatus } from "~/server/utils/payment";
 import { participantRefundState } from "~/server/utils/refunds";
+import { awayGamePaths, revalidatePages } from "~/server/utils/revalidate";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { createPaymentIntent, createRefundIntent } from "~/utils/stripeHelpers";
 import { participantSchema } from "~/utils/zodSchemas";
@@ -554,6 +555,7 @@ export const eventPaymentRouter = createTRPCRouter({
           }
         })
       );
+      await revalidatePages(awayGamePaths([participant.eventId]));
 
       return "ok";
     }),

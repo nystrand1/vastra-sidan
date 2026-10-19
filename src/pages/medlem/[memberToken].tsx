@@ -1,6 +1,6 @@
 import { type inferRouterOutputs } from "@trpc/server";
-import { type GetStaticPropsContext, type InferGetStaticPropsType } from "next";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { ButtonLink } from "~/components/atoms/ButtonLink/ButtonLink";
@@ -8,7 +8,6 @@ import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { env } from "~/env.mjs";
 import { type AppRouter } from "~/server/api/root";
 import { api } from "~/utils/api";
-import { createSSRHelper } from "~/utils/createSSRHelper";
 
 export const MemberCard = dynamic(
   () => import("~/components/common/MemberCard/MemberCard"),
@@ -22,11 +21,14 @@ type ActiveMembership = NonNullable<
   inferRouterOutputs<AppRouter>["member"]["getMember"]
 >["activeMemberships"][0];
 
-export const MemberPage = ({
-  memberToken
-}: InferGetStaticPropsType<typeof getStaticProps>) => {
-  const { data, isLoading } = api.member.getMember.useQuery(
-    { memberToken },
+/**
+ * Rendered in the browser only: a member's page holds personal data, so it
+ * must never end up in the CDN cache.
+ */
+export const MemberPage = () => {
+  const { memberToken } = useRouter().query as { memberToken?: string };
+  const { data, isPending } = api.member.getMember.useQuery(
+    { memberToken: memberToken ?? "" },
     { enabled: !!memberToken }
   );
   const [flipped, setFlipped] = useState(false);
@@ -39,7 +41,8 @@ export const MemberPage = ({
     }
   }, [data]);
 
-  if (!data && !isLoading) {
+  // Also pending while the router has no token yet
+  if (isPending) {
     return <div className="flex justify-center">Laddar...</div>;
   }
 
@@ -112,38 +115,3 @@ export const MemberPage = ({
 };
 
 export default MemberPage;
-
-export const getStaticPaths = () => {
-  return {
-    paths: [],
-    fallback: true
-  };
-};
-
-export const getStaticProps = async (context: GetStaticPropsContext) => {
-  const { memberToken } = context.params as { memberToken: string };
-
-  if (!memberToken) {
-    return {
-      notFound: true
-    };
-  }
-
-  const ssg = await createSSRHelper();
-
-  const member = await ssg.member.getMember.fetch({ memberToken });
-
-  if (!member) {
-    return {
-      notFound: true
-    };
-  }
-
-  return {
-    props: {
-      memberToken,
-      trpcState: ssg.dehydrate()
-    },
-    revalidate: 3600
-  };
-};

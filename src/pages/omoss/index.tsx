@@ -5,7 +5,7 @@ import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 
 export const AboutUsPage = () => {
-  const { data } = api.wordpress.getAboutUsPage.useQuery();
+  const { data } = api.wordpress.getAboutUsPage.useQuery(undefined, { staleTime: Infinity });
 
   if (!data) return null;
 
@@ -24,13 +24,13 @@ export const AboutUsPage = () => {
       <div>
         <h1 className="mb-4 text-center text-5xl">Om oss</h1>
         <div className="flex flex-col justify-center py-6 text-lg underline underline-offset-4 md:flex-row md:space-x-5">
-          <Link className="hover:text-gray-200" href="/omoss/stadgar">
+          <Link prefetch={false} className="hover:text-gray-200" href="/omoss/stadgar">
             Stadgar
           </Link>
-          <Link className="hover:text-gray-200" href="/bortaresor/regler">
+          <Link prefetch={false} className="hover:text-gray-200" href="/bortaresor/regler">
             Regler för bortaresor
           </Link>
-          <Link className="hover:text-gray-200" href="/omoss/wall-of-fame">
+          <Link prefetch={false} className="hover:text-gray-200" href="/omoss/wall-of-fame">
             Wall of fame
           </Link>
         </div>
@@ -126,7 +126,7 @@ export const AboutUsPage = () => {
 export default AboutUsPage;
 
 export async function getStaticProps() {
-  const ssrHelper = await createSSRHelper();
+  const ssrHelper = createSSRHelper();
 
   await ssrHelper.wordpress.getAboutUsPage.prefetch();
 

@@ -80,7 +80,7 @@ export const getStaticProps = async (props: GetStaticPropsContext) => {
   if (!id) {
     return { notFound: true };
   }
-  const ssrHelper = await createSSRHelper();
+  const ssrHelper = createSSRHelper();
   const game = await ssrHelper.public.getAwayGame.fetch({ id });
   if (!game) {
     return { notFound: true };
@@ -89,6 +89,6 @@ export const getStaticProps = async (props: GetStaticPropsContext) => {
     props: {
       trpcState: ssrHelper.dehydrate(),
     },
-    revalidate: 60
+    revalidate: 3600
   };
 };

@@ -69,7 +69,7 @@ export default function AwayGuidePage() {
 }
 
 export const getStaticProps = async () => {
-  const ssrHelper = await createSSRHelper();
+  const ssrHelper = createSSRHelper();
   console.time("fetchAwayGuides");
   await ssrHelper.wordpress.getAwayGuides.prefetch();
   console.timeEnd("fetchAwayGuides");

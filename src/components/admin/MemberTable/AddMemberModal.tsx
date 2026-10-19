@@ -57,7 +57,7 @@ const defaultValues = {
 export const AddMemberModal = () => {
   const [open, setOpen] = useState(false);
   const utils = api.useUtils();
-  const { data: memberships } = api.admin.getAvailableMemberships.useQuery();
+  const { data: memberships } = api.admin.getAvailableMemberships.useQuery(undefined, { staleTime: 0 });
   const { mutateAsync: addMember } = api.admin.addMember.useMutation();
 
   const form = useForm<z.infer<typeof adminAddMemberSchema>>({

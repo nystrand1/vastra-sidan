@@ -5,7 +5,11 @@ import { useRouter } from "next/router";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { Wysiwyg } from "~/components/atoms/Wysiwyg/Wysiwyg";
 import { api } from "~/utils/api";
-import { createSSRHelper } from "~/utils/createSSRHelper";
+import {
+  createSSRHelper,
+  isNotFoundError,
+  NOT_FOUND_REVALIDATE
+} from "~/utils/createSSRHelper";
 
 export default function NewsPage() {
   const { id } = useRouter().query;
@@ -55,7 +59,7 @@ export default function NewsPage() {
 
 export const getStaticPaths = async () => {
 
-  const ssrHelper = await createSSRHelper();
+  const ssrHelper = createSSRHelper();
   const news = await ssrHelper.wordpress.getNews.fetch();
   const paths = news?.map(({ slug }) => ({ params: { id: slug } }));
   return {
@@ -69,15 +73,19 @@ export const getStaticProps = async (props: GetStaticPropsContext ) => {
   if (!slug) {
     return { notFound: true };
   }
-  const ssrHelper = await createSSRHelper();
-  const news = await ssrHelper.wordpress.getNewsBySlug.fetch({ slug });
-  if (!news) {
-    return { notFound: true };
+  const ssrHelper = createSSRHelper();
+  try {
+    await ssrHelper.wordpress.getNewsBySlug.fetch({ slug });
+  } catch (err) {
+    if (isNotFoundError(err)) {
+      return { notFound: true, revalidate: NOT_FOUND_REVALIDATE };
+    }
+    throw err;
   }
   return {
     props: {
       trpcState: ssrHelper.dehydrate(),
     },
-    revalidate: 300,
+    revalidate: 3600,
   };
 };

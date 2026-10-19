@@ -313,7 +313,7 @@ export default MemberPage;
 
 
 export const getStaticProps = async () => {
-  const ssrHelper = await createSSRHelper();
+  const ssrHelper = createSSRHelper();
   if (!featureFlags.ENABLE_MEMBERSHIPS) {
     return {
       notFound: true,
@@ -325,6 +325,6 @@ export const getStaticProps = async () => {
     props: {
       trpcState: ssrHelper.dehydrate(),
     },
-    revalidate: 60,
+    revalidate: 3600,
   };
 }

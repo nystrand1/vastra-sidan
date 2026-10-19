@@ -12,7 +12,8 @@ export default function Admin() {
   const { data: sessionData } = useSession();
   const router = useRouter();
   const { data: members } = api.admin.getActiveMembers.useQuery(undefined, {
-    enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN
+    enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN,
+    staleTime: 0
   });
 
   if (!members) {

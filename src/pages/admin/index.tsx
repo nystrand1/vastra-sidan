@@ -10,12 +10,12 @@ export default function Admin() {
 
   const { data: events } = api.admin.getEvents.useQuery(
     undefined,
-    { enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN }
+    { enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN, staleTime: 0 }
     );
 
   const { data: members } = api.admin.getActiveMembers.useQuery(
     undefined,
-    { enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN }
+    { enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN, staleTime: 0 }
   );
   if (!events || !members) {
     return <p className="text-center">Laddar...</p>
