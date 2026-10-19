@@ -12,7 +12,7 @@ export default function AdminEvent() {
 
   const { data: events } = api.admin.getEvents.useQuery(
     undefined,
-    { enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN }
+    { enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN, staleTime: 0 }
     );
 
   if (!events) {

@@ -38,7 +38,7 @@ const UserMenu = ({ className }: UserMenuProps) => {
       >
         {featureFlags.ENABLE_MEMBERSHIPS && featureFlags.ENABLE_LOGIN && (
           <li>
-            <Link
+            <Link prefetch={false}
               href="/mina-medlemskap"
               className="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 hover:text-white"
             >
@@ -47,7 +47,7 @@ const UserMenu = ({ className }: UserMenuProps) => {
           </li>
         )}
         <li>
-          <Link
+          <Link prefetch={false}
             href="/mina-bussresor"
             className="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 hover:text-white"
           >
@@ -56,7 +56,7 @@ const UserMenu = ({ className }: UserMenuProps) => {
         </li>
         {sessionData?.user.role === "ADMIN" && (
           <li>
-            <Link
+            <Link prefetch={false}
               href="/admin"
               className="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 hover:text-white"
             >
@@ -65,7 +65,7 @@ const UserMenu = ({ className }: UserMenuProps) => {
           </li>
         )}
         <li>
-          <Link
+          <Link prefetch={false}
             href="/profil"
             className="block rounded-b-lg px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 hover:text-white"
           >
@@ -94,7 +94,7 @@ export const Navigation = () => {
   return (
     <nav className="fixed z-50 w-full border-gray-200 bg-gray-900">
       <div className="mx-auto flex max-w-screen-xl flex-wrap items-center justify-between p-4">
-        <Link href="/" className="flex items-center">
+        <Link prefetch={false} href="/" className="flex items-center">
           <div className="relative mr-3 h-8 w-8">
             <Image
               src="/favicon/android-icon-192x192.png"
@@ -107,43 +107,43 @@ export const Navigation = () => {
           </span>
         </Link>
         <div className="ml-10 hidden flex-1 flex-row space-x-4 md:flex">
-          <Link className="hover:text-gray-200" href="/bortaresor">
+          <Link prefetch={false} className="hover:text-gray-200" href="/bortaresor">
             Bortaresor
           </Link>
-          <Link className="hover:text-gray-200" href="/nyheter">
+          <Link prefetch={false} className="hover:text-gray-200" href="/nyheter">
             Nyheter
           </Link>
-          <Link className="hover:text-gray-200" href="/bortaguiden">
+          <Link prefetch={false} className="hover:text-gray-200" href="/bortaguiden">
             Bortaguiden
           </Link>
-          <Link className="hover:text-gray-200" href="/kronikor">
+          <Link prefetch={false} className="hover:text-gray-200" href="/kronikor">
             Krönikor
           </Link>
-          <Link className="hover:text-gray-200" href="/sasongforsasong">
+          <Link prefetch={false} className="hover:text-gray-200" href="/sasongforsasong">
             Säsong för säsong
           </Link>
-          <Link
+          <Link prefetch={false}
             className="hover:text-gray-200"
             href="https://api.vastrasidan.se"
             target="_blank"
           >
             Forum
           </Link>
-          <Link
+          <Link prefetch={false}
             className="hover:text-gray-200"
             href="https://iksirius.github.io/index.html"
             target="_blank"
           >
             Sånger
           </Link>
-          <Link className="hover:text-gray-200" href="/omoss">
+          <Link prefetch={false} className="hover:text-gray-200" href="/omoss">
             Om oss
           </Link>
         </div>
         <div className="flex items-center md:order-2">
           {!sessionData?.user.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
             <Button asChild>
-              <Link
+              <Link prefetch={false}
                 href="/bli-medlem"
                 className="!mb-0 mr-3 hidden md:flex md:items-center"
               >
@@ -154,7 +154,7 @@ export const Navigation = () => {
           {!sessionData?.user && featureFlags.ENABLE_LOGIN && (
             <>
               <Button className="!mb-0 mr-3 hidden md:block">
-                <Link href="/skapakonto">
+                <Link prefetch={false} href="/skapakonto">
                   <p>Skapa konto</p>
                 </Link>
               </Button>
@@ -209,7 +209,7 @@ export const Navigation = () => {
           >
             {!sessionData?.user.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
               <li>
-                <Link
+                <Link prefetch={false}
                   href="/bli-medlem"
                   className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
                 >
@@ -218,7 +218,7 @@ export const Navigation = () => {
               </li>
             )}
             <li>
-              <Link
+              <Link prefetch={false}
                 href="/medlem/glomt-lank"
                 className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
               >
@@ -227,7 +227,7 @@ export const Navigation = () => {
             </li>
             {featureFlags.ENABLE_AWAYGAMES && (
               <li className="divide-y divide-gray-100">
-                <Link
+                <Link prefetch={false}
                   className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
                   href="/bortaresor"
                 >
@@ -236,7 +236,7 @@ export const Navigation = () => {
               </li>
             )}
             <li className="divide-y divide-gray-100">
-              <Link
+              <Link prefetch={false}
                 className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
                 href="/nyheter"
               >
@@ -244,7 +244,7 @@ export const Navigation = () => {
               </Link>
             </li>
             <li className="divide-y divide-gray-100">
-              <Link
+              <Link prefetch={false}
                 className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
                 href="/kronikor"
               >
@@ -252,7 +252,7 @@ export const Navigation = () => {
               </Link>
             </li>
             <li className="divide-y divide-gray-100">
-              <Link
+              <Link prefetch={false}
                 className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
                 href="/bortaguiden"
               >
@@ -260,7 +260,7 @@ export const Navigation = () => {
               </Link>
             </li>
             <li className="divide-y divide-gray-100">
-              <Link
+              <Link prefetch={false}
                 href="/sasongforsasong"
                 className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
                 aria-current="page"
@@ -269,7 +269,7 @@ export const Navigation = () => {
               </Link>
             </li>
             <li className="divide-y divide-gray-100">
-              <Link
+              <Link prefetch={false}
                 href="https://api.vastrasidan.se"
                 className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
                 aria-current="page"
@@ -278,7 +278,7 @@ export const Navigation = () => {
               </Link>
             </li>
             <li className="divide-y divide-gray-100">
-              <Link
+              <Link prefetch={false}
                 href="https://iksirius.github.io/index.html"
                 target="_blank"
                 className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
@@ -288,7 +288,7 @@ export const Navigation = () => {
               </Link>
             </li>
             <li className="divide-y divide-gray-100">
-              <Link
+              <Link prefetch={false}
                 href="/omoss"
                 className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
                 aria-current="page"
@@ -298,7 +298,7 @@ export const Navigation = () => {
             </li>
             {!sessionData?.user && featureFlags.ENABLE_LOGIN && (
               <li className="divide-y divide-gray-100">
-                <Link
+                <Link prefetch={false}
                   href="/skapakonto"
                   className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
                   aria-current="page"
@@ -309,7 +309,7 @@ export const Navigation = () => {
             )}
             {sessionData?.user.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
               <li>
-                <Link
+                <Link prefetch={false}
                   href="/mina-medlemskap"
                   className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
                   aria-current="page"
@@ -320,7 +320,7 @@ export const Navigation = () => {
             )}
             {sessionData?.user.role === "ADMIN" && (
               <li>
-                <Link
+                <Link prefetch={false}
                   href="/admin"
                   className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
                 >
@@ -331,7 +331,7 @@ export const Navigation = () => {
             {sessionData?.user && (
               <>
                 <li>
-                  <Link
+                  <Link prefetch={false}
                     href="/mina-bussresor"
                     className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
                     aria-current="page"
@@ -340,7 +340,7 @@ export const Navigation = () => {
                   </Link>
                 </li>
                 <li>
-                  <Link
+                  <Link prefetch={false}
                     href="/profil"
                     className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
                     aria-current="page"

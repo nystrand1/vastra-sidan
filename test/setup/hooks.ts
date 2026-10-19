@@ -2,6 +2,7 @@ import type * as Sentry from "@sentry/nextjs";
 import { captureException, captureMessage } from "@sentry/nextjs";
 import { afterAll, afterEach, beforeAll, beforeEach, expect, vi } from "vitest";
 import { prisma, resetDatabase } from "../helpers/db";
+import { resetRevalidatedPaths } from "../mocks/revalidate";
 import { resetSentEmails } from "../mocks/ses";
 import { server } from "../mocks/server";
 import { resetFakeStripe } from "../mocks/stripe";
@@ -22,6 +23,7 @@ beforeEach(async () => {
   await resetDatabase();
   resetFakeStripe();
   resetSentEmails();
+  resetRevalidatedPaths();
   vi.mocked(captureException).mockClear();
   vi.mocked(captureMessage).mockClear();
 });

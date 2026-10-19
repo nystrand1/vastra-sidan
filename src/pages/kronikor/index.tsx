@@ -47,7 +47,7 @@ export default function ChroniclesPage() {
 }
 
 export const getStaticProps = async () => {
-  const ssrHelper = await createSSRHelper();
+  const ssrHelper = createSSRHelper();
   await ssrHelper.wordpress.getChronicles.prefetch();
 
   return {

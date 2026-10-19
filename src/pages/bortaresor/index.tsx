@@ -81,7 +81,7 @@ export async function getStaticProps() {
     }
   }
 
-  const ssrHelper = await createSSRHelper();
+  const ssrHelper = createSSRHelper();
 
   await ssrHelper.public.getAwayGames.prefetch();
 
@@ -89,6 +89,6 @@ export async function getStaticProps() {
     props: {
       trpcState: ssrHelper.dehydrate()
     },
-    revalidate: 60
+    revalidate: 3600
   }
 }

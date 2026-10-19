@@ -1,6 +1,5 @@
 import { MembershipType } from "@prisma/client";
-import { Button, Container, Head, Hr, Img, Section, Tailwind, Text } from "@react-email/components";
-import { Html } from '@react-email/html';
+import { Button, Container, Head, Hr, Html, Img, Section, Tailwind, Text } from "react-email";
 
 interface MemberSignupProps {
   member: {

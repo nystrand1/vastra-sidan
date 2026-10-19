@@ -9,7 +9,7 @@ import { createSSRHelper } from "~/utils/createSSRHelper";
 
 
 export const WallOfFame = () => {
-  const { data } = api.wordpress.getWallOfFamePage.useQuery();
+  const { data } = api.wordpress.getWallOfFamePage.useQuery(undefined, { staleTime: Infinity });
 
   if (!data) return null;
 
@@ -56,7 +56,7 @@ export const WallOfFame = () => {
 export default WallOfFame;
 
 export async function getStaticProps() {
-  const ssrHelper = await createSSRHelper();
+  const ssrHelper = createSSRHelper();
 
   await ssrHelper.wordpress.getWallOfFamePage.prefetch();
 
@@ -64,6 +64,6 @@ export async function getStaticProps() {
     props: {
       trpcState: ssrHelper.dehydrate(),
     },
-    revalidate: 300,
+    revalidate: 86400,
   }
 }

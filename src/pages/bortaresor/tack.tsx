@@ -6,7 +6,7 @@ import { api } from "~/utils/api";
 
 const ThanksPage = () => {
   const { payment_intent: paymentId } = useRouter().query as { payment_intent: string };
-  const { data, isLoading } = api.eventPayment.getBooking.useQuery({ paymentId: paymentId || '' }, { enabled: !!paymentId})
+  const { data, isLoading } = api.eventPayment.getBooking.useQuery({ paymentId: paymentId || '' }, { enabled: !!paymentId, staleTime: 0 })
 
   if (!paymentId) {
     return null;

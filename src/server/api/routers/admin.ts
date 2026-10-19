@@ -28,6 +28,7 @@ import { sendEventConfirmationEmail } from "~/server/utils/email/sendEventConfir
 import { sendMemberConfirmationEmail } from "~/server/utils/email/sendMemberConfirmationEmail";
 import { findOrCreateMember } from "~/server/utils/member/findOrCreateMember";
 import { findOrCreateFamilyMembers, linkFamilyMembers } from "~/server/utils/member/findOrCreateFamilyMembers";
+import { awayGamePaths, revalidatePages } from "~/server/utils/revalidate";
 import { parseForMembershipType } from "~/server/utils/member/parseForMembershipType";
 import { isMembershipOnSale } from "~/server/utils/membership";
 import {
@@ -140,6 +141,7 @@ export const adminRouter = createTRPCRouter({
           }
         })
       );
+      await revalidatePages(awayGamePaths([participant.eventId]));
 
       return "ok";
     }),
@@ -250,6 +252,7 @@ export const adminRouter = createTRPCRouter({
           return created;
         }
       );
+      await revalidatePages(awayGamePaths([eventId]));
 
       const participantWithRelations = await ctx.prisma.participant.findUniqueOrThrow({
         where: { id: participant.id },

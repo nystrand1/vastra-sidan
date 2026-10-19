@@ -38,7 +38,7 @@ const CardLink = ({ title, badge, href, target, className, children, contentClas
 
   if (href) {
     return (
-      <Link className="block" href={href} target={target}>
+      <Link className="block" href={href} target={target} prefetch={false}>
         {card}
       </Link>
     )

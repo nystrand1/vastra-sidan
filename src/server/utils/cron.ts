@@ -118,6 +118,19 @@ const awayGameToBuses = (
   }));
 };
 
+/** Whether `next` differs from `existing` in any field other than the timestamps. */
+const hasChanged = (existing: object, next: object) =>
+  Object.entries(next).some(([key, after]) => {
+    if (key === "createdAt" || key === "updatedAt") {
+      return false;
+    }
+    const before = (existing as Record<string, unknown>)[key];
+    return before instanceof Date && after instanceof Date
+      ? before.getTime() !== after.getTime()
+      : before !== after;
+  });
+
+/** @returns whether the event is new or changed. */
 export const upsertEvent = async (
   awayGame: VastraEvent,
   ctx: inferAsyncReturnType<typeof createTRPCContext>
@@ -134,13 +147,15 @@ export const upsertEvent = async (
       },
       data: awayGame
     });
-  } else {
-    await ctx.prisma.vastraEvent.create({
-      data: awayGame
-    });
+    return hasChanged(existingEvent, awayGame);
   }
+  await ctx.prisma.vastraEvent.create({
+    data: awayGame
+  });
+  return true;
 };
 
+/** @returns whether the bus is new or changed. */
 export const upsertBus = async (
   bus: Bus,
   ctx: inferAsyncReturnType<typeof createTRPCContext>
@@ -157,11 +172,12 @@ export const upsertBus = async (
       },
       data: bus
     });
-  } else {
-    await ctx.prisma.bus.create({
-      data: bus
-    });
+    return hasChanged(existingBus, bus);
   }
+  await ctx.prisma.bus.create({
+    data: bus
+  });
+  return true;
 };
 
 export const wpMembershipToMembership = (
@@ -194,6 +210,7 @@ export const wpMembershipToMembership = (
   return memberships;
 };
 
+/** @returns whether the membership is new or changed. */
 export const upsertMembership = async (
   membership: MembershipPayload,
   ctx: inferAsyncReturnType<typeof createTRPCContext>
@@ -211,9 +228,10 @@ export const upsertMembership = async (
       },
       data: membership
     });
-  } else {
-    await ctx.prisma.membership.create({
-      data: membership
-    });
+    return hasChanged(existingMembership, membership);
   }
+  await ctx.prisma.membership.create({
+    data: membership
+  });
+  return true;
 };
