@@ -2,23 +2,38 @@ import {
   StripeRefundStatus,
   type PrismaClient
 } from "@prisma/client";
+import { participantRefundState } from "./refunds";
 
+/**
+ * Where the refund of one participant's cancellation stands. In a group booking each
+ * traveller has their own refund, so this looks only at theirs, not the whole payment's.
+ */
 export const checkRefundStatus = async (
-  originalPaymentId: string,
+  cancellationToken: string,
   prisma: PrismaClient
 ) => {
-  const refund = await prisma.stripeRefund.findFirst({
+  const participant = await prisma.participant.findFirst({
     where: {
-      originalPaymentId: originalPaymentId,
-      status: StripeRefundStatus.REFUNDED
+      cancellationToken
+    },
+    select: {
+      stripeRefunds: {
+        select: {
+          stripeRefundId: true,
+          status: true
+        }
+      }
     }
   });
-  if (!refund) {
-    return {
-      status: "Not found"
-    };
+  const state = participantRefundState(participant?.stripeRefunds ?? []);
+  if (state.refunded) {
+    return { status: StripeRefundStatus.REFUNDED };
   }
-  return {
-    status: refund.status
-  };
+  if (state.pending) {
+    return { status: StripeRefundStatus.CREATED };
+  }
+  if (state.failedAttempts > 0) {
+    return { status: StripeRefundStatus.ERROR };
+  }
+  return { status: "Not found" };
 };

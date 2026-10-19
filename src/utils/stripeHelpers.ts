@@ -18,15 +18,18 @@ export const createPaymentIntent = async (data: CreatePaymentIntentInput) => {
     payee
   } = data;
 
+  // Stripe matches emails case-sensitively, so always use the lowercased email
+  const email = payee.email.toLowerCase();
+
   const listCustomers = await stripe.customers.list({
-    email: payee.email,
+    email,
   });
 
   let existingCustomer = listCustomers.data[0];
 
   if (!existingCustomer) {
     existingCustomer = await stripe.customers.create({
-      email: payee.email.toLowerCase(),
+      email,
       name: payee.name,
     });
   }
@@ -44,13 +47,25 @@ export const createPaymentIntent = async (data: CreatePaymentIntentInput) => {
 interface CreateRefundIntentInput {
   paymentIntentId: string;
   amount: number;
- }
+  /** Makes Stripe return the first refund instead of creating another for the same key. */
+  idempotencyKey: string;
+  metadata: Record<string, string>;
+}
 
-export const createRefundIntent = async ({ paymentIntentId, amount }: CreateRefundIntentInput) => {
-  return stripe.refunds.create({
-    payment_intent: paymentIntentId,
-    amount,
-    reason: "requested_by_customer",
-  });
+export const createRefundIntent = async ({
+  paymentIntentId,
+  amount,
+  idempotencyKey,
+  metadata
+}: CreateRefundIntentInput) => {
+  return stripe.refunds.create(
+    {
+      payment_intent: paymentIntentId,
+      amount,
+      reason: "requested_by_customer",
+      metadata
+    },
+    { idempotencyKey }
+  );
 }
 

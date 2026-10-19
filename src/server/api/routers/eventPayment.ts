@@ -17,6 +17,7 @@ import {
 } from "~/server/utils/busCapacity";
 import { isEventCancelable } from "~/server/utils/event";
 import { checkRefundStatus } from "~/server/utils/payment";
+import { participantRefundState } from "~/server/utils/refunds";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { createPaymentIntent, createRefundIntent } from "~/utils/stripeHelpers";
 import { participantSchema } from "~/utils/zodSchemas";
@@ -83,9 +84,10 @@ const participantFormatter = (
   participant: ParticipantWithParticipants["stripePayments"][number]["participants"][number]
 ) => {
   const isCancelable = isEventCancelable(participant.event.date);
-  const hasCancelled = participant.stripeRefunds.some(
-    (x) => x.status === StripeRefundStatus.REFUNDED
-  );
+  const refundState = participantRefundState(participant.stripeRefunds);
+  const hasCancelled = refundState.refunded;
+  // Cancelled, but Stripe hasn't confirmed the refund yet
+  const refundPending = !hasCancelled && refundState.pending;
 
   const res = {
     name: participant.name,
@@ -100,7 +102,8 @@ const participantFormatter = (
       : null,
     note: participant.note,
     cancellationDisabled: !isCancelable,
-    hasCancelled
+    hasCancelled,
+    refundPending
   };
   return res;
 };
@@ -284,6 +287,12 @@ export const eventPaymentRouter = createTRPCRouter({
         },
         include: {
           event: true,
+          stripeRefunds: {
+            select: {
+              stripeRefundId: true,
+              status: true
+            }
+          },
           stripePayments: {
             select: {
               id: true,
@@ -332,55 +341,122 @@ export const eventPaymentRouter = createTRPCRouter({
         });
       }
 
-      let eventCost = event.defaultPrice;
+      // payAmount is what the participant paid, in SEK (older bookings may lack it).
+      // Convert to cents (öre) to be synced with Stripe.
+      const paidAmount =
+        participant.payAmount ?? getParticipantCost(participant, event);
+      const participantCost = Math.round(paidAmount * 100);
 
-      if (participant.youth && participant.member) {
-        eventCost = event.youthMemberPrice;
-      } else if (participant.member) {
-        eventCost = event.memberPrice;
-      } else if (participant.youth) {
-        eventCost = event.youthPrice;
-      }
-
-      // Eventcost is in SEK, we need to convert it to cents (öre) to be synced with Stripe
-      eventCost = eventCost * 100;
+      // Free bookings (e.g. added by an admin) have nothing to refund through Stripe
+      const isFree = participantCost <= 0 || stripePayment.amount <= 0;
 
       const stripeFee = stripePayment.amount - stripePayment.netAmount;
 
       // How big is the fee for this participant
-      const eventCostFeeFraction = eventCost / stripePayment.amount;
-      const eventCostFee = Math.floor(stripeFee * eventCostFeeFraction);
+      const participantFeeFraction = isFree ? 0 : participantCost / stripePayment.amount;
+      const participantFee = Math.floor(stripeFee * participantFeeFraction);
 
       // So, this is the amount that the participant will get back after the Stripe fees.
-      const participantPayAmount = eventCost - eventCostFee;
+      const participantPayAmount = participantCost - participantFee;
 
-      try {
-        const stripeRefundIntent = await createRefundIntent({
-          paymentIntentId: stripePayment.stripePaymentId,
-          amount: participantPayAmount
+      if (participant.cancellationDate) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Resenären har redan avbokats"
         });
+      }
 
-        const refundIntent = await ctx.prisma.stripeRefund.create({
-          data: {
-            stripeRefundId: stripeRefundIntent.id,
-            amount: participantPayAmount,
-            status: StripePaymentStatus.CREATED,
-            participantId: participant.id,
-            originalPaymentId: stripePayment.id
+      // A failed refund may be retried, a pending or completed one may not
+      const refundState = participantRefundState(participant.stripeRefunds);
+      if (refundState.refunded || refundState.pending) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Avbokningen behandlas redan"
+        });
+      }
+
+      if (isFree) {
+        await ctx.prisma.$transaction([
+          ctx.prisma.stripeRefund.create({
+            data: {
+              stripeRefundId: `no-refund-${participant.id}`,
+              amount: 0,
+              status: StripeRefundStatus.REFUNDED,
+              participantId: participant.id,
+              originalPaymentId: stripePayment.id
+            }
+          }),
+          ctx.prisma.participant.update({
+            where: {
+              id: participant.id
+            },
+            data: {
+              cancellationDate: new Date()
+            }
+          })
+        ]);
+        return stripePayment.id;
+      }
+
+      // One key per attempt: cancelling twice at once (e.g. a double-click) gets the same
+      // refund from Stripe, while a retry after a failed refund gets a new one.
+      const attempt = refundState.failedAttempts;
+      let stripeRefund;
+      try {
+        stripeRefund = await createRefundIntent({
+          paymentIntentId: stripePayment.stripePaymentId,
+          amount: participantPayAmount,
+          idempotencyKey: `cancel-${participant.id}-${attempt}`,
+          metadata: {
+            participantId: participant.id
           }
         });
-
-        return refundIntent.originalPaymentId;
       } catch (err) {
         console.error("Error creating refund request");
         console.error(err);
+        const errorType = (err as { type?: string }).type;
+        if (errorType === "StripeIdempotencyError") {
+          // The same cancellation is being made right now
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Avbokningen behandlas redan"
+          });
+        }
+        captureException(err);
+        // If Stripe couldn't be reached, the refund may still have been created: a retry with
+        // the same key gets it. Otherwise Stripe refused it, and a retry needs a new key.
+        if (errorType !== "StripeConnectionError") {
+          await ctx.prisma.stripeRefund.create({
+            data: {
+              stripeRefundId: `refused-${participant.id}-${attempt}`,
+              amount: participantPayAmount,
+              status: StripeRefundStatus.ERROR,
+              errorMessage: (err as Error).message,
+              participantId: participant.id,
+              originalPaymentId: stripePayment.id
+            }
+          });
+        }
         throw err;
       }
+
+      // The webhook may already have recorded the outcome; this row is still added (append-only)
+      await ctx.prisma.stripeRefund.create({
+        data: {
+          stripeRefundId: stripeRefund.id,
+          amount: participantPayAmount,
+          status: StripeRefundStatus.CREATED,
+          participantId: participant.id,
+          originalPaymentId: stripePayment.id
+        }
+      });
+
+      return stripePayment.id;
     }),
   checkRefundStatus: publicProcedure
-    .input(z.object({ originalPaymentId: z.string() }))
+    .input(z.object({ token: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      return checkRefundStatus(input.originalPaymentId, ctx.prisma);
+      return checkRefundStatus(input.token, ctx.prisma);
     }),
   getManagableBooking: publicProcedure
     .input(z.object({ token: z.string() }))

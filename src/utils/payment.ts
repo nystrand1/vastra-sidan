@@ -26,25 +26,27 @@ export const pollPaymentStatus = async (
 };
 
 export const pollRefundStatus = async (
-  originalPaymentId: string,
-  checkRefundStatus: ({
-    originalPaymentId
-  }: {
-    originalPaymentId: string;
-  }) => Promise<{ status: string }>,
+  token: string,
+  checkRefundStatus: ({ token }: { token: string }) => Promise<{ status: string }>,
   attempt = 0
 ): Promise<{ success: boolean }> => {
   if (attempt > 30) {
-    throw new Error("Could not poll refund status");
+    // Still pending: the booking is cancelled, Stripe just hasn't confirmed the refund yet
+    return {
+      success: false
+    };
   }
 
-  const refund = await checkRefundStatus({ originalPaymentId });
+  const refund = await checkRefundStatus({ token });
 
   if (refund.status === StripeRefundStatus.REFUNDED) {
     return {
       success: true
     };
   }
+  if (refund.status === StripeRefundStatus.ERROR) {
+    throw new Error("Refund failed");
+  }
   await delay(1000);
-  return pollRefundStatus(originalPaymentId, checkRefundStatus, attempt + 1);
+  return pollRefundStatus(token, checkRefundStatus, attempt + 1);
 };

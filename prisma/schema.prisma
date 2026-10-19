@@ -223,6 +223,7 @@ model StripeRefund {
   originalPayment   StripePayment      @relation(fields: [originalPaymentId], references: [id])
 
   @@index([id])
+  @@index([stripeRefundId])
   @@index([participantId])
   @@index([originalPaymentId])
   @@index([userId])
