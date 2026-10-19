@@ -8,13 +8,18 @@ import { captureException, captureMessage } from "@sentry/nextjs";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import {
+  busesWithBookedSeats,
+  cancelPendingPayment,
+  lockBusesWithFreeSeats,
+  releaseExpiredSeatHolds,
+  withFreeSeat
+} from "~/server/utils/busCapacity";
 import { isEventCancelable } from "~/server/utils/event";
 import { checkRefundStatus } from "~/server/utils/payment";
-import { paidPassengerQuery } from "~/server/utils/queryConstants/paidPassengerQuery";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { createPaymentIntent, createRefundIntent } from "~/utils/stripeHelpers";
 import { participantSchema } from "~/utils/zodSchemas";
-import { busesWithPaidPassengers } from "./public";
 
 type ParticipantInput = z.infer<typeof participantSchema>;
 
@@ -109,21 +114,11 @@ export const eventPaymentRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      await releaseExpiredSeatHolds(ctx.prisma, ctx.stripe, input.eventId);
+
       const event = await ctx.prisma.vastraEvent.findFirst({
         where: {
           id: input.eventId
-        },
-        include: {
-          buses: {
-            include: {
-              passengers: {
-                select: {
-                  _count: true
-                },
-                ...paidPassengerQuery
-              }
-            }
-          }
         }
       });
 
@@ -133,42 +128,63 @@ export const eventPaymentRouter = createTRPCRouter({
           message: "Event not found"
         });
       }
-      // check if we have slots on the buses
-      const someBusIsFull = event.buses.some((bus) => {
-        const participantsOnBus = input.participants.filter(
-          (p) => p.busId === bus.id
-        );
-        if (participantsOnBus.length === 0) return false; // Skip check if no participants on bus
-        const availableSeats = bus.seats - bus.passengers.length;
-        return availableSeats < participantsOnBus.length;
-      });
 
-      if (someBusIsFull) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "BUS_FULL"
+      // Check the seats and hold them in one go, so two bookings can't both
+      // take the last seat. The participants hold their seats from here on.
+      const participants = await ctx.prisma.$transaction(async (tx) => {
+        const buses = await lockBusesWithFreeSeats(
+          tx,
+          event.id,
+          input.participants.map((p) => p.busId)
+        );
+
+        const eventBusIds = new Set(buses.map((bus) => bus.id));
+        if (input.participants.some((p) => !eventBusIds.has(p.busId))) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Bus not found"
+          });
+        }
+
+        const someBusIsFull = buses.some((bus) => {
+          const participantsOnBus = input.participants.filter(
+            (p) => p.busId === bus.id
+          );
+          return bus.availableSeats < participantsOnBus.length;
         });
-      }
+
+        if (someBusIsFull) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "BUS_FULL"
+          });
+        }
+
+        const created = [];
+        for (const {
+          consent: _consent,
+          firstName,
+          lastName,
+          ...participant
+        } of input.participants) {
+          created.push(
+            await tx.participant.create({
+              data: {
+                ...participant,
+                name: `${firstName} ${lastName}`,
+                userEmail: participant.email,
+                payAmount: getParticipantCost(participant, event),
+                eventId: event.id
+              }
+            })
+          );
+        }
+        return created;
+      });
 
       const cost = calculateCost(input.participants, event);
 
       try {
-        // Create participants for event
-        const participants = await ctx.prisma.$transaction(
-          input.participants.map(
-            ({ consent: _consent, firstName, lastName, ...participant }) =>
-              ctx.prisma.participant.create({
-                data: {
-                  ...participant,
-                  name: `${firstName} ${lastName}`,
-                  userEmail: participant.email,
-                  payAmount: getParticipantCost(participant, event),
-                  eventId: event.id
-                }
-              })
-          )
-        );
-
         const payee = participants[0];
 
         if (!payee) {
@@ -210,10 +226,54 @@ export const eventPaymentRouter = createTRPCRouter({
         console.error(error?.response?.data);
         captureMessage("Error creating payment request");
         captureException(err);
+        // Give the seats back
+        await ctx.prisma.participant.deleteMany({
+          where: {
+            id: {
+              in: participants.map((p) => p.id)
+            },
+            stripePayments: {
+              none: {}
+            }
+          }
+        });
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR"
         });
       }
+    }),
+  releasePendingBooking: publicProcedure
+    .input(z.object({ clientSecret: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      // The client secret proves the caller made the booking
+      const [paymentIntentId] = input.clientSecret.split("_secret_");
+      const payment = await ctx.prisma.stripePayment.findFirst({
+        where: {
+          stripePaymentId: paymentIntentId,
+          status: StripePaymentStatus.CREATED
+        },
+        select: {
+          stripePaymentId: true,
+          amount: true,
+          participants: {
+            select: {
+              id: true
+            }
+          }
+        }
+      });
+      if (!payment) {
+        return { released: false };
+      }
+      const paymentIntent = await ctx.stripe.paymentIntents.retrieve(
+        payment.stripePaymentId
+      );
+      if (paymentIntent.client_secret !== input.clientSecret) {
+        return { released: false };
+      }
+      return {
+        released: await cancelPendingPayment(ctx.prisma, ctx.stripe, payment)
+      };
     }),
   cancelBooking: publicProcedure
     .input(z.object({ token: z.string() }))
@@ -333,7 +393,7 @@ export const eventPaymentRouter = createTRPCRouter({
           phone: true,
           busId: true,
           event: {
-            include: busesWithPaidPassengers
+            include: busesWithBookedSeats()
           },
           cancellationDate: true,
           stripePayments: {
@@ -402,39 +462,22 @@ export const eventPaymentRouter = createTRPCRouter({
         });
       }
 
-      const bus = await ctx.prisma.bus.findFirst({
-        where: {
-          id: input.busId
-        },
-        include: busesWithPaidPassengers.buses.include
-      });
-
-      if (!bus) {
-        captureMessage("Bus not found");
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Bus not found"
-        });
+      if (participant.busId === input.busId) {
+        return "ok";
       }
 
-      const availableSeats = bus.seats - bus._count.passengers;
+      await releaseExpiredSeatHolds(ctx.prisma, ctx.stripe, participant.eventId);
 
-      if (!availableSeats) {
-        captureMessage("Bus is full");
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Bus is full"
-        });
-      }
-
-      await ctx.prisma.participant.update({
-        where: {
-          id: participant.id
-        },
-        data: {
-          busId: input.busId
-        }
-      });
+      await withFreeSeat(ctx.prisma, participant.eventId, input.busId, (tx) =>
+        tx.participant.update({
+          where: {
+            id: participant.id
+          },
+          data: {
+            busId: input.busId
+          }
+        })
+      );
 
       return "ok";
     }),

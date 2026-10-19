@@ -42,11 +42,27 @@ export const handleSuccessfulPayment = async (paymentIntent: Stripe.PaymentInten
 }
 
 export const handleFailedPayment = async (paymentIntent: Stripe.PaymentIntentPaymentFailedEvent) => {
+  // Link the participants so their booking stops holding seats on the bus
+  const participants = await prisma.participant.findMany({
+    where: {
+      stripePayments: {
+        some: {
+          stripePaymentId: paymentIntent.data.object.id
+        }
+      }
+    },
+    select: {
+      id: true
+    }
+  });
   await prisma.stripePayment.create({
     data: {
       amount: paymentIntent.data.object.amount,
       stripePaymentId: paymentIntent.data.object.id,
       status: StripePaymentStatus.CANCELED,
+      participants: {
+        connect: participants
+      }
     }
   });
 };

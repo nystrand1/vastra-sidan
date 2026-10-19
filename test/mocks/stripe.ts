@@ -22,7 +22,7 @@ interface FakePaymentIntent {
   description: string;
   customer: string;
   metadata: Metadata;
-  status: "requires_payment_method" | "succeeded";
+  status: "requires_payment_method" | "processing" | "succeeded" | "canceled";
   client_secret: string;
   latest_charge: string | null;
 }
@@ -185,6 +185,30 @@ export const stripeHandlers = [
     return HttpResponse.json(paymentIntent);
   }),
 
+  http.get(`${API}/payment_intents/:id`, async ({ request, params }) => {
+    await recordRequest(request);
+    const paymentIntent = state.paymentIntents.get(String(params.id));
+    if (!paymentIntent) {
+      return stripeError(`No such payment_intent: '${String(params.id)}'`, 404);
+    }
+    return HttpResponse.json(paymentIntent);
+  }),
+
+  http.post(`${API}/payment_intents/:id/cancel`, async ({ request, params }) => {
+    await recordRequest(request);
+    const paymentIntent = state.paymentIntents.get(String(params.id));
+    if (!paymentIntent) {
+      return stripeError(`No such payment_intent: '${String(params.id)}'`, 404);
+    }
+    if (paymentIntent.status !== "requires_payment_method") {
+      return stripeError(
+        `You cannot cancel this PaymentIntent because it has a status of ${paymentIntent.status}.`
+      );
+    }
+    paymentIntent.status = "canceled";
+    return HttpResponse.json(paymentIntent);
+  }),
+
   http.post(`${API}/refunds`, async ({ request }) => {
     const body = await recordRequest(request);
     const amount = Number(body.amount);
@@ -302,8 +326,20 @@ export const fakeStripe = {
   },
 
   /** The customer completes the payment: creates the charge and sends `payment_intent.succeeded`. */
-  succeedPayment: (paymentIntentId: string) => {
+  succeedPayment: async (paymentIntentId: string) =>
+    deliver(fakeStripe.succeedPaymentWithoutWebhook(paymentIntentId)),
+
+  /**
+   * The payment goes through, but the `payment_intent.succeeded` webhook is
+   * delayed. Returns the event; deliver it later with `redeliver(event.id)`.
+   */
+  succeedPaymentWithoutWebhook: (paymentIntentId: string) => {
     const paymentIntent = getPaymentIntent(paymentIntentId);
+    if (paymentIntent.status === "canceled" || paymentIntent.status === "succeeded") {
+      throw new Error(
+        `fakeStripe: cannot pay payment intent ${paymentIntentId} with status ${paymentIntent.status}`
+      );
+    }
     const transaction: FakeBalanceTransaction = {
       id: nextId("txn"),
       object: "balance_transaction",
@@ -330,7 +366,12 @@ export const fakeStripe = {
     state.charges.set(charge.id, charge);
     paymentIntent.status = "succeeded";
     paymentIntent.latest_charge = charge.id;
-    return deliver(createEvent("payment_intent.succeeded", paymentIntent));
+    return createEvent("payment_intent.succeeded", paymentIntent);
+  },
+
+  /** The customer has submitted the payment and it's being processed (no webhook). */
+  startProcessing: (paymentIntentId: string) => {
+    getPaymentIntent(paymentIntentId).status = "processing";
   },
 
   /** The customer's payment fails: sends `payment_intent.payment_failed`. */

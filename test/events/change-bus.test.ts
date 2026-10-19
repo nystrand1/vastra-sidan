@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { adminCaller, publicCaller, userCaller } from "../helpers/caller";
 import { prisma } from "../helpers/db";
-import { createEvent, createParticipant, fillSeats } from "../helpers/factories";
-import { availableSeats } from "../helpers/flows";
-import { itKnownBug } from "../helpers/knownBug";
+import { createEvent, createParticipant, fillSeats, participantInput } from "../helpers/factories";
+import { availableSeats, book, expireSeatHolds } from "../helpers/flows";
 
 const setup = async ({ targetSeats = 2 }: { targetSeats?: number } = {}) => {
   const event = await createEvent({
@@ -60,6 +59,34 @@ describe("changing bus (traveller)", () => {
     expect(await busOf(participant.id)).toBe(currentBus.id);
   });
 
+  it("counts seats held by unpaid bookings as taken", async () => {
+    const { event, targetBus, participant } = await setup({ targetSeats: 1 });
+    await createParticipant({ eventId: event.id, busId: targetBus.id, payment: "pending" });
+
+    await expect(changeBus(participant.cancellationToken, targetBus.id)).rejects.toMatchObject({
+      message: "Bus is full"
+    });
+  });
+
+  it("frees the seat of an expired unpaid booking", async () => {
+    const { event, targetBus, participant } = await setup({ targetSeats: 1 });
+    const { paymentIntent } = await book(event.id, [participantInput(targetBus.id)]);
+    await expireSeatHolds();
+
+    await expect(changeBus(participant.cancellationToken, targetBus.id)).resolves.toBe("ok");
+
+    expect(paymentIntent.status).toBe("canceled");
+    expect(await busOf(participant.id)).toBe(targetBus.id);
+  });
+
+  it("accepts the traveller's own bus even when it's full", async () => {
+    const { event, currentBus, participant } = await setup();
+    await fillSeats(event.id, currentBus.id, 1);
+
+    await expect(changeBus(participant.cancellationToken, currentBus.id)).resolves.toBe("ok");
+    expect(await busOf(participant.id)).toBe(currentBus.id);
+  });
+
   it("rejects an unknown token or bus", async () => {
     const { targetBus, participant } = await setup();
 
@@ -71,8 +98,7 @@ describe("changing bus (traveller)", () => {
     });
   });
 
-  // Known bug: `if (!availableSeats)` lets a negative seat count through.
-  itKnownBug("rejects an overbooked bus", async () => {
+  it("rejects an overbooked bus", async () => {
     const { event, targetBus, participant } = await setup({ targetSeats: 1 });
     await fillSeats(event.id, targetBus.id, 2);
 
@@ -81,8 +107,7 @@ describe("changing bus (traveller)", () => {
     });
   });
 
-  // Known bug: the bus isn't checked against the traveller's event.
-  itKnownBug("rejects a bus that belongs to another event", async () => {
+  it("rejects a bus that belongs to another event", async () => {
     const { participant } = await setup();
     const otherEvent = await createEvent();
 
@@ -119,8 +144,24 @@ describe("changing bus (admin)", () => {
     expect(await busOf(participant.id)).toBe(currentBus.id);
   });
 
-  // Known bug: `if (!availableSeats)` lets a negative seat count through.
-  itKnownBug("rejects an overbooked bus", async () => {
+  it("accepts the traveller's own bus even when it's full", async () => {
+    const { event, currentBus, participant } = await setup();
+    await fillSeats(event.id, currentBus.id, 1);
+
+    await adminCaller().admin.changeBus({ participantId: participant.id, busId: currentBus.id });
+    expect(await busOf(participant.id)).toBe(currentBus.id);
+  });
+
+  it("frees the seat of an expired unpaid booking", async () => {
+    const { event, targetBus, participant } = await setup({ targetSeats: 1 });
+    await book(event.id, [participantInput(targetBus.id)]);
+    await expireSeatHolds();
+
+    await adminCaller().admin.changeBus({ participantId: participant.id, busId: targetBus.id });
+    expect(await busOf(participant.id)).toBe(targetBus.id);
+  });
+
+  it("rejects an overbooked bus", async () => {
     const { event, targetBus, participant } = await setup({ targetSeats: 1 });
     await fillSeats(event.id, targetBus.id, 2);
 

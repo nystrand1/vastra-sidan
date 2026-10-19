@@ -1,6 +1,6 @@
 import { prisma } from "~/server/db";
 import { paidPassengerQuery } from "../queryConstants/paidPassengerQuery";
-import { busesWithPaidPassengers } from "~/server/api/routers/public";
+import { busesWithBookedSeats } from "~/server/utils/busCapacity";
 
 export const formatEventParticipant = (
   participant: NonNullable<Awaited<ReturnType<typeof getEventParticipantById>>>
@@ -34,7 +34,7 @@ export const getEventParticipantById = async (id: string) => {
     include: {
       bus: true,
       event: {
-        include: busesWithPaidPassengers
+        include: busesWithBookedSeats()
       }
     }
   });

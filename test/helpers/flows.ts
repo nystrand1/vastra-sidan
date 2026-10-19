@@ -1,3 +1,4 @@
+import { subMinutes } from "date-fns";
 import { expect } from "vitest";
 import { type z } from "zod";
 import { type memberSignupSchema, type participantSchema } from "~/utils/zodSchemas";
@@ -40,3 +41,16 @@ export const availableSeats = async (eventId: string, busId: string) => {
   if (!bus) throw new Error(`Bus ${busId} not found on event ${eventId}`);
   return bus.availableSeats;
 };
+
+/** Public event booking that hasn't been paid yet. Returns its PaymentIntent. */
+export const book = async (eventId: string, participants: z.infer<typeof participantSchema>[]) => {
+  const clientSecret = await publicCaller().eventPayment.requestStripePayment({
+    eventId,
+    participants
+  });
+  return { clientSecret: clientSecret!, paymentIntent: fakeStripe.paymentIntentByClientSecret(clientSecret) };
+};
+
+/** Makes every booking so far older than the 15-minute seat hold. */
+export const expireSeatHolds = () =>
+  prisma.stripePayment.updateMany({ data: { createdAt: subMinutes(new Date(), 16) } });
