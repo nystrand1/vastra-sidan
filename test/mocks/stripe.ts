@@ -50,7 +50,6 @@ interface FakeRefund {
   payment_intent: string;
   reason: string | null;
   metadata: Metadata;
-  created: number;
   status: "pending" | "succeeded" | "failed";
   failure_reason?: string;
 }
@@ -257,7 +256,6 @@ export const stripeHandlers = [
       payment_intent: paymentIntent.id,
       reason: (body.reason as string | undefined) ?? null,
       metadata: (body.metadata ?? {}) as Metadata,
-      created: Math.floor(Date.now() / 1000),
       status: "pending"
     };
     state.refunds.set(refund.id, refund);
@@ -268,15 +266,6 @@ export const stripeHandlers = [
       if (res.status !== 201) throw new Error(`fakeStripe: webhook failed with ${res.status}`);
     }
     return HttpResponse.json(refund);
-  }),
-
-  http.get(`${API}/charges/:id`, async ({ request, params }) => {
-    await recordRequest(request);
-    const charge = state.charges.get(String(params.id));
-    if (!charge) {
-      return stripeError(`No such charge: '${String(params.id)}'`, 404);
-    }
-    return HttpResponse.json(charge);
   }),
 
   http.get(`${API}/refunds`, async ({ request }) => {
@@ -442,41 +431,16 @@ export const fakeStripe = {
     return deliver(createEvent("charge.updated", charge));
   },
 
-  /** A refund goes through without any webhook, e.g. one the old handler processed. */
-  completeRefundWithoutWebhook: (refundId: string) => {
-    const refund = getRefund(refundId);
-    const charge = state.charges.get(refund.charge)!;
-    refund.status = "succeeded";
-    charge.amount_refunded += refund.amount;
-    charge.refunded = charge.amount_refunded >= charge.amount;
-    return refund;
-  },
-
-  /** A dashboard refund that goes through without any webhook. */
-  refundFromDashboardWithoutWebhook: (paymentIntentId: string, amount: number) => {
-    const charge = getChargeFor(paymentIntentId);
-    const refund: FakeRefund = {
-      id: nextId("re"),
-      object: "refund",
-      amount,
-      charge: charge.id,
-      payment_intent: paymentIntentId,
-      reason: null,
-      metadata: {},
-      created: Math.floor(Date.now() / 1000),
-      status: "pending"
-    };
-    state.refunds.set(refund.id, refund);
-    return fakeStripe.completeRefundWithoutWebhook(refund.id);
-  },
-
   /**
    * A refund goes through: sends `charge.refunded`, then `refund.updated` (Stripe sends both,
    * in no guaranteed order). Returns the first failed response, or the last one.
    */
   completeRefund: async (refundId: string) => {
-    const refund = fakeStripe.completeRefundWithoutWebhook(refundId);
+    const refund = getRefund(refundId);
     const charge = state.charges.get(refund.charge)!;
+    refund.status = "succeeded";
+    charge.amount_refunded += refund.amount;
+    charge.refunded = charge.amount_refunded >= charge.amount;
     const chargeRefunded = await deliver(createEvent("charge.refunded", charge));
     if (chargeRefunded.status !== 201) return chargeRefunded;
     return deliver(createEvent("refund.updated", refund));
@@ -515,7 +479,6 @@ export const fakeStripe = {
       payment_intent: paymentIntentId,
       reason: null,
       metadata: {},
-      created: Math.floor(Date.now() / 1000),
       status: "pending"
     };
     state.refunds.set(refund.id, refund);
