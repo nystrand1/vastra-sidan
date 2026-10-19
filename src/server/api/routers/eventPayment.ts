@@ -17,6 +17,7 @@ import {
 } from "~/server/utils/busCapacity";
 import { isEventCancelable } from "~/server/utils/event";
 import { checkRefundStatus } from "~/server/utils/payment";
+import { participantRefundState } from "~/server/utils/refunds";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { createPaymentIntent, createRefundIntent } from "~/utils/stripeHelpers";
 import { participantSchema } from "~/utils/zodSchemas";
@@ -83,13 +84,10 @@ const participantFormatter = (
   participant: ParticipantWithParticipants["stripePayments"][number]["participants"][number]
 ) => {
   const isCancelable = isEventCancelable(participant.event.date);
-  const hasCancelled = participant.stripeRefunds.some(
-    (x) => x.status === StripeRefundStatus.REFUNDED
-  );
+  const refundState = participantRefundState(participant.stripeRefunds);
+  const hasCancelled = refundState.refunded;
   // Cancelled, but Stripe hasn't confirmed the refund yet
-  const refundPending =
-    !hasCancelled &&
-    participant.stripeRefunds.some((x) => x.status === StripeRefundStatus.CREATED);
+  const refundPending = !hasCancelled && refundState.pending;
 
   const res = {
     name: participant.name,
@@ -291,6 +289,7 @@ export const eventPaymentRouter = createTRPCRouter({
           event: true,
           stripeRefunds: {
             select: {
+              stripeRefundId: true,
               status: true
             }
           },
@@ -360,127 +359,104 @@ export const eventPaymentRouter = createTRPCRouter({
       // So, this is the amount that the participant will get back after the Stripe fees.
       const participantPayAmount = participantCost - participantFee;
 
-      const { refund, attempt } = await ctx.prisma.$transaction(async (tx) => {
-        // Lock the participant so that two cancellations at once (e.g. a double-click)
-        // are handled one after the other, and the second one is rejected.
-        await tx.$queryRaw`SELECT id FROM Participant WHERE id = ${participant.id} FOR UPDATE`;
-        const current = await tx.participant.findUniqueOrThrow({
-          where: {
-            id: participant.id
-          },
-          select: {
-            cancellationDate: true,
-            stripeRefunds: {
-              select: {
-                status: true
-              }
-            }
-          }
+      if (participant.cancellationDate) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Resenären har redan avbokats"
         });
+      }
 
-        if (current.cancellationDate) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Resenären har redan avbokats"
-          });
-        }
+      // A failed refund may be retried, a pending or completed one may not
+      const refundState = participantRefundState(participant.stripeRefunds);
+      if (refundState.refunded || refundState.pending) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Avbokningen behandlas redan"
+        });
+      }
 
-        // A failed refund (ERROR) may be retried, a pending or completed one may not
-        const hasActiveRefund = current.stripeRefunds.some(
-          (r) =>
-            r.status === StripeRefundStatus.CREATED ||
-            r.status === StripeRefundStatus.REFUNDED
-        );
-        if (hasActiveRefund) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Avbokningen behandlas redan"
-          });
-        }
-
-        const attempt = current.stripeRefunds.filter(
-          (r) => r.status === StripeRefundStatus.ERROR
-        ).length;
-
-        if (isFree) {
-          await tx.participant.update({
+      if (isFree) {
+        await ctx.prisma.$transaction([
+          ctx.prisma.stripeRefund.create({
+            data: {
+              stripeRefundId: `no-refund-${participant.id}`,
+              amount: 0,
+              status: StripeRefundStatus.REFUNDED,
+              participantId: participant.id,
+              originalPaymentId: stripePayment.id
+            }
+          }),
+          ctx.prisma.participant.update({
             where: {
               id: participant.id
             },
             data: {
               cancellationDate: new Date()
             }
-          });
-        }
-
-        // Saved before calling Stripe, so the webhook finds it even if the refund
-        // completes before Stripe has answered us.
-        const refund = await tx.stripeRefund.create({
-          data: {
-            stripeRefundId: isFree
-              ? `no-refund-${participant.id}`
-              : `pending-${participant.id}-${attempt}`,
-            amount: isFree ? 0 : participantPayAmount,
-            status: isFree ? StripeRefundStatus.REFUNDED : StripeRefundStatus.CREATED,
-            participantId: participant.id,
-            originalPaymentId: stripePayment.id
-          }
-        });
-        return { refund, attempt };
-      });
-
-      if (isFree) {
-        return refund.originalPaymentId;
+          })
+        ]);
+        return stripePayment.id;
       }
 
+      // One key per attempt: cancelling twice at once (e.g. a double-click) gets the same
+      // refund from Stripe, while a retry after a failed refund gets a new one.
+      const attempt = refundState.failedAttempts;
+      let stripeRefund;
       try {
-        const stripeRefund = await createRefundIntent({
+        stripeRefund = await createRefundIntent({
           paymentIntentId: stripePayment.stripePaymentId,
           amount: participantPayAmount,
           idempotencyKey: `cancel-${participant.id}-${attempt}`,
           metadata: {
-            participantId: participant.id,
-            stripeRefundRowId: refund.id
+            participantId: participant.id
           }
         });
-
-        // Unless the webhook already matched the refund through its metadata
-        await ctx.prisma.stripeRefund.updateMany({
-          where: {
-            id: refund.id,
-            stripeRefundId: refund.stripeRefundId
-          },
-          data: {
-            stripeRefundId: stripeRefund.id
-          }
-        });
-
-        return refund.originalPaymentId;
       } catch (err) {
         console.error("Error creating refund request");
         console.error(err);
+        const errorType = (err as { type?: string }).type;
+        if (errorType === "StripeIdempotencyError") {
+          // The same cancellation is being made right now
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Avbokningen behandlas redan"
+          });
+        }
         captureException(err);
-        // If Stripe couldn't be reached the refund may still have been created, so keep it
-        // pending: the webhook resolves it. Otherwise Stripe refused it and it can be retried.
-        if ((err as { type?: string }).type !== "StripeConnectionError") {
-          await ctx.prisma.stripeRefund.updateMany({
-            where: {
-              id: refund.id,
-              status: StripeRefundStatus.CREATED
-            },
+        // If Stripe couldn't be reached, the refund may still have been created: a retry with
+        // the same key gets it. Otherwise Stripe refused it, and a retry needs a new key.
+        if (errorType !== "StripeConnectionError") {
+          await ctx.prisma.stripeRefund.create({
             data: {
+              stripeRefundId: `refused-${participant.id}-${attempt}`,
+              amount: participantPayAmount,
               status: StripeRefundStatus.ERROR,
-              errorMessage: (err as Error).message
+              errorMessage: (err as Error).message,
+              participantId: participant.id,
+              originalPaymentId: stripePayment.id
             }
           });
         }
         throw err;
       }
+
+      // The webhook may already have recorded the outcome; this row is still added (append-only)
+      await ctx.prisma.stripeRefund.create({
+        data: {
+          stripeRefundId: stripeRefund.id,
+          amount: participantPayAmount,
+          status: StripeRefundStatus.CREATED,
+          participantId: participant.id,
+          originalPaymentId: stripePayment.id
+        }
+      });
+
+      return stripePayment.id;
     }),
   checkRefundStatus: publicProcedure
-    .input(z.object({ originalPaymentId: z.string() }))
+    .input(z.object({ token: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      return checkRefundStatus(input.originalPaymentId, ctx.prisma);
+      return checkRefundStatus(input.token, ctx.prisma);
     }),
   getManagableBooking: publicProcedure
     .input(z.object({ token: z.string() }))

@@ -48,11 +48,10 @@ export const ParticipantInfo = ({
     const toastId = toast.loading("Avbokar...")
 
     try {
-      // Get the refund ID from cancel booking
-      // Use the refund ID to poll the refund status
-      const originalPaymentId = await cancelBooking({ token: cancellationToken })
-      await pollRefundStatus(originalPaymentId, checkRefundStatus);
-      toast.success("Avbokning slutförd", {
+      await cancelBooking({ token: cancellationToken })
+      // Wait for Stripe to confirm this traveller's own refund
+      const { success } = await pollRefundStatus(cancellationToken, checkRefundStatus);
+      toast.success(success ? "Avbokning slutförd" : "Avbokad, återbetalningen behandlas", {
         id: toastId
       });
       await refetchParticipant();

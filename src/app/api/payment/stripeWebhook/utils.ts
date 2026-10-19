@@ -1,8 +1,9 @@
-import { StripePaymentStatus, StripeRefundStatus } from "@prisma/client";
+import { type Prisma, StripePaymentStatus, StripeRefundStatus } from "@prisma/client";
 import { captureMessage } from "@sentry/nextjs";
 import type Stripe from "stripe";
 import { prisma } from "~/server/db";
 import { stripe } from "~/server/stripe";
+import { refundStatuses } from "~/server/utils/refunds";
 import { attachMembershipToMembers } from "./attachMembershipToMembers";
 
 /**
@@ -133,47 +134,75 @@ export const handleChargeUpdate = async (charge: Stripe.ChargeUpdatedEvent) => {
 const idOf = (value: string | { id: string }) =>
   typeof value === "string" ? value : value.id;
 
+type PaymentForRefunds = { id: string };
+
 /**
- * Applies the outcome of a refund to the StripeRefund row we saved when creating it
- * (e.g. when a traveller cancels). Safe to call more than once for the same refund.
- *
- * @returns false if we have no record of the refund, e.g. it was made from the Stripe dashboard.
+ * Runs `fn` with the payment's row locked, so that refund events for the same payment
+ * (Stripe sends several per refund, possibly at the same time) are handled one at a time.
  */
-const applyRefundOutcome = async (refund: Stripe.Refund) => {
-  // The row is saved before the refund is created, so the webhook can arrive before the row
-  // has Stripe's refund id. The refund's metadata points at the row in that case.
-  const rowId = refund.metadata?.stripeRefundRowId;
-  const dbRefund = await prisma.stripeRefund.findFirst({
+const withPaymentLocked = <T>(
+  paymentId: string,
+  fn: (tx: Prisma.TransactionClient) => Promise<T>
+) =>
+  prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM StripePayment WHERE id = ${paymentId} FOR UPDATE`;
+    return fn(tx);
+  });
+
+const findSucceededPayment = async (paymentIntent: string | { id: string } | null) => {
+  if (!paymentIntent) {
+    throw new Error("Payment intent not found");
+  }
+  const payment = await prisma.stripePayment.findFirst({
     where: {
-      OR: [{ stripeRefundId: refund.id }, ...(rowId ? [{ id: rowId }] : [])]
+      stripePaymentId: idOf(paymentIntent),
+      status: StripePaymentStatus.SUCCEEDED
     }
   });
-  if (!dbRefund) {
+  if (!payment) {
+    throw new Error("Payment not found");
+  }
+  return payment;
+};
+
+/**
+ * Appends the outcome of a refund we asked for (e.g. when a traveller cancels), unless it's
+ * already recorded. StripeRefund is append-only: see ~/server/utils/refunds.ts.
+ *
+ * @returns false if the refund isn't one of ours, e.g. it was made from the Stripe dashboard.
+ */
+const recordRefundOutcome = async (
+  tx: Prisma.TransactionClient,
+  payment: PaymentForRefunds,
+  refund: Stripe.Refund
+) => {
+  const rows = await tx.stripeRefund.findMany({
+    where: {
+      stripeRefundId: refund.id
+    }
+  });
+  // The webhook can arrive before cancelBooking has saved its row, so the refund says whose it is
+  const participantId =
+    rows.find((r) => r.participantId)?.participantId ?? refund.metadata?.participantId ?? null;
+  if (rows.length === 0 && !participantId) {
     return false;
   }
+  const status = refundStatuses(rows).get(refund.id);
 
-  if (refund.status === "succeeded") {
-    // Only the first delivery changes the row. A refund we marked as failed because
-    // Stripe's answer never reached us may still have gone through.
-    const { count } = await prisma.stripeRefund.updateMany({
-      where: {
-        id: dbRefund.id,
-        status: {
-          in: [StripeRefundStatus.CREATED, StripeRefundStatus.ERROR]
-        }
-      },
+  if (refund.status === "succeeded" && status !== StripeRefundStatus.REFUNDED) {
+    await tx.stripeRefund.create({
       data: {
         status: StripeRefundStatus.REFUNDED,
-        stripeRefundId: refund.id,
         amount: refund.amount,
-        errorCode: null,
-        errorMessage: null
+        stripeRefundId: refund.id,
+        originalPaymentId: payment.id,
+        participantId
       }
     });
-    if (count > 0 && dbRefund.participantId) {
-      await prisma.participant.updateMany({
+    if (participantId) {
+      await tx.participant.updateMany({
         where: {
-          id: dbRefund.participantId,
+          id: participantId,
           cancellationDate: null
         },
         data: {
@@ -184,26 +213,25 @@ const applyRefundOutcome = async (refund: Stripe.Refund) => {
   }
 
   if (refund.status === "failed" || refund.status === "canceled") {
-    if (dbRefund.status === StripeRefundStatus.REFUNDED) {
+    if (status === StripeRefundStatus.REFUNDED) {
       // The money was already reported as returned and the seat released, so this needs a human
       captureMessage(`Stripe refund ${refund.id} ${refund.status} after it succeeded`, {
         level: "error",
-        extra: { stripeRefundRowId: dbRefund.id, failureReason: refund.failure_reason }
+        extra: { paymentId: payment.id, participantId, failureReason: refund.failure_reason }
       });
-      return true;
+    } else if (status !== StripeRefundStatus.ERROR) {
+      await tx.stripeRefund.create({
+        data: {
+          status: StripeRefundStatus.ERROR,
+          amount: refund.amount,
+          stripeRefundId: refund.id,
+          errorCode: refund.failure_reason ?? refund.status,
+          errorMessage: `Refund ${refund.status}`,
+          originalPaymentId: payment.id,
+          participantId
+        }
+      });
     }
-    await prisma.stripeRefund.updateMany({
-      where: {
-        id: dbRefund.id,
-        status: StripeRefundStatus.CREATED
-      },
-      data: {
-        status: StripeRefundStatus.ERROR,
-        stripeRefundId: refund.id,
-        errorCode: refund.failure_reason ?? refund.status,
-        errorMessage: `Refund ${refund.status}`
-      }
-    });
   }
 
   return true;
@@ -211,123 +239,113 @@ const applyRefundOutcome = async (refund: Stripe.Refund) => {
 
 /** A refund made from the Stripe dashboard, which we have no record of. */
 const recordDashboardRefund = async (
+  tx: Prisma.TransactionClient,
   refund: Stripe.Refund,
   paymentId: string,
   membershipId: string | undefined
 ) => {
-  const dbRefund = await prisma.stripeRefund.create({
+  const membersRelatedToRefund = membershipId
+    ? await tx.member.findMany({
+        where: {
+          stripePayments: {
+            some: {
+              id: paymentId,
+              status: StripePaymentStatus.SUCCEEDED
+            }
+          }
+        }
+      })
+    : [];
+
+  await tx.stripeRefund.create({
     data: {
       status: StripeRefundStatus.REFUNDED,
       amount: refund.amount,
       stripeRefundId: refund.id,
-      originalPaymentId: paymentId
-    }
-  });
-  if (!membershipId) {
-    return;
-  }
-  const membersRelatedToRefund = await prisma.member.findMany({
-    where: {
-      stripePayments: {
-        some: {
-          id: paymentId,
-          status: StripePaymentStatus.SUCCEEDED
-        }
-      }
-    }
-  });
-
-  // Attach a refund to the members
-  const refundPromise = prisma.stripeRefund.update({
-    where: {
-      id: dbRefund.id
-    },
-    data: {
+      originalPaymentId: paymentId,
       members: {
         connect: membersRelatedToRefund.map((m) => ({ id: m.id }))
       }
     }
   });
 
-  // Remove the membership from the members
-  const disconnectPromise = prisma.membership.update({
-    where: {
-      id: membershipId
-    },
-    data: {
-      members: {
-        disconnect: membersRelatedToRefund.map((m) => ({ id: m.id }))
+  if (membershipId) {
+    // Remove the membership from the members
+    await tx.membership.update({
+      where: {
+        id: membershipId
+      },
+      data: {
+        members: {
+          disconnect: membersRelatedToRefund.map((m) => ({ id: m.id }))
+        }
       }
-    }
-  });
-
-  await Promise.all([refundPromise, disconnectPromise]);
+    });
+  }
 };
 
 /**
  * `charge.refunded` is sent when more of a charge has been refunded. It carries the Charge,
- * not the Refund, so we look up the charge's refunds and reconcile each of them.
+ * not the Refund, so we look up all of the charge's refunds and record any we're missing.
  */
 export const handleRefund = async (event: Stripe.ChargeRefundedEvent) => {
   const charge = event.data.object;
-  if (!charge.payment_intent) {
-    throw new Error("Payment intent not found");
-  }
-  const payment = await prisma.stripePayment.findFirst({
-    where: {
-      stripePaymentId: idOf(charge.payment_intent),
-      status: StripePaymentStatus.SUCCEEDED
-    }
-  });
-  if (!payment) {
-    throw new Error("Payment not found");
-  }
+  const payment = await findSucceededPayment(charge.payment_intent);
 
-  const unknownRefunds: Stripe.Refund[] = [];
+  const refunds: Stripe.Refund[] = [];
   for await (const refund of stripe.refunds.list({ charge: charge.id, limit: 100 })) {
-    const isKnown = await applyRefundOutcome(refund);
-    if (!isKnown && refund.status === "succeeded") {
-      unknownRefunds.push(refund);
-    }
-  }
-  if (unknownRefunds.length === 0) {
-    return;
+    refunds.push(refund);
   }
 
-  // Never record more than Stripe says has been refunded. This skips dashboard refunds we
-  // already recorded, including older records that stored the charge id instead of the refund id.
-  const recorded = await prisma.stripeRefund.aggregate({
-    _sum: {
-      amount: true
-    },
-    where: {
-      originalPaymentId: payment.id,
-      status: StripeRefundStatus.REFUNDED
+  await withPaymentLocked(payment.id, async (tx) => {
+    const unknownRefunds: Stripe.Refund[] = [];
+    for (const refund of refunds) {
+      const isOurs = await recordRefundOutcome(tx, payment, refund);
+      if (!isOurs && refund.status === "succeeded") {
+        unknownRefunds.push(refund);
+      }
+    }
+    if (unknownRefunds.length === 0) {
+      return;
+    }
+
+    // Never record more than Stripe says has been refunded. This skips dashboard refunds we
+    // already recorded, including older records that stored the charge id instead of the refund id.
+    const recorded = await tx.stripeRefund.aggregate({
+      _sum: {
+        amount: true
+      },
+      where: {
+        originalPaymentId: payment.id,
+        status: StripeRefundStatus.REFUNDED
+      }
+    });
+    let unrecordedAmount = charge.amount_refunded - (recorded._sum.amount ?? 0);
+    for (const refund of unknownRefunds) {
+      if (refund.amount > unrecordedAmount) {
+        // Our records claim more was refunded than Stripe says (e.g. older rows that stored
+        // the full charge amount), so this refund can't be told apart from one already recorded.
+        captureMessage(`Skipped recording Stripe refund ${refund.id}: already counted as refunded`, {
+          level: "warning",
+          extra: {
+            paymentId: payment.id,
+            chargeAmountRefunded: charge.amount_refunded,
+            unrecordedAmount
+          }
+        });
+        continue;
+      }
+      unrecordedAmount -= refund.amount;
+      await recordDashboardRefund(tx, refund, payment.id, charge.metadata.membershipId);
     }
   });
-  let unrecordedAmount = charge.amount_refunded - (recorded._sum.amount ?? 0);
-  for (const refund of unknownRefunds) {
-    if (refund.amount > unrecordedAmount) {
-      // Our records claim more was refunded than Stripe says (e.g. older rows that stored
-      // the full charge amount), so this refund can't be told apart from one already recorded.
-      captureMessage(`Skipped recording Stripe refund ${refund.id}: already counted as refunded`, {
-        level: "warning",
-        extra: {
-          paymentId: payment.id,
-          chargeAmountRefunded: charge.amount_refunded,
-          unrecordedAmount
-        }
-      });
-      continue;
-    }
-    unrecordedAmount -= refund.amount;
-    await recordDashboardRefund(refund, payment.id, charge.metadata.membershipId);
-  }
 };
 
 /** `refund.updated` / `refund.failed`: the only events that tell us a refund failed. */
 export const handleRefundUpdate = async (
   event: Stripe.RefundUpdatedEvent | Stripe.RefundFailedEvent
 ) => {
-  await applyRefundOutcome(event.data.object);
+  const refund = event.data.object;
+  const payment = await findSucceededPayment(refund.payment_intent);
+  await withPaymentLocked(payment.id, (tx) => recordRefundOutcome(tx, payment, refund));
 };

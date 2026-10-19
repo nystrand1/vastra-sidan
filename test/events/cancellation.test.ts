@@ -1,4 +1,4 @@
-import { StripePaymentStatus, StripeRefundStatus } from "@prisma/client";
+import { StripePaymentStatus, StripeRefundStatus, type Participant } from "@prisma/client";
 import { captureMessage } from "@sentry/nextjs";
 import { addHours } from "date-fns";
 import { http, HttpResponse } from "msw";
@@ -31,6 +31,15 @@ const bookTwoTravellers = async ({ departure }: { departure?: Date } = {}) => {
 const cancel = (token: string | null) =>
   publicCaller().eventPayment.cancelBooking({ token: token ?? "" });
 
+const refundStatusOf = (participant: Participant) =>
+  publicCaller().eventPayment.checkRefundStatus({ token: participant.cancellationToken! });
+
+/** StripeRefund is append-only, so its rows in order tell what happened. */
+const refundHistory = async () =>
+  (await prisma.stripeRefund.findMany({ orderBy: [{ createdAt: "asc" }, { id: "asc" }] })).map(
+    ({ stripeRefundId, status, participantId, amount }) => ({ stripeRefundId, status, participantId, amount })
+  );
+
 describe("cancelling a booking", () => {
   it("refunds the traveller's share minus their part of the Stripe fee", async () => {
     const { event, busId, paymentIntent, member, nonMember } = await bookTwoTravellers();
@@ -44,7 +53,7 @@ describe("cancelling a booking", () => {
           payment_intent: paymentIntent.id,
           amount: "29358",
           reason: "requested_by_customer",
-          metadata: { participantId: member.id, stripeRefundRowId: expect.any(String) as unknown }
+          metadata: { participantId: member.id }
         },
         idempotencyKey: `cancel-${member.id}-0`
       })
@@ -53,28 +62,26 @@ describe("cancelling a booking", () => {
       where: { stripePaymentId: paymentIntent.id, status: StripePaymentStatus.SUCCEEDED }
     });
     expect(originalPaymentId).toBe(succeededPayment.id);
-    expect(await prisma.stripeRefund.findMany()).toEqual([
-      expect.objectContaining({
-        amount: 29358,
-        status: StripeRefundStatus.CREATED,
-        participantId: member.id,
-        originalPaymentId
-      })
+    const [refund] = fakeStripe.refunds();
+    expect(await refundHistory()).toEqual([
+      { stripeRefundId: refund!.id, status: StripeRefundStatus.CREATED, participantId: member.id, amount: 29358 }
     ]);
+    expect((await prisma.stripeRefund.findFirstOrThrow()).originalPaymentId).toBe(originalPaymentId);
 
     // Until Stripe confirms, the seat is still taken and the refund is pending
-    expect(await publicCaller().eventPayment.checkRefundStatus({ originalPaymentId })).toEqual({
-      status: "Not found"
-    });
+    expect(await refundStatusOf(member)).toEqual({ status: StripeRefundStatus.CREATED });
     expect(await availableSeats(event.id, busId)).toBe(8);
 
-    const [refund] = fakeStripe.refunds();
     const res = await fakeStripe.completeRefund(refund!.id);
     expect(res.status).toBe(201);
 
-    expect(await publicCaller().eventPayment.checkRefundStatus({ originalPaymentId })).toEqual({
-      status: StripeRefundStatus.REFUNDED
-    });
+    // The outcome is a new row: the CREATED row is kept as it was
+    expect(await refundHistory()).toEqual([
+      { stripeRefundId: refund!.id, status: StripeRefundStatus.CREATED, participantId: member.id, amount: 29358 },
+      { stripeRefundId: refund!.id, status: StripeRefundStatus.REFUNDED, participantId: member.id, amount: 29358 }
+    ]);
+    expect(await refundStatusOf(member)).toEqual({ status: StripeRefundStatus.REFUNDED });
+    expect(await refundStatusOf(nonMember)).toEqual({ status: "Not found" });
     const cancelled = await prisma.participant.findUniqueOrThrow({ where: { id: member.id } });
     expect(cancelled.cancellationDate).toBeInstanceOf(Date);
     expect(await availableSeats(event.id, busId)).toBe(9);
@@ -196,13 +203,14 @@ describe("cancelling a booking", () => {
     const res = await fakeStripe.failRefund(failed!.id);
 
     expect(res.status).toBe(201);
-    expect(await prisma.stripeRefund.findMany()).toEqual([
-      expect.objectContaining({
-        stripeRefundId: failed!.id,
-        status: StripeRefundStatus.ERROR,
-        errorCode: "expired_or_canceled_card"
-      })
+    expect(await refundHistory()).toEqual([
+      expect.objectContaining({ stripeRefundId: failed!.id, status: StripeRefundStatus.CREATED }),
+      expect.objectContaining({ stripeRefundId: failed!.id, status: StripeRefundStatus.ERROR })
     ]);
+    expect(
+      await prisma.stripeRefund.findFirst({ where: { status: StripeRefundStatus.ERROR } })
+    ).toMatchObject({ errorCode: "expired_or_canceled_card" });
+    expect(await refundStatusOf(member)).toEqual({ status: StripeRefundStatus.ERROR });
     const stillBooked = await prisma.participant.findUniqueOrThrow({ where: { id: member.id } });
     expect(stillBooked.cancellationDate).toBeNull();
     expect(await availableSeats(event.id, busId)).toBe(8);
@@ -222,7 +230,7 @@ describe("cancelling a booking", () => {
     expect(await availableSeats(event.id, busId)).toBe(9);
   });
 
-  it("handles two cancellations at the same time (a double-click) as one", async () => {
+  it("refunds only once when cancelling twice at the same time (a double-click)", async () => {
     const { member } = await bookTwoTravellers();
 
     const results = await Promise.allSettled([
@@ -230,12 +238,15 @@ describe("cancelling a booking", () => {
       cancel(member.cancellationToken)
     ]);
 
-    expect(results.map((r) => r.status).sort()).toEqual(["fulfilled", "rejected"]);
-    expect(results.find((r) => r.status === "rejected")).toMatchObject({
-      reason: { code: "BAD_REQUEST" }
-    });
+    // Depending on timing, the second one is rejected or gets the same refund back
+    for (const result of results) {
+      if (result.status === "rejected") expect(result.reason).toMatchObject({ code: "BAD_REQUEST" });
+    }
+    expect(results.some((r) => r.status === "fulfilled")).toBe(true);
     expect(fakeStripe.refunds()).toHaveLength(1);
-    expect(await prisma.stripeRefund.count()).toBe(1);
+    const rows = await prisma.stripeRefund.findMany();
+    expect(new Set(rows.map((r) => r.stripeRefundId))).toEqual(new Set([fakeStripe.refunds()[0]!.id]));
+    expect(await refundStatusOf(member)).toEqual({ status: StripeRefundStatus.CREATED });
   });
 
   it("handles the refund webhook arriving before Stripe's API response", async () => {
@@ -246,14 +257,12 @@ describe("cancelling a booking", () => {
 
     const [refund] = fakeStripe.refunds();
     expect(refund!.status).toBe("succeeded");
-    expect(await prisma.stripeRefund.findMany()).toEqual([
-      expect.objectContaining({
-        stripeRefundId: refund!.id,
-        amount: refund!.amount,
-        status: StripeRefundStatus.REFUNDED,
-        participantId: member.id
-      })
+    // The webhook recorded the outcome first; the CREATED row came after
+    expect(await refundHistory()).toEqual([
+      { stripeRefundId: refund!.id, status: StripeRefundStatus.REFUNDED, participantId: member.id, amount: refund!.amount },
+      { stripeRefundId: refund!.id, status: StripeRefundStatus.CREATED, participantId: member.id, amount: refund!.amount }
     ]);
+    expect(await refundStatusOf(member)).toEqual({ status: StripeRefundStatus.REFUNDED });
     const cancelled = await prisma.participant.findUniqueOrThrow({ where: { id: member.id } });
     expect(cancelled.cancellationDate).toBeInstanceOf(Date);
     expect(await availableSeats(event.id, busId)).toBe(9);
@@ -283,6 +292,10 @@ describe("cancelling a booking", () => {
       })
     ]);
     await expect(cancel(member.cancellationToken)).resolves.toBeTruthy();
+    // The refused request (answered by the override above) used attempt 0; the retry needs a new key
+    expect(fakeStripe.requestsTo("POST", "/refunds").map((r) => r.idempotencyKey)).toEqual([
+      `cancel-${member.id}-1`
+    ]);
     expect(fakeStripe.refunds()).toHaveLength(1);
   });
 
@@ -297,7 +310,8 @@ describe("cancelling a booking", () => {
       const res = await fakeStripe.failRefund(refund!.id, { event: failureEvent });
 
       expect(res.status).toBe(201);
-      expect(await prisma.stripeRefund.findMany()).toEqual([
+      expect(await refundHistory()).toEqual([
+        expect.objectContaining({ stripeRefundId: refund!.id, status: StripeRefundStatus.CREATED }),
         expect.objectContaining({ stripeRefundId: refund!.id, status: StripeRefundStatus.REFUNDED })
       ]);
       expect(await availableSeats(event.id, busId)).toBe(9);
@@ -307,4 +321,51 @@ describe("cancelling a booking", () => {
       );
     }
   );
+
+  it("refunds a group booking one traveller at a time", async () => {
+    const event = await createEvent({ buses: [{ name: "Buss 1", seats: 10 }] });
+    const busId = event.buses[0]!.id;
+    const { paymentIntent, participants } = await bookAndPay(event.id, [
+      participantInput(busId),
+      participantInput(busId),
+      participantInput(busId),
+      participantInput(busId)
+    ]);
+    await fakeStripe.settleCharge(paymentIntent.id, { fee: 4000 });
+    const [a, b, c, d] = participants as [Participant, Participant, Participant, Participant];
+
+    await cancel(a.cancellationToken);
+    await fakeStripe.completeRefund(fakeStripe.refunds()[0]!.id);
+    await cancel(b.cancellationToken);
+
+    // A's refund being done must not make B's look done
+    expect(await refundStatusOf(a)).toEqual({ status: StripeRefundStatus.REFUNDED });
+    expect(await refundStatusOf(b)).toEqual({ status: StripeRefundStatus.CREATED });
+    const booking = await publicCaller().eventPayment.getManagableBooking({ token: c.cancellationToken! });
+    expect(booking.participants).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ email: a.email, hasCancelled: true, refundPending: false }),
+        expect.objectContaining({ email: b.email, hasCancelled: false, refundPending: true }),
+        expect.objectContaining({ email: c.email, hasCancelled: false, refundPending: false })
+      ])
+    );
+
+    await fakeStripe.completeRefund(fakeStripe.refunds()[1]!.id);
+
+    // Each gets their own 40000 minus a quarter of the fee, based on the original payment
+    const [refundA, refundB] = fakeStripe.refunds();
+    expect([refundA!.amount, refundB!.amount]).toEqual([39000, 39000]);
+    expect(await refundHistory()).toEqual([
+      { stripeRefundId: refundA!.id, status: StripeRefundStatus.CREATED, participantId: a.id, amount: 39000 },
+      { stripeRefundId: refundA!.id, status: StripeRefundStatus.REFUNDED, participantId: a.id, amount: 39000 },
+      { stripeRefundId: refundB!.id, status: StripeRefundStatus.CREATED, participantId: b.id, amount: 39000 },
+      { stripeRefundId: refundB!.id, status: StripeRefundStatus.REFUNDED, participantId: b.id, amount: 39000 }
+    ]);
+    expect(await refundStatusOf(b)).toEqual({ status: StripeRefundStatus.REFUNDED });
+    expect(await availableSeats(event.id, busId)).toBe(8);
+    for (const p of [c, d]) {
+      const stillBooked = await prisma.participant.findUniqueOrThrow({ where: { id: p.id } });
+      expect(stillBooked.cancellationDate).toBeNull();
+    }
+  });
 });

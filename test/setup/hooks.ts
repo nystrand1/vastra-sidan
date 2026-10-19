@@ -1,6 +1,6 @@
 import type * as Sentry from "@sentry/nextjs";
 import { captureException, captureMessage } from "@sentry/nextjs";
-import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, expect, vi } from "vitest";
 import { prisma, resetDatabase } from "../helpers/db";
 import { resetSentEmails } from "../mocks/ses";
 import { server } from "../mocks/server";
@@ -26,8 +26,13 @@ beforeEach(async () => {
   vi.mocked(captureMessage).mockClear();
 });
 
-afterEach(() => {
+afterEach(async () => {
   server.resetHandlers();
+  // StripeRefund is append-only: the app may add rows, but never change them
+  const changed = await prisma.stripeRefund.findMany({
+    select: { id: true, status: true, createdAt: true, updatedAt: true }
+  });
+  expect(changed.filter((r) => r.updatedAt.getTime() !== r.createdAt.getTime())).toEqual([]);
 });
 
 afterAll(async () => {
