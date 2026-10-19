@@ -52,12 +52,8 @@ export const ProfilePage = () => {
       success: 'Profil uppdaterad!',
       error: 'Något gick fel!'
     });
-    await update({
-      user: {
-        ...user,
-        ...parseProfile.data,
-      }
-    });
+    // Reloads the session from the database, which now has the new profile.
+    await update();
   };
 
   return (
