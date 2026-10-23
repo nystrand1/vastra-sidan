@@ -4,6 +4,7 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import Accordion from "~/components/atoms/Accordion/Accordion";
 import { awayGameRules } from "~/components/atoms/Accordion/accordionContent";
+import { NonRefundableNotice } from "~/components/atoms/NonRefundableNotice/NonRefundableNotice";
 import { AwayGameForm } from "~/components/common/AwayGameForm/AwayGameForm";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
@@ -31,6 +32,9 @@ export const BusPage = () => {
         <p className="text-3xl">
           Bussen avgår {formatSwedishTime(game.date, "HH:mm")}
         </p>
+        {!game.refundable && (
+          <NonRefundableNotice className="max-w-lg" />
+        )}
         <div className="max-w-lg space-y-6">
           <Accordion
             items={[

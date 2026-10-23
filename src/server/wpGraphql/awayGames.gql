@@ -11,6 +11,7 @@ query GetAwayGames {
         memberPriceYouth: memberpriceYouth
         nonMemberPrice: nonmemberprice
         nonMemberPriceYouth: nonmemberpriceYouth
+        refundable
         buses {
           id
           busName

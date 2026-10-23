@@ -103,6 +103,7 @@ const participantFormatter = (
       : null,
     note: participant.note,
     cancellationDisabled: !isCancelable,
+    refundable: participant.event.refundable,
     hasCancelled,
     refundPending
   };
@@ -314,6 +315,13 @@ export const eventPaymentRouter = createTRPCRouter({
         });
       }
 
+      if (!participant.event.refundable) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Den här resan går inte att avboka"
+        });
+      }
+
       const isCancelable = isEventCancelable(participant.event.date);
       if (!isCancelable) {
         throw new TRPCError({
@@ -517,6 +525,7 @@ export const eventPaymentRouter = createTRPCRouter({
         participants,
         eventName: payer.event.name,
         departureTime: formatSwedishTime(payer.event.date, "HH:mm"),
+        refundable: payer.event.refundable,
         buses: payer.event.buses.map((bus) => ({
           ...bus,
           availableSeats: bus.seats - bus._count.passengers
@@ -596,7 +605,8 @@ export const eventPaymentRouter = createTRPCRouter({
         eventName: participants[0].eventName,
         departureTime: participants[0].departureTime,
         totalPrice: payment.amount / 100,
-        gameInfo: payment.participants[0]?.event.description
+        gameInfo: payment.participants[0]?.event.description,
+        refundable: participants[0].refundable
       };
     })
 });

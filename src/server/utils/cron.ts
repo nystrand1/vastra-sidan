@@ -95,7 +95,9 @@ export const awayGameToEvent = (
       memberPrice: Number(awayGame.memberPrice),
       youthPrice: Number(awayGame.nonMemberPriceYouth),
       youthMemberPrice: Number(awayGame.memberPriceYouth),
-      active: awayGame.status === "publish"
+      active: awayGame.status === "publish",
+      // Trips that haven't set the field keep the normal cancellation rules
+      refundable: awayGame.refundable ?? true
     },
     buses: awayGameToBuses(awayGame)
   };
