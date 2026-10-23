@@ -1,5 +1,6 @@
 import { useRouter } from "next/router";
 import Card from "~/components/atoms/CardLink/CardLink";
+import { NonRefundableNotice } from "~/components/atoms/NonRefundableNotice/NonRefundableNotice";
 import { Wysiwyg } from "~/components/atoms/Wysiwyg/Wysiwyg";
 import { api } from "~/utils/api";
 
@@ -61,9 +62,13 @@ const ThanksPage = () => {
             {data.gameInfo && (
               <Wysiwyg content={`Reseinfo: ${data.gameInfo}`} />
             )}
-            <p>
-              Avbokning kan endast ske senast 36 timmar innan avresa annars debiteras du fullt pris.
-            </p>
+            {data.refundable ? (
+              <p>
+                Avbokning kan endast ske senast 36 timmar innan avresa annars debiteras du fullt pris.
+              </p>
+            ) : (
+              <NonRefundableNotice />
+            )}
           </div>
         </div>
       </Card>

@@ -130,6 +130,33 @@ describe("cancelling a booking", () => {
     expect(booking.participants.every((p) => p.cancellationDisabled)).toBe(true);
   });
 
+  it("rejects cancelling a non-refundable trip, but still lets the traveller change bus", async () => {
+    const event = await createEvent({
+      refundable: false,
+      buses: [
+        { name: "Buss 1", seats: 10 },
+        { name: "Buss 2", seats: 10 }
+      ]
+    });
+    const [bus, otherBus] = event.buses;
+    const { participants } = await bookAndPay(event.id, [participantInput(bus!.id)]);
+    const token = participants[0]!.cancellationToken!;
+
+    await expect(cancel(token)).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: "Den här resan går inte att avboka"
+    });
+    expect(fakeStripe.requestsTo("POST", "/refunds")).toHaveLength(0);
+    expect(await prisma.stripeRefund.count()).toBe(0);
+    expect((await prisma.participant.findUniqueOrThrow({ where: { id: participants[0]!.id } })).cancellationDate).toBeNull();
+
+    const booking = await publicCaller().eventPayment.getManagableBooking({ token });
+    expect(booking.refundable).toBe(false);
+    expect(booking.participants.every((p) => !p.refundable)).toBe(true);
+
+    await expect(publicCaller().eventPayment.changeBus({ token, busId: otherBus!.id })).resolves.toBe("ok");
+  });
+
   it("rejects an unknown cancellation token", async () => {
     await expect(cancel("not-a-token")).rejects.toMatchObject({
       code: "BAD_REQUEST",

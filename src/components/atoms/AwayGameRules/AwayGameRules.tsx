@@ -20,6 +20,7 @@ export const AwayGameRules = () => {
             Avbokning kan göras via länken i ditt mail du får som bekräftelse på bokningen.
             Pengarna återbetalas då inom 3 bankdagar.
             Avbokning kan göras senast 36 timmar innan avresa. 
+            Vissa resor går inte att avboka, det står i så fall på resans sida.
             Allmän information och ordningsregler
           </p>
         </li>

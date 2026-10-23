@@ -72,8 +72,24 @@ describe("public event booking", () => {
     }
 
     const booking = await publicCaller().eventPayment.getBooking({ paymentId: paymentIntent.id });
-    expect(booking).toMatchObject({ eventName: event.name, totalPrice: 700 });
+    expect(booking).toMatchObject({ eventName: event.name, totalPrice: 700, refundable: true });
     expect(booking.participants).toHaveLength(2);
+  });
+
+  it("doesn't offer cancelling in the confirmation email of a non-refundable trip", async () => {
+    const event = await createEvent({ refundable: false });
+    const busId = event.buses[0]!.id;
+
+    const { paymentIntent, participants } = await bookAndPay(event.id, [participantInput(busId)]);
+
+    const [email] = getSentEmails();
+    expect(email?.html).toContain(`token=${participants[0]!.cancellationToken}`);
+    expect(email?.html).toContain("Hantera bokning");
+    // The link still goes to /bortaresor/avboka, but the text doesn't mention cancelling
+    expect(email?.html?.replace(/href="[^"]*"/g, "")).not.toMatch(/avbok/i);
+
+    const booking = await publicCaller().eventPayment.getBooking({ paymentId: paymentIntent.id });
+    expect(booking.refundable).toBe(false);
   });
 
   it("allows booking exactly the remaining seats", async () => {

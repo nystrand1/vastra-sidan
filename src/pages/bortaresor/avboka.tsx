@@ -7,6 +7,7 @@ import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { Button } from "~/components/ui/button";
 import Card from "~/components/atoms/CardLink/CardLink";
+import { NonRefundableNotice } from "~/components/atoms/NonRefundableNotice/NonRefundableNotice";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
 import { type AppRouter } from "~/server/api/root";
 import { api } from "~/utils/api";
@@ -24,6 +25,7 @@ export const ParticipantInfo = ({
     payAmount,
     note,
     cancellationDisabled,
+    refundable,
     cancellationToken,
     hasCancelled,
     refundPending,
@@ -99,7 +101,7 @@ export const ParticipantInfo = ({
         <p>Övrigt: {note}</p>
       )}
       <div className="space-y-6">
-        {!cancellationDisabled && !hasCancelled && !refundPending && (
+        {!hasCancelled && !refundPending && (
           <>
             <div className="space-y-2 pt-2">
               <SelectField
@@ -112,7 +114,9 @@ export const ParticipantInfo = ({
               />
               <Button className="w-full" disabled={!hasChangedBus || isChangingBus} onClick={() => handleChangeBus()}>Byt buss</Button>
             </div>
-            <Button className="w-full" disabled={isCancelling} onClick={() => handleCancel()}>Avboka</Button>
+            {refundable && !cancellationDisabled && (
+              <Button className="w-full" disabled={isCancelling} onClick={() => handleCancel()}>Avboka</Button>
+            )}
           </>
         )}
         {hasCancelled && cancellationDate && (
@@ -121,7 +125,7 @@ export const ParticipantInfo = ({
         {refundPending && (
           <p className="rounded-md border p-2 text-center">Avbokad, återbetalningen behandlas</p>
         )}
-        {cancellationDisabled && !hasCancelled && !refundPending && (
+        {refundable && cancellationDisabled && !hasCancelled && !refundPending && (
           <p>Du kan inte avboka inom 36h från avgång</p>
         )}
       </div>
@@ -135,7 +139,7 @@ export const CancelPage = () => {
 
   if (!data || isLoading) return null;
 
-  const { participants, departureTime, eventName } = data;
+  const { participants, departureTime, eventName, refundable } = data;
 
   const busOptions = data.buses.map((bus) => {
     const fullyBooked = bus.availableSeats <= 0;
@@ -151,12 +155,18 @@ export const CancelPage = () => {
         <div className="divide-y divide-gray-100 space-y-4">
           <div>
             <p className="font-bold">Avgångstid: {departureTime}</p>
-            <p>
-              Avbokning kan endast ske senast 36 timmar innan avresa annars debiteras du fullt pris.
-            </p>
-            <p>
-              Du blir återbetald hela summan minus serviceavgift från Stripe. Läs mer om Stripe&apos;s avgifter <a href="https://stripe.com/pricing">här</a>
-            </p>
+            {refundable ? (
+              <>
+                <p>
+                  Avbokning kan endast ske senast 36 timmar innan avresa annars debiteras du fullt pris.
+                </p>
+                <p>
+                  Du blir återbetald hela summan minus serviceavgift från Stripe. Läs mer om Stripe&apos;s avgifter <a href="https://stripe.com/pricing">här</a>
+                </p>
+              </>
+            ) : (
+              <NonRefundableNotice />
+            )}
           </div>
           {participants.map((participant) => (
             <ParticipantInfo key={participant.cancellationToken} {...participant} busOptions={busOptions} />               
