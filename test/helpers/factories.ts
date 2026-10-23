@@ -114,12 +114,14 @@ export const createEvent = async ({
   departure = addDays(new Date(), 7),
   buses = [{ name: "Buss 1", seats: 50 }],
   prices = { defaultPrice: 400, memberPrice: 300, youthPrice: 200, youthMemberPrice: 100 },
-  active = true
+  active = true,
+  refundable = true
 }: {
   departure?: Date;
   buses?: { name: string; seats: number }[];
   prices?: { defaultPrice: number; memberPrice: number; youthPrice: number; youthMemberPrice: number };
   active?: boolean;
+  refundable?: boolean;
 } = {}) => {
   const n = next();
   return prisma.vastraEvent.create({
@@ -129,6 +131,7 @@ export const createEvent = async ({
       description: "Avgång från Studenternas",
       date: departure,
       active,
+      refundable,
       ...prices,
       buses: {
         create: buses.map((bus, i) => ({ id: `event-${n}-bus-${i + 1}`, ...bus }))

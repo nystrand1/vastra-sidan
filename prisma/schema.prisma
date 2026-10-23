@@ -132,6 +132,7 @@ model VastraEvent {
   youthPrice       Float
   youthMemberPrice Float
   active           Boolean       @default(true)
+  refundable       Boolean       @default(true)
   participants     Participant[]
   buses            Bus[]
 }

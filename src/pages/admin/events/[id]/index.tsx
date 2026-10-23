@@ -10,23 +10,36 @@ import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { prisma } from "~/server/db";
 import { api } from "~/utils/api";
 
-
 export const AdminEventPage = () => {
   const { query, push } = useRouter();
   const { data: sessionData } = useSession();
   const { data: event, isLoading } = api.admin.getEvent.useQuery(
     { id: query.id as string },
-    { enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN && !!query.id, staleTime: 0 }
+    {
+      enabled:
+        !!sessionData?.user &&
+        sessionData.user.role === Role.ADMIN &&
+        !!query.id,
+      staleTime: 0
+    }
   );
 
   if (!event || isLoading) {
-    return <p className="text-center">Laddar event...</p>
+    return <p className="text-center">Laddar event...</p>;
   }
 
-  const amountYouthMembers = event.participants.filter((participant) => participant.member && participant.youth).length;
-  const amountYouthNonMembers = event.participants.filter((participant) => !participant.member && participant.youth).length;
-  const amountAdultMembers = event.participants.filter((participant) => participant.member && !participant.youth).length;
-  const amountAdultNonMembers = event.participants.filter((participant) => !participant.member && !participant.youth).length;
+  const amountYouthMembers = event.participants.filter(
+    (participant) => participant.member && participant.youth
+  ).length;
+  const amountYouthNonMembers = event.participants.filter(
+    (participant) => !participant.member && participant.youth
+  ).length;
+  const amountAdultMembers = event.participants.filter(
+    (participant) => participant.member && !participant.youth
+  ).length;
+  const amountAdultNonMembers = event.participants.filter(
+    (participant) => !participant.member && !participant.youth
+  ).length;
 
   const allOption = [{ label: "Alla", value: "" }];
   const busOptions = event?.buses.map((bus) => ({
@@ -37,17 +50,20 @@ export const AdminEventPage = () => {
   const allOptions = allOption.concat(busOptions ?? []);
 
   return (
-    <div className="flex flex-col justify-center align-middle gap-4">
+    <div className="flex flex-col justify-center gap-4 align-middle">
       <Card>
         <CardHeader>
           <p className="text-3xl">{event.title}</p>
-          <div className="flex flex-row gap-2">
-            <DownloadPassengerListCsv passengers={event.participants} title={event.title} />
+          <div className="flex flex-col gap-2 md:flex-row">
+            <DownloadPassengerListCsv
+              passengers={event.participants}
+              title={event.title}
+            />
             <AddPassengerModal eventId={event.id} buses={event.buses} />
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-row gap-4 mb-2">
+          <div className="mb-2 flex flex-row gap-4">
             <div>
               <p className="text-lg font-medium">Vuxna:</p>
               <p>Medlemmar: {amountAdultMembers}</p>
@@ -59,38 +75,43 @@ export const AdminEventPage = () => {
               <p>Icke-medlemmar: {amountYouthNonMembers}</p>
             </div>
           </div>
-          <PassengerTable busOptions={allOptions} data={event?.participants ?? []} columns={columns} onRowClick={(id) => push(`/admin/events/${query.id as string}/${id}`)} />
+          <PassengerTable
+            busOptions={allOptions}
+            data={event?.participants ?? []}
+            columns={columns}
+            onRowClick={(id) =>
+              push(`/admin/events/${query.id as string}/${id}`)
+            }
+          />
         </CardContent>
       </Card>
     </div>
-  )
+  );
 };
 
-
 export default AdminEventPage;
-
 
 export async function getServerSideProps({ query }: GetServerSidePropsContext) {
   const { id } = query;
   if (!id) {
     return {
       notFound: true
-    }
+    };
   }
 
   const event = await prisma.vastraEvent.findFirst({
     where: {
       id: id as string
     }
-  })
+  });
 
   if (!event) {
     return {
       notFound: true
-    }
+    };
   }
 
   return {
     props: {}
-  }
+  };
 }
