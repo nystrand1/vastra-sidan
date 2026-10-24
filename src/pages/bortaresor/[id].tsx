@@ -9,6 +9,7 @@ import { AwayGameForm } from "~/components/common/AwayGameForm/AwayGameForm";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
+import { getTransportLabels, isTrainEvent } from "~/utils/transport";
 
 
 export const BusPage = () => {
@@ -18,6 +19,8 @@ export const BusPage = () => {
   if (!game || isLoadingGame) return null;
 
   const gameExpired = isAfter(new Date(), game.date);
+  const isTrain = isTrainEvent(game);
+  const transport = getTransportLabels(isTrain);
 
   return (
     <>
@@ -30,7 +33,7 @@ export const BusPage = () => {
           {game.name}
         </h1>
         <p className="text-3xl">
-          Bussen avgår {formatSwedishTime(game.date, "HH:mm")}
+          {transport.departs} {formatSwedishTime(game.date, "HH:mm")}
         </p>
         {!game.refundable && (
           <NonRefundableNotice className="max-w-lg" />
@@ -38,9 +41,10 @@ export const BusPage = () => {
         <div className="max-w-lg space-y-6">
           <Accordion
             items={[
-              awayGameRules,
+              // The rules are written for the bus trips
+              ...(isTrain ? [] : [awayGameRules]),
               {
-                title: 'Bussinfo',
+                title: transport.info,
                 content: game.description
               },
               {
@@ -61,7 +65,7 @@ export const BusPage = () => {
             <AwayGameForm />
           )}
           {gameExpired && (
-            <p className="text-white text-lg">Bussen har avgått</p>
+            <p className="text-white text-lg">{transport.departed}</p>
           )}
 
         </div>
