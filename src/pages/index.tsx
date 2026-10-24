@@ -12,6 +12,7 @@ import { PATHS } from "~/utils/constants";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 import { featureFlags } from "~/utils/featureFlags";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
+import { getTransportLabels, isTrainEvent } from "~/utils/transport";
 
 export default function Home() {
   const { data: startPage } = api.public.getStartPage.useQuery();
@@ -110,6 +111,7 @@ export default function Home() {
                 {upcomingEvents.map((event) => {
                   const expired = isAfter(new Date(), event.date);
                   const full = event.bookedSeats >= event.maxSeats;
+                  const transport = getTransportLabels(isTrainEvent(event));
                   return (
                     <div
                       key={event.id}
@@ -118,7 +120,7 @@ export default function Home() {
                       <div className="space-y-1">
                         <p className="text-lg font-semibold">{event.name}</p>
                         <p className="text-md font-semibold">
-                          Bussen avgår{" "}
+                          {transport.departs}{" "}
                           {formatSwedishTime(event.date, "dd MMMM HH:mm", {
                             locale: sv
                           })}
@@ -132,7 +134,7 @@ export default function Home() {
                       <Link prefetch={false} href={`${PATHS.awayGames}${event.id}`}>
                         {expired ? (
                           <Button disabled className="w-full">
-                            Bussen har avgått
+                            {transport.departed}
                           </Button>
                         ) : full ? (
                           <Button disabled className="w-full">

@@ -20,6 +20,7 @@ import { api } from "../../../utils/api";
 import { StripeWidget } from "../StripeWidget/StripeWidget";
 import { getParticipantPrice } from "~/utils/event/getParticipantPrice";
 import { Textarea } from "~/components/ui/textarea";
+import { getTransportLabels, isTrainEvent } from "~/utils/transport";
 
 const stripePromise = getStripe();
 
@@ -32,6 +33,8 @@ export const AwayGameForm = () => {
   const { mutate: releasePendingBooking } = api.eventPayment.releasePendingBooking.useMutation();
 
   const firstAvailableBus = awayGame?.buses.find((bus) => bus.availableSeats > 0);
+  const isTrain = !!awayGame && isTrainEvent(awayGame);
+  const transport = getTransportLabels(isTrain);
   const form = useForm<z.infer<typeof eventSignupSchema>>({
     resolver: zodResolver(eventSignupSchema),
     defaultValues: {
@@ -45,7 +48,8 @@ export const AwayGameForm = () => {
           youth: false,
           busId: firstAvailableBus?.id ?? '',
           note: '',
-          consent: false,
+          // Train trips have no rules to accept
+          consent: isTrain,
         }
       ],
     }
@@ -80,7 +84,7 @@ export const AwayGameForm = () => {
 
     if (fullBusses.length > 0) {
       const busNames = fullBusses.map((bus) => bus.name).join(", ");
-      toast.error(`${busNames} har för få platser, vänligen välj en annan buss.`);
+      toast.error(`${busNames} har för få platser, ${transport.chooseAnother}.`);
       setModalOpen(false);
       return;
     }
@@ -94,7 +98,7 @@ export const AwayGameForm = () => {
       if (error instanceof TRPCClientError) {
         setModalOpen(false);
         if (error.message === 'BUS_FULL') {
-          toast.error("Någon buss är fullbokad, vänligen välj en annan buss");
+          toast.error(`${transport.someFull}, ${transport.chooseAnother}`);
           return;
         }
         captureException(error);
@@ -190,11 +194,11 @@ export const AwayGameForm = () => {
                       name={`participants.${index}.busId`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Buss</FormLabel>
+                          <FormLabel>{transport.label}</FormLabel>
                           <Select defaultValue={firstAvailableBus?.id} onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Välj buss..." />
+                                <SelectValue placeholder={transport.selectPlaceholder} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -257,23 +261,25 @@ export const AwayGameForm = () => {
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name={`participants.${index}.consent`}
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md py-2">
-                          <FormControl>
-                            <Checkbox onCheckedChange={field.onChange} checked={field.value} />
-                          </FormControl>
-                          <div>
-                            <FormLabel>
-                              Jag har läst & förstått reglerna kring bussresorna
-                            </FormLabel>
-                            <FormMessage />
-                          </div>
-                        </FormItem>
-                      )}
-                    />
+                    {!isTrain && (
+                      <FormField
+                        control={form.control}
+                        name={`participants.${index}.consent`}
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md py-2">
+                            <FormControl>
+                              <Checkbox onCheckedChange={field.onChange} checked={field.value} />
+                            </FormControl>
+                            <div>
+                              <FormLabel>
+                                Jag har läst & förstått reglerna kring bussresorna
+                              </FormLabel>
+                              <FormMessage />
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    )}
                   </div>
                 )
               })}
@@ -289,7 +295,7 @@ export const AwayGameForm = () => {
                       member: false,
                       youth: false,
                       busId: firstAvailableBus?.id ?? '',
-                      consent: false,
+                      consent: isTrain,
                     });
                   }}
                 >

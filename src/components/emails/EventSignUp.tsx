@@ -11,6 +11,7 @@ import {
 } from "react-email";
 import { type ParticipantWithBusAndEvent } from "~/server/api/routers/eventPayment";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
+import { getTransportLabels, isTrainEvent } from "~/utils/transport";
 
 interface EventSignUpProps {
   participant: ParticipantWithBusAndEvent;
@@ -76,6 +77,7 @@ export const EventSignUp = ({
   const departureTime = formatSwedishTime(event.date, "HH:mm");
 
   const { name: eventName } = event;
+  const transport = getTransportLabels(isTrainEvent(event));
   return (
     <Tailwind>
       <Html className="bg-slate-900 font-sans">
@@ -96,7 +98,7 @@ export const EventSignUp = ({
             <Container>
               <Text className="text-lg">Event: {eventName}</Text>
               <Text className="text-lg">Namn: {name}</Text>
-              {bus && <Text className="text-lg">Buss: {bus.name}</Text>}
+              {bus && <Text className="text-lg">{transport.label}: {bus.name}</Text>}
               <Text className="text-lg">Datum: {formattedDate}</Text>
               <Text className="text-lg">Avgångstid: {departureTime}</Text>
               <Text className="text-lg">Pris: {payAmount} kr</Text>

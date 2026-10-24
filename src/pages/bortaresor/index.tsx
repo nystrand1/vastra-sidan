@@ -8,6 +8,7 @@ import { api } from "~/utils/api";
 import { PATHS } from "~/utils/constants";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 import { featureFlags } from "~/utils/featureFlags";
+import { getTransportLabels, isTrainEvent } from "~/utils/transport";
 
 export default function AwaygamesPage() {
   const { data: awayGames, isLoading: isLoadingAwayGames } = api.public.getAwayGames.useQuery();
@@ -30,6 +31,7 @@ export default function AwaygamesPage() {
             {awayGames?.map((game, index) => {
               let centerClass = "";
               const gameExpired = isAfter(new Date(), game.date);
+              const transport = getTransportLabels(isTrainEvent(game));
               if (index === 0) {
                 centerClass = awayGames.length === 1 ? "md:col-start-4 xl:col-start-5" 
                   : awayGames.length === 2 ? "md:col-start-1 xl:col-start-3"
@@ -42,7 +44,7 @@ export default function AwaygamesPage() {
                   href={`${PATHS.awayGames}${game.id}`}
                 >
                   <div className="space-y-1">
-                    <p className="text-md font-semibold">Bussen avgår {formatSwedishTime(game.date, "HH:mm")}</p>
+                    <p className="text-md font-semibold">{transport.departs} {formatSwedishTime(game.date, "HH:mm")}</p>
                     <p className="text-sm">Pris vuxen medlem: {game.memberPrice} kr</p>
                     <p className="text-sm">Pris vuxen icke medlem: {game.defaultPrice} kr</p>
                     <p className="text-sm">Pris ungdom medlem: {game.youthMemberPrice} kr</p>
@@ -60,7 +62,7 @@ export default function AwaygamesPage() {
                     <Button disabled>Fullbokat</Button>
                   )}
                   {gameExpired && (
-                    <Button disabled>Bussen har avgått</Button>
+                    <Button disabled>{transport.departed}</Button>
                   )}
                 </Card>
               </div>
