@@ -38,7 +38,7 @@ export const BusPage = () => {
         {!game.refundable && (
           <NonRefundableNotice className="max-w-lg" />
         )}
-        <div className="max-w-lg space-y-6">
+        <div className="w-full max-w-lg space-y-6">
           <Accordion
             items={[
               // The rules are written for the bus trips
@@ -59,7 +59,8 @@ export const BusPage = () => {
                 )
               }
             ]}
-            className="w-full space-y-6" 
+            className="w-full space-y-6"
+            itemClassName="md:w-full"
             />
           {!gameExpired && (
             <AwayGameForm />

@@ -1,5 +1,6 @@
 import { type ReactNode, useState } from 'react';
 import { PiCaretDown } from 'react-icons/pi';
+import { cn } from '~/lib/utils';
 
 export interface AccordionItemProps {
   title: string;
@@ -12,6 +13,7 @@ export interface AccordionItemProps {
 interface AccordionProps {
   items: AccordionItemProps[];
   className?: string
+  itemClassName?: string
 }
 
 const AccordionItem: React.FC<AccordionItemProps> = ({
@@ -22,7 +24,7 @@ const AccordionItem: React.FC<AccordionItemProps> = ({
   className
 }) => {
   return (
-    <div className={`divide-y divide-gray-100/25 mx-auto p-4 w-full md:w-96 rounded-lg transition duration-300 ease-in-out bg-slate-800 ${className || ''}`}>
+    <div className={cn('divide-y divide-gray-100/25 mx-auto p-4 w-full md:w-96 rounded-lg transition duration-300 ease-in-out bg-slate-800', className)}>
       <button
         className={`w-full text-white text-left flex flex-row justify-between items-center ${isOpen ? 'pb-2' : ''}`}
         onClick={toggle}
@@ -48,7 +50,7 @@ const AccordionItem: React.FC<AccordionItemProps> = ({
   );
 };
 
-const Accordion: React.FC<AccordionProps> = ({ items, className = '' }) => {
+const Accordion: React.FC<AccordionProps> = ({ items, className = '', itemClassName }) => {
   const [openItemIndex, setOpenItemIndex] = useState<number | null>(null);
 
   const toggleItem = (index: number) => {
@@ -64,7 +66,7 @@ const Accordion: React.FC<AccordionProps> = ({ items, className = '' }) => {
           key={index}
           title={item.title}
           content={item.content}
-          className={item.className}
+          className={cn(itemClassName, item.className)}
           isOpen={index === openItemIndex}
           toggle={() => toggleItem(index)}
         />
