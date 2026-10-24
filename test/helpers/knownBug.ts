@@ -12,7 +12,7 @@ const isAssertionError = (error: unknown) =>
  * (a broken factory, a crash before the `expect`) is logged and makes the
  * test go red, so a broken test can't hide behind the known bug.
  *
- * Run `KNOWN_BUGS=show yarn test` to run them as normal tests and see why they fail.
+ * Run `KNOWN_BUGS=show pnpm test` to run them as normal tests and see why they fail.
  */
 export const itKnownBug = (name: string, fn: TestFunction) => {
   if (process.env.KNOWN_BUGS === "show") {
