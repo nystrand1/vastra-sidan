@@ -59,7 +59,8 @@ export const BusPage = () => {
                 )
               }
             ]}
-            className="w-full space-y-6" 
+            className="w-full space-y-6"
+            itemClassName="md:w-full"
             />
           {!gameExpired && (
             <AwayGameForm />
