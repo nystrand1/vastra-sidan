@@ -21,6 +21,7 @@ import { participantRefundState } from "~/server/utils/refunds";
 import { awayGamePaths, revalidatePages } from "~/server/utils/revalidate";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { createPaymentIntent, createRefundIntent } from "~/utils/stripeHelpers";
+import { isTrainEvent } from "~/utils/transport";
 import { participantSchema } from "~/utils/zodSchemas";
 
 type ParticipantInput = z.infer<typeof participantSchema>;
@@ -524,6 +525,7 @@ export const eventPaymentRouter = createTRPCRouter({
       return {
         participants,
         eventName: payer.event.name,
+        isTrain: isTrainEvent(payer.event),
         departureTime: formatSwedishTime(payer.event.date, "HH:mm"),
         refundable: payer.event.refundable,
         buses: payer.event.buses.map((bus) => ({

@@ -13,10 +13,12 @@ import { type AppRouter } from "~/server/api/root";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 import { pollRefundStatus } from "~/utils/payment";
+import { getTransportLabels, type TransportLabels } from "~/utils/transport";
 
 
 type Participant = inferRouterOutputs<AppRouter>['eventPayment']['getManagableBooking']['participants'][number] & {
   busOptions: { value: string, label: string, disabled: boolean }[]
+  transport: TransportLabels
 };
 
 export const ParticipantInfo = ({
@@ -32,6 +34,7 @@ export const ParticipantInfo = ({
     busId,
     busOptions,
     cancellationDate,
+    transport,
   }: Participant ) => {
   const query = useRouter().query;
   const { refetch: refetchParticipant } = api.eventPayment.getManagableBooking.useQuery({ token: query.token as string});
@@ -75,11 +78,11 @@ export const ParticipantInfo = ({
   const handleChangeBus = async () => {
     if (!cancellationToken || !selectedBus) return null;
 
-    const toastId = toast.loading("Byter buss...")
+    const toastId = toast.loading(transport.changing)
 
     try {
       await changeBus({ token: cancellationToken, busId: selectedBus });
-      toast.success("Bussbyte slutfört", {
+      toast.success(transport.changed, {
         id: toastId
       });
       await refetchParticipant();
@@ -105,14 +108,14 @@ export const ParticipantInfo = ({
           <>
             <div className="space-y-2 pt-2">
               <SelectField
-                label="Buss"
+                label={transport.label}
                 id="busId"
                 name="busId"
                 value={selectedBus ?? ''}
                 options={busOptions}
                 onChange={((e) => setSelectedBus(e.target.value))}
               />
-              <Button className="w-full" disabled={!hasChangedBus || isChangingBus} onClick={() => handleChangeBus()}>Byt buss</Button>
+              <Button className="w-full" disabled={!hasChangedBus || isChangingBus} onClick={() => handleChangeBus()}>{transport.change}</Button>
             </div>
             {refundable && !cancellationDisabled && (
               <Button className="w-full" disabled={isCancelling} onClick={() => handleCancel()}>Avboka</Button>
@@ -139,7 +142,8 @@ export const CancelPage = () => {
 
   if (!data || isLoading) return null;
 
-  const { participants, departureTime, eventName, refundable } = data;
+  const { participants, departureTime, eventName, refundable, isTrain } = data;
+  const transport = getTransportLabels(isTrain);
 
   const busOptions = data.buses.map((bus) => {
     const fullyBooked = bus.availableSeats <= 0;
@@ -169,7 +173,7 @@ export const CancelPage = () => {
             )}
           </div>
           {participants.map((participant) => (
-            <ParticipantInfo key={participant.cancellationToken} {...participant} busOptions={busOptions} />               
+            <ParticipantInfo key={participant.cancellationToken} {...participant} busOptions={busOptions} transport={transport} />               
           ))}
         </div>
     </Card>
