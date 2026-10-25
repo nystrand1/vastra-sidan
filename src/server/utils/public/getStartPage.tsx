@@ -1,6 +1,5 @@
 import { featureFlags } from "~/utils/featureFlags";
 import { getMemberCount } from "../member/getMemberCount";
-import { getCardSkipperMemberCount } from "../cardSkipper";
 import { prisma } from "~/server/db";
 import { busesWithBookedSeats } from "~/server/utils/busCapacity";
 import { isToday, subHours } from "date-fns";
@@ -10,9 +9,7 @@ import { parseDateString, stripHtmlTags } from "~/server/api/routers/wordpress";
 import { toUTCDate } from "../helpers";
 
 export const getStartPage = async () => {
-  const memberCountPromise = featureFlags.ENABLE_MEMBERSHIPS
-    ? getMemberCount()
-    : getCardSkipperMemberCount();
+  const memberCountPromise = getMemberCount();
   const upcomingEventsPromise = featureFlags.ENABLE_AWAYGAMES
     ? prisma.vastraEvent.findMany({
         include: busesWithBookedSeats(),

@@ -37,9 +37,6 @@ export const env = createEnv({
         : z.string().min(1).optional()
     ),
     USE_DEV_MODE: z.literal("true").or(z.literal("false")).default("false"),
-    CARDSKIPPER_USERNAME: z.string().min(1),
-    CARDSKIPPER_PASSWORD: z.string().min(1),
-    CARDSKIPPER_ORG_NUMBER: z.string().min(1),
     WEBSITE_URL: z.preprocess(
       // This makes Vercel deployments not fail if you don't set NEXTAUTH_URL
       // Since NextAuth.js automatically uses the VERCEL_URL if present.
@@ -86,9 +83,6 @@ export const env = createEnv({
     STRIPE_API_KEY: process.env.STRIPE_API_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
     USE_DEV_MODE: process.env.USE_DEV_MODE,
-    CARDSKIPPER_USERNAME: process.env.CARDSKIPPER_USERNAME,
-    CARDSKIPPER_PASSWORD: process.env.CARDSKIPPER_PASSWORD,
-    CARDSKIPPER_ORG_NUMBER: process.env.CARDSKIPPER_ORG_NUMBER,
     WEBSITE_URL: process.env.WEBSITE_URL,
     ENABLE_AWS_SES_EMAILS: process.env.ENABLE_AWS_SES_EMAILS,
     NEXT_PUBLIC_ENABLE_MEMBERSHIPS: process.env.NEXT_PUBLIC_ENABLE_MEMBERSHIPS,
