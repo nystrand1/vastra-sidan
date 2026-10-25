@@ -1,4 +1,4 @@
-import { type Membership, MembershipType } from "@prisma/client";
+import { type Membership, MembershipType } from "~/generated/prisma/browser";
 
 export const friendlyMembershipNames = {
   [MembershipType.FAMILY]: "Familjemedlemskap",

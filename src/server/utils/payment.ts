@@ -1,7 +1,7 @@
 import {
   StripeRefundStatus,
   type PrismaClient
-} from "@prisma/client";
+} from "~/generated/prisma/client";
 import { participantRefundState } from "./refunds";
 
 /**

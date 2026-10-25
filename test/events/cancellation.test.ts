@@ -1,4 +1,4 @@
-import { StripePaymentStatus, StripeRefundStatus, type Participant } from "@prisma/client";
+import { StripePaymentStatus, StripeRefundStatus, type Participant } from "~/generated/prisma/client";
 import { captureMessage } from "@sentry/nextjs";
 import { addHours } from "date-fns";
 import { http, HttpResponse } from "msw";

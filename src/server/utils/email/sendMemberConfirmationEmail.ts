@@ -1,4 +1,4 @@
-import { type Member, type Membership } from "@prisma/client";
+import { type Member, type Membership } from "~/generated/prisma/client";
 import { render } from "react-email";
 import MemberSignup from "~/components/emails/MemberSignUp";
 import { env } from "~/env.mjs";

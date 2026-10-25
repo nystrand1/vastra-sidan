@@ -1,4 +1,4 @@
-import { MembershipType } from "@prisma/client";
+import { MembershipType } from "~/generated/prisma/client";
 import { TRPCError } from "@trpc/server";
 import { type z } from "zod";
 import { prisma } from "~/server/db";

@@ -1,4 +1,4 @@
-import { StripePaymentStatus, StripeRefundStatus } from "@prisma/client";
+import { StripePaymentStatus, StripeRefundStatus } from "~/generated/prisma/client";
 import { describe, expect, it } from "vitest";
 import { adminCaller, cronCaller, publicCaller, userCaller } from "../helpers/caller";
 import { prisma } from "../helpers/db";

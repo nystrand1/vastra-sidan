@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { Role } from "~/generated/prisma/client";
 import { describe, expect, it } from "vitest";
 import { authBrowser } from "../helpers/auth";
 import { prisma } from "../helpers/db";
