@@ -10,7 +10,6 @@ import { Button } from "~/components/ui/button";
 import { api } from "~/utils/api";
 import { PATHS } from "~/utils/constants";
 import { createSSRHelper } from "~/utils/createSSRHelper";
-import { featureFlags } from "~/utils/featureFlags";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { getTransportLabels, isTrainEvent } from "~/utils/transport";
 
@@ -25,15 +24,6 @@ export default function Home() {
 
   const seoDescription =
     "Välkommen till Västra Sidan. Vi är en supporterförening till IK Sirius som arbetar för att skapa en bättre upplevelse för blåsvarta supportrar.";
-
-  const memberLink = featureFlags.ENABLE_MEMBERSHIPS
-    ? {
-        href: "/bli-medlem"
-      }
-    : {
-        href: "https://apply.cardskipper.se/pxvo",
-        target: "_blank"
-      };
 
   return (
     <>
@@ -57,7 +47,7 @@ export default function Home() {
               <Button>Läs mer</Button>
             </Card>
           )}
-          <Card title="Antal medlemmar" {...memberLink}>
+          <Card title="Antal medlemmar" href="/bli-medlem">
             <p className="text-4xl">{member.count}</p>
             <p className="text-sm text-gray-500">Mål 2026, 1000 medlemmar</p>
             <p className="text-sm text-gray-500">
