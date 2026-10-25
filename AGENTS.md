@@ -131,7 +131,7 @@ WordPress is used as a headless CMS for editorial content. The Apollo GraphQL cl
 To regenerate WordPress types after changing `.gql` files:
 
 ```bash
-npm run compile
+pnpm compile
 ```
 
 ### Feature Flags
@@ -166,8 +166,8 @@ Always use `~/` imports for project files.
 - Prisma schema: `prisma/schema.prisma`
 - Prisma uses `relationMode = "prisma"` (no foreign key constraints at DB level)
 - Key models: `User`, `Member`, `Membership`, `VastraEvent`, `Bus`, `Participant`, `StripePayment`, `StripeRefund`, `FotballGame`, `TicketSalesRecord`
-- After schema changes: `npx prisma db push` (dev) or `npx prisma migrate dev`
-- Generate client: `npx prisma generate` (runs automatically on `postinstall`)
+- After schema changes: `pnpm prisma db push` (dev) or `pnpm prisma migrate dev`
+- Generate client: `pnpm prisma generate` (runs automatically on `postinstall`)
 
 ---
 
@@ -198,7 +198,7 @@ Always use `~/` imports for project files.
 ### WordPress / GraphQL
 
 - Add new GraphQL queries as `.gql` files in `src/server/wpGraphql/`.
-- Run `npm run compile` to regenerate TypeScript types.
+- Run `pnpm compile` to regenerate TypeScript types.
 - Use the `apolloClient` from the tRPC context to execute queries in routers.
 
 ### Payments
@@ -216,24 +216,24 @@ Always use `~/` imports for project files.
 
 ## Commands
 
-| Command               | Purpose                                  |
-| --------------------- | ---------------------------------------- |
-| `npm run dev`         | Start development server                 |
-| `npm run build`       | Production build                         |
-| `npm run lint`        | Run ESLint                               |
-| `npm run test`        | Integration tests (Vitest, needs Docker) |
-| `npm run compile`     | Generate GraphQL types from `.gql` files |
-| `npm run watch`       | Watch mode for GraphQL codegen           |
-| `npm run dev:email`   | Preview email templates on port 3001     |
-| `npx prisma studio`   | Open Prisma Studio (database GUI)        |
-| `npx prisma db push`  | Push schema changes to database          |
-| `npx prisma generate` | Regenerate Prisma client                 |
+| Command                | Purpose                                  |
+| ---------------------- | ---------------------------------------- |
+| `pnpm dev`             | Start development server                 |
+| `pnpm build`           | Production build                         |
+| `pnpm lint`            | Run ESLint                               |
+| `pnpm test`            | Integration tests (Vitest, needs Docker) |
+| `pnpm compile`         | Generate GraphQL types from `.gql` files |
+| `pnpm watch`           | Watch mode for GraphQL codegen           |
+| `pnpm dev:email`       | Preview email templates on port 3001     |
+| `pnpm prisma studio`   | Open Prisma Studio (database GUI)        |
+| `pnpm prisma db push`  | Push schema changes to database          |
+| `pnpm prisma generate` | Regenerate Prisma client                 |
 
 ---
 
 ## Testing
 
-Integration tests live in `test/` and run with `yarn test`. They use Vitest, a MariaDB started by Testcontainers, and MSW for Stripe and SES. See the "Integration tests" section in `README.md`.
+Integration tests live in `test/` and run with `pnpm test`. They use Vitest, a MariaDB started by Testcontainers, and MSW for Stripe and SES. See the "Integration tests" section in `README.md`.
 
 - Call routers through `publicCaller()` / `userCaller()` / `adminCaller()` from `test/helpers/caller.ts`, and seed data with `test/helpers/factories.ts`.
 - Drive Stripe with `fakeStripe` from `test/mocks/stripe.ts`. It sends signed webhooks to the real route. Never call the webhook handlers directly.

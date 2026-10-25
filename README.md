@@ -40,16 +40,18 @@ Several features are gated behind `NEXT_PUBLIC_*` environment flags (see `src/ut
 
 ### Prerequisites
 
-- Node.js and [Yarn](https://yarnpkg.com)
+- Node.js and [pnpm](https://pnpm.io)
 - [Docker](https://www.docker.com) (for the local MySQL database)
 
 ### 1. Install dependencies
 
 ```bash
-yarn install
+pnpm install
 ```
 
 This also runs `prisma generate` automatically via the `postinstall` hook.
+
+pnpm only runs install scripts for dependencies listed in `pnpm.onlyBuiltDependencies` in `package.json`. If a new dependency needs its install script, add it there.
 
 ### 2. Configure environment variables
 
@@ -75,36 +77,36 @@ This starts a MariaDB container matching the `DATABASE_URL` expected in developm
 ### 4. Push the database schema
 
 ```bash
-npx prisma db push
+pnpm prisma db push
 ```
 
 ### 5. Run the dev server
 
 ```bash
-yarn dev
+pnpm dev
 ```
 
 The app will be available at [http://localhost:3000](http://localhost:3000).
 
 ## Other useful commands
 
-| Command               | Purpose                                        |
-| --------------------- | ----------------------------------------------- |
-| `yarn build`          | Production build                                |
-| `yarn lint`           | Run ESLint                                      |
-| `yarn test`           | Run the integration tests (needs Docker)        |
-| `yarn compile`        | Generate TypeScript types from WordPress `.gql` files |
-| `yarn watch`          | Watch mode for GraphQL codegen                  |
-| `yarn dev:email`      | Preview React Email templates on port 3001      |
-| `npx prisma studio`   | Open Prisma Studio (database GUI)               |
-| `npx prisma generate` | Regenerate the Prisma client                    |
+| Command                | Purpose                                               |
+| ---------------------- | ----------------------------------------------------- |
+| `pnpm build`           | Production build                                      |
+| `pnpm lint`            | Run ESLint                                            |
+| `pnpm test`            | Run the integration tests (needs Docker)              |
+| `pnpm compile`         | Generate TypeScript types from WordPress `.gql` files |
+| `pnpm watch`           | Watch mode for GraphQL codegen                        |
+| `pnpm dev:email`       | Preview React Email templates on port 3001            |
+| `pnpm prisma studio`   | Open Prisma Studio (database GUI)                     |
+| `pnpm prisma generate` | Regenerate the Prisma client                          |
 
 ## Integration tests
 
 The membership, event booking and Stripe flows are covered by integration tests in `test/`, run with [Vitest](https://vitest.dev):
 
 ```bash
-yarn test
+pnpm test
 ```
 
 Docker must be running. Each run:
@@ -117,7 +119,7 @@ The tests play the Stripe side with `fakeStripe` (`succeedPayment`, `failPayment
 
 Only `.env.test` is loaded, never `.env`, and the suite refuses to run against a non-local database.
 
-Tests named `[known bug] …` (`itKnownBug`) describe the intended behaviour of bugs we haven't fixed yet. They're expected to fail: once a bug is fixed, Vitest reports the test as unexpectedly passing, and it should be turned into a normal `it`. Run `KNOWN_BUGS=show yarn test` to see why each one fails.
+Tests named `[known bug] …` (`itKnownBug`) describe the intended behaviour of bugs we haven't fixed yet. They're expected to fail: once a bug is fixed, Vitest reports the test as unexpectedly passing, and it should be turned into a normal `it`. Run `KNOWN_BUGS=show pnpm test` to see why each one fails.
 
 ## Deployment
 
