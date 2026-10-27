@@ -1,4 +1,4 @@
-import { type Prisma, StripePaymentStatus, StripeRefundStatus } from "@prisma/client";
+import { type Prisma, StripePaymentStatus, StripeRefundStatus } from "~/generated/prisma/client";
 import { captureMessage } from "@sentry/nextjs";
 import type Stripe from "stripe";
 import { prisma } from "~/server/db";

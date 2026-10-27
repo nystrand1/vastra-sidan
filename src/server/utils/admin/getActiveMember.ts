@@ -1,6 +1,6 @@
 import { prisma } from "~/server/db";
 import { friendlyMembershipNames } from "../membership";
-import { StripePaymentStatus } from "@prisma/client";
+import { StripePaymentStatus } from "~/generated/prisma/client";
 
 type ActiveMember = Awaited<ReturnType<typeof getActiveMember>>;
 

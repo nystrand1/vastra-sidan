@@ -1,4 +1,4 @@
-import { StripeRefundStatus, type StripeRefund } from "@prisma/client";
+import { StripeRefundStatus, type StripeRefund } from "~/generated/prisma/client";
 
 /*
  * StripeRefund is append-only. A refund gets a CREATED row when we ask Stripe for it, and a

@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { Role } from "~/generated/prisma/browser";
 import { useSession } from "next-auth/react";
 import { ButtonLink } from "~/components/atoms/ButtonLink/ButtonLink";
 import Card from "~/components/atoms/CardLink/CardLink";

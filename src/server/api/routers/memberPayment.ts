@@ -1,4 +1,4 @@
-import { StripePaymentStatus } from "@prisma/client";
+import { StripePaymentStatus } from "~/generated/prisma/client";
 import { captureException, captureMessage } from "@sentry/nextjs";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";

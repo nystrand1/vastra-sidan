@@ -1,4 +1,4 @@
-import { type Participant } from "@prisma/client";
+import { type Participant } from "~/generated/prisma/browser";
 import { stripe } from "~/server/stripe";
 
 

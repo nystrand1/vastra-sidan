@@ -2,7 +2,7 @@ import {
   MembershipType,
   StripePaymentStatus,
   StripeRefundStatus
-} from "@prisma/client";
+} from "~/generated/prisma/browser";
 import { z } from "zod";
 import { MAX_FAMILY_MEMBERS } from "~/utils/constants";
 

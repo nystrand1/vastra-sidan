@@ -1,4 +1,4 @@
-import { MembershipType, StripePaymentStatus, type Prisma } from "@prisma/client";
+import { MembershipType, StripePaymentStatus, type Prisma } from "~/generated/prisma/client";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { adminProcedure, createTRPCRouter } from "~/server/api/trpc";

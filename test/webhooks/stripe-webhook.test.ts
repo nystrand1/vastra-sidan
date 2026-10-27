@@ -1,4 +1,4 @@
-import { StripePaymentStatus, StripeRefundStatus } from "@prisma/client";
+import { StripePaymentStatus, StripeRefundStatus } from "~/generated/prisma/client";
 import { captureException, captureMessage } from "@sentry/nextjs";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";

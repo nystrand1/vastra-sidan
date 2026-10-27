@@ -1,4 +1,4 @@
-import { MembershipType } from "@prisma/client";
+import { MembershipType } from "~/generated/prisma/client";
 import { subHours } from "date-fns";
 import { z } from "zod";
 import {
