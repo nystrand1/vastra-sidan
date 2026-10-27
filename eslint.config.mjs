@@ -3,7 +3,8 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["src/types/wordpresstypes/**"]
+    // Flat config doesn't read .gitignore, so local build output and worktrees must be listed here
+    ignores: ["src/types/wordpresstypes/**", ".react-email/**", ".claude/**"]
   },
   ...nextCoreWebVitals,
   ...tseslint.configs.recommended,
