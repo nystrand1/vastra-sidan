@@ -1,0 +1,25 @@
+[Unit]
+Description=Vastra Sidan website (Next.js standalone)
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/srv/vss-event/current
+EnvironmentFile=/srv/vss-event/shared/.env
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOSTNAME=127.0.0.1
+# The box has 2 GB shared with MySQL and WordPress. Keep the V8 heap bounded.
+Environment=NODE_OPTIONS=--max-old-space-size=512
+ExecStart=/usr/bin/node server.js
+# Next exits with 143 on SIGTERM
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=3
+MemoryMax=900M
+
+[Install]
+WantedBy=multi-user.target

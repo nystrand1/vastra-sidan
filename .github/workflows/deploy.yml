@@ -1,0 +1,106 @@
+name: Deploy to EC2
+
+# main is built here and deployed to EC2. Vercel only builds previews (see deploy/README.md).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: Production
+    env:
+      EC2_HOST: ${{ vars.EC2_HOST }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$EC2_KNOWN_HOSTS" > ~/.ssh/known_hosts
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_KNOWN_HOSTS: ${{ vars.EC2_KNOWN_HOSTS }}
+
+      # getStaticProps reads the database at build time. MySQL only needs to be
+      # reachable from the box itself, so DATABASE_URL (127.0.0.1:3306) works
+      # both here, through the tunnel, and at runtime on the box.
+      - name: Open database tunnel
+        run: ssh -fN -o ExitOnForwardFailure=yes -L 3306:127.0.0.1:3306 "ubuntu@$EC2_HOST"
+
+      # The same file is used for the build (NEXT_PUBLIC_* are baked in) and
+      # installed as /srv/vss-event/shared/.env. Empty values are left out so
+      # the defaults in src/env.mjs apply.
+      - name: Write env
+        run: |
+          umask 077
+          for name in $ENV_NAMES; do
+            value=${!name}
+            if [ -n "$value" ]; then printf '%s="%s"\n' "$name" "$value"; fi
+          done > .env
+        env:
+          ENV_NAMES: >-
+            DATABASE_URL NEXTAUTH_SECRET NEXTAUTH_URL WORDPRESS_API_KEY CRON_KEY
+            STRIPE_API_KEY STRIPE_WEBHOOK_SECRET AWS_CLIENT_ID AWS_CLIENT_SECRET
+            ENABLE_AWS_SES_EMAILS USE_DEV_MODE WEBSITE_URL CANCELLATION_URL
+            MEMBERSHIP_URL API_URL BOOKING_EMAIL
+            NEXT_PUBLIC_WORDPRESS_URL NEXT_PUBLIC_WEBSITE_URL NEXT_PUBLIC_STRIPE_API_KEY
+            NEXT_PUBLIC_ENABLE_MEMBERSHIPS NEXT_PUBLIC_ENABLE_LOGIN
+            NEXT_PUBLIC_ENABLE_AWAYGAMES NEXT_PUBLIC_ENABLE_ANALYTICS
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          WORDPRESS_API_KEY: ${{ secrets.WORDPRESS_API_KEY }}
+          CRON_KEY: ${{ secrets.CRON_KEY }}
+          STRIPE_API_KEY: ${{ secrets.STRIPE_API_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          AWS_CLIENT_ID: ${{ secrets.AWS_CLIENT_ID }}
+          AWS_CLIENT_SECRET: ${{ secrets.AWS_CLIENT_SECRET }}
+          NEXTAUTH_URL: ${{ vars.NEXTAUTH_URL }}
+          ENABLE_AWS_SES_EMAILS: ${{ vars.ENABLE_AWS_SES_EMAILS }}
+          USE_DEV_MODE: ${{ vars.USE_DEV_MODE }}
+          WEBSITE_URL: ${{ vars.WEBSITE_URL }}
+          CANCELLATION_URL: ${{ vars.CANCELLATION_URL }}
+          MEMBERSHIP_URL: ${{ vars.MEMBERSHIP_URL }}
+          API_URL: ${{ vars.API_URL }}
+          BOOKING_EMAIL: ${{ vars.BOOKING_EMAIL }}
+          NEXT_PUBLIC_WORDPRESS_URL: ${{ vars.NEXT_PUBLIC_WORDPRESS_URL }}
+          NEXT_PUBLIC_WEBSITE_URL: ${{ vars.NEXT_PUBLIC_WEBSITE_URL }}
+          NEXT_PUBLIC_STRIPE_API_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_API_KEY }}
+          NEXT_PUBLIC_ENABLE_MEMBERSHIPS: ${{ vars.NEXT_PUBLIC_ENABLE_MEMBERSHIPS }}
+          NEXT_PUBLIC_ENABLE_LOGIN: ${{ vars.NEXT_PUBLIC_ENABLE_LOGIN }}
+          NEXT_PUBLIC_ENABLE_AWAYGAMES: ${{ vars.NEXT_PUBLIC_ENABLE_AWAYGAMES }}
+          NEXT_PUBLIC_ENABLE_ANALYTICS: ${{ vars.NEXT_PUBLIC_ENABLE_ANALYTICS }}
+
+      - name: Build
+        run: pnpm build
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_PROJECT_NAME: ${{ vars.SENTRY_PROJECT_NAME }}
+
+      - name: Package
+        run: deploy/package.sh release.tar.gz
+
+      - name: Upload and release
+        run: |
+          RELEASE_ID=$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}
+          scp release.tar.gz deploy/release.sh "ubuntu@$EC2_HOST":/tmp/
+          scp .env "ubuntu@$EC2_HOST":/tmp/vss-event.env
+          ssh "ubuntu@$EC2_HOST" "bash /tmp/release.sh /tmp/release.tar.gz $RELEASE_ID /tmp/vss-event.env"

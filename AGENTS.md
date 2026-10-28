@@ -21,7 +21,7 @@ This is the website for **Västra Sidan** (a Swedish football supporters associa
 | Email      | **AWS SES** + **React Email**                                    |
 | Monitoring | **Sentry**                                                       |
 | Validation | **Zod** (env vars via `@t3-oss/env-nextjs`, tRPC inputs)         |
-| Deployment | **Vercel**                                                       |
+| Deployment | **EC2** (standalone Next.js behind Apache, see `deploy/`)         |
 
 ---
 
