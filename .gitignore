@@ -48,3 +48,6 @@ swishCerts
 
 # Claude Code worktrees
 .claude/worktrees
+
+# Prisma client (generated on postinstall)
+/src/generated

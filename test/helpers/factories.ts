@@ -3,7 +3,7 @@ import {
   Role,
   StripePaymentStatus,
   type Membership
-} from "@prisma/client";
+} from "~/generated/prisma/client";
 import { addDays, addMonths, subMonths } from "date-fns";
 import { type z } from "zod";
 import { sha256 } from "~/server/auth";

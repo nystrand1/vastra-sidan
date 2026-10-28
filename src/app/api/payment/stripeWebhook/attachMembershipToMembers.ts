@@ -1,4 +1,4 @@
-import { type Member, MembershipType, type Prisma } from "@prisma/client";
+import { type Member, MembershipType, type Prisma } from "~/generated/prisma/client";
 import { TRPCError } from "@trpc/server";
 import { prisma } from "~/server/db";
 import { linkFamilyMembers } from "~/server/utils/member/findOrCreateFamilyMembers";

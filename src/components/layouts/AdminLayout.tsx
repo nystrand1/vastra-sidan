@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { Role } from "~/generated/prisma/browser";
 import { useSession } from "next-auth/react";
 import { type PropsWithChildren } from "react";
 import LoginPage from "~/pages/loggain";

@@ -1,4 +1,4 @@
-import { StripePaymentStatus, StripeRefundStatus } from "@prisma/client";
+import { StripePaymentStatus, StripeRefundStatus } from "~/generated/prisma/browser";
 import { delay } from "./helpers";
 
 export const pollPaymentStatus = async (

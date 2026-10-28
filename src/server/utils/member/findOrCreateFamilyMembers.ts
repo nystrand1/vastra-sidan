@@ -1,4 +1,4 @@
-import { type Prisma } from "@prisma/client";
+import { type Prisma } from "~/generated/prisma/client";
 import { type z } from "zod";
 import { prisma } from "~/server/db";
 import { type memberSignupSchema } from "~/utils/zodSchemas";

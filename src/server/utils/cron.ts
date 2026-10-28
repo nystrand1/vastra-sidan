@@ -3,7 +3,7 @@ import {
   type Bus,
   type Prisma,
   type VastraEvent
-} from "@prisma/client";
+} from "~/generated/prisma/client";
 import { captureException } from "@sentry/nextjs";
 import { type inferAsyncReturnType } from "@trpc/server";
 import { parseISO } from "date-fns";
