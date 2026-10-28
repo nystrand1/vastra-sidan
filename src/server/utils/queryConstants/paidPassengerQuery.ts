@@ -1,4 +1,4 @@
-import { StripePaymentStatus, StripeRefundStatus } from "@prisma/client";
+import { StripePaymentStatus, StripeRefundStatus } from "~/generated/prisma/client";
 
 export const paidPassengerQuery = {
   where: {

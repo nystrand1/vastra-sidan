@@ -1,4 +1,4 @@
-import { MembershipType, StripePaymentStatus } from "@prisma/client";
+import { MembershipType, StripePaymentStatus } from "~/generated/prisma/client";
 import { addMonths } from "date-fns";
 import { describe, expect, it } from "vitest";
 import { publicCaller } from "../helpers/caller";

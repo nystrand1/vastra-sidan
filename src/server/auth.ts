@@ -1,5 +1,4 @@
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { type Role } from "@prisma/client";
+import { type Role } from "~/generated/prisma/client";
 import { createHash } from "crypto";
 import { type GetServerSidePropsContext } from "next";
 import {
@@ -138,7 +137,6 @@ export const authOptions: NextAuthOptions = {
       return token;
     }
   },
-  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
       name: "Credentials",

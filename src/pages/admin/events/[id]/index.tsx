@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { Role } from "~/generated/prisma/browser";
 import { type GetServerSidePropsContext } from "next";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";

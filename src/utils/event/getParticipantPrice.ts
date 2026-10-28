@@ -1,4 +1,4 @@
-import { type VastraEvent } from "@prisma/client";
+import { type VastraEvent } from "~/generated/prisma/browser";
 
 export const getParticipantPrice = (member: boolean, youth: boolean, event: VastraEvent) => {
   if (member && youth) {

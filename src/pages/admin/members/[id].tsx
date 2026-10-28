@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Role } from "@prisma/client";
+import { Role } from "~/generated/prisma/browser";
 import { IdCardIcon, MailIcon, SaveIcon } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";

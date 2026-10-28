@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { Role } from "~/generated/prisma/browser";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { AddMemberModal } from "~/components/admin/MemberTable/AddMemberModal";

@@ -3,7 +3,7 @@ import {
   StripePaymentStatus,
   StripeRefundStatus,
   type Prisma
-} from "@prisma/client";
+} from "~/generated/prisma/client";
 import { render } from "react-email";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";

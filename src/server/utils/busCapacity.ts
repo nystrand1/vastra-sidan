@@ -3,7 +3,7 @@ import {
   type PrismaClient,
   StripePaymentStatus,
   StripeRefundStatus
-} from "@prisma/client";
+} from "~/generated/prisma/client";
 import { captureException, captureMessage } from "@sentry/nextjs";
 import { TRPCError } from "@trpc/server";
 import { subMinutes } from "date-fns";
