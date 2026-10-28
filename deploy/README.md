@@ -16,13 +16,21 @@ Internet → Apache :443 (certbot) → node server.js on 127.0.0.1:3000 → MySQ
 The box has 2 GB of RAM, so it never builds. GitHub Actions builds a linux/amd64 release and the
 box only unpacks and runs it.
 
+## Users on the box
+
+| User        | What it can do                                                                 |
+| ----------- | ------------------------------------------------------------------------------ |
+| `deploy`    | Logs in with the GitHub Actions key. Owns the releases. Its only sudo right is `systemctl restart vss-event`, and its only port forward is to MySQL on `127.0.0.1:3306` |
+| `vss-event` | Runs the app (no login). Can write only `shared/cache` and each release's `.next/server/route-cache`. systemd also keeps it off `/home` and makes the rest of the system read-only |
+| `ubuntu`    | Your login, with full sudo. Not used by deploys                                |
+
 ## Layout on the box
 
 | Path                          | What                                                         |
 | ----------------------------- | ------------------------------------------------------------ |
 | `/srv/vss-event/releases/*`   | One unpacked release per deploy, the newest 5 are kept       |
 | `/srv/vss-event/current`      | Symlink to the live release                                  |
-| `/srv/vss-event/shared/.env`  | Production env (mode 600), rewritten by every deploy         |
+| `/srv/vss-event/shared/.env`  | Production env (`deploy:vss-event`, mode 640), rewritten by every deploy |
 | `/srv/vss-event/shared/cache` | `.next/cache` (ISR pages, optimised images), kept across deploys |
 | `/etc/systemd/system/vss-event.service` | From `deploy/vss-event.service`                    |
 
@@ -45,7 +53,7 @@ a value: edit it on GitHub and re-run the workflow.
 | `STRIPE_WEBHOOK_SECRET` | From the production webhook endpoint in Stripe          |
 | `AWS_CLIENT_ID`, `AWS_CLIENT_SECRET` | SES                                        |
 | `SENTRY_AUTH_TOKEN`     | Source map upload                                       |
-| `EC2_SSH_KEY`           | Private half of the `github-actions-deploy@nystrand1/vss-event` key in `~ubuntu/.ssh/authorized_keys`. Its only port forward is to `127.0.0.1:3306` |
+| `EC2_SSH_KEY`           | Private half of the `github-actions-deploy@nystrand1/vss-event` key in `~deploy/.ssh/authorized_keys` |
 
 **Variables**
 
@@ -79,7 +87,7 @@ and deploys.
 
 ```bash
 ssh VastraAWS 'ls -1t /srv/vss-event/releases'
-ssh VastraAWS 'ln -sfn /srv/vss-event/releases/<id> /srv/vss-event/current && sudo systemctl restart vss-event'
+ssh VastraAWS 'sudo -u deploy ln -sfn /srv/vss-event/releases/<id> /srv/vss-event/current && sudo systemctl restart vss-event'
 ```
 
 ## Operating

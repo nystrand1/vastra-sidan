@@ -27,6 +27,7 @@ docker run --rm --platform linux/amd64 \
     deploy/package.sh /out/$(basename "$OUT")
   "
 
+# Your own login on the box, not the deploy key. Releases still belong to deploy.
 scp "$OUT" deploy/release.sh "$HOST":/tmp/
-ssh "$HOST" "bash /tmp/release.sh /tmp/$(basename "$OUT") $RELEASE_ID"
+ssh "$HOST" "sudo -u deploy bash /tmp/release.sh /tmp/$(basename "$OUT") $RELEASE_ID; rm -f /tmp/$(basename "$OUT")"
 rm -f "$OUT"

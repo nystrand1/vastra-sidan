@@ -5,8 +5,12 @@ Wants=mysql.service
 
 [Service]
 Type=simple
-User=ubuntu
-Group=ubuntu
+# Releases belong to the deploy user. The app can only write its caches:
+# shared/cache and each release's .next/server/route-cache (ISR pages).
+User=vss-event
+Group=vss-event
+# Group-writable, so the deploy user can prune old releases
+UMask=0002
 WorkingDirectory=/srv/vss-event/current
 EnvironmentFile=/srv/vss-event/shared/.env
 Environment=NODE_ENV=production
@@ -20,6 +24,16 @@ SuccessExitStatus=143
 Restart=on-failure
 RestartSec=3
 MemoryMax=900M
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ReadWritePaths=/srv/vss-event/shared/cache /srv/vss-event/releases
 
 [Install]
 WantedBy=multi-user.target
