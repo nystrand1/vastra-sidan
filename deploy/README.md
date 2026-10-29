@@ -11,7 +11,7 @@ Internet → Apache :443 (certbot) → node server.js on 127.0.0.1:3000 → MySQ
 | Branch        | Built by                          | Runs on |
 | ------------- | --------------------------------- | ------- |
 | `main`        | `.github/workflows/deploy.yml`    | EC2     |
-| anything else | Vercel                            | Vercel previews (`*.vercel.app`, `staging.`/`dev.vastrasidan.se`) |
+| anything else | Vercel                            | Vercel previews (`*.vercel.app`, `staging.event.vastrasidan.se`) |
 
 The box has 2 GB of RAM, so it never builds. GitHub Actions builds a linux/amd64 release and the
 box only unpacks and runs it.
@@ -124,12 +124,16 @@ open it with every `ssh VastraAWS`, add `LocalForward 3307 127.0.0.1:3306` to th
    The last production deployment keeps serving until DNS moves.
 3. Install the vhost: copy `deploy/apache-vss-event.conf` to `/etc/apache2/sites-available/vss-event.conf`,
    `sudo a2ensite vss-event && sudo apache2ctl configtest && sudo systemctl reload apache2`.
-4. In Vercel: Project → Settings → Domains, remove `vastrasidan.se` and `www.vastrasidan.se`
-   from the project (they stay in the team's DNS). Under the team's Domains → vastrasidan.se,
-   add `A @` and `A www` → the Elastic IP. Leave `staging`/`dev` on the project for previews.
-5. Once `dig +short www.vastrasidan.se` shows the box:
-   `sudo certbot --apache -d vastrasidan.se -d www.vastrasidan.se`, then `sudo systemctl enable vss-event`.
-6. Check a booking end to end. The Stripe webhook URL is unchanged.
+4. In Stripe, check that the production webhook endpoint is on `https://www.vastrasidan.se`.
+   `event.vastrasidan.se` only redirects from now on, and Stripe doesn't follow redirects.
+5. In Vercel: Project → Settings → Domains, remove `vastrasidan.se`, `www.vastrasidan.se` and
+   `event.vastrasidan.se` from the project (they stay in the team's DNS). Under the team's
+   Domains → vastrasidan.se, add `A @`, `A www` and `A event` → the Elastic IP. Leave
+   `staging.event` on the project for previews.
+6. Once `dig +short www.vastrasidan.se` shows the box:
+   `sudo certbot --apache -d vastrasidan.se -d www.vastrasidan.se -d event.vastrasidan.se`, then
+   `sudo systemctl enable vss-event`.
+7. Check a booking end to end, and that `https://event.vastrasidan.se/admin` lands on `www`.
 
 Previews on Vercel still connect to `vss_dev` over the public MySQL port, so it stays open.
 Give them a user that can only touch `vss_dev`, and limit the production user to `localhost`.
