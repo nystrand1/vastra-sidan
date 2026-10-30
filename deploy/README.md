@@ -115,6 +115,12 @@ open it with every `ssh VastraAWS`, add `LocalForward 3307 127.0.0.1:3306` to th
 
 ## Cutover checklist
 
+0. The `.se` registry delegates `vastrasidan.se` to both Vercel (`ns1/ns2.vercel-dns.com`) and
+   Loopia (`ns1/ns2.loopia.se`), and resolvers pick either. Loopia has its own zone, with a
+   wildcard to its parking page. A record changed only in Vercel reaches about half the
+   visitors. Either make the same changes in Loopia's DNS editor, or first remove the Loopia
+   nameservers at Loopia (the registrar) after copying anything only Loopia has (it still lists
+   the old `ASPMX.L.GOOGLE.COM` MX records).
 1. Fill in the `Production` environment on GitHub and run the workflow by hand. The app
    starts on the box but nothing routes to it yet.
 2. Stop Vercel deploying `main`. Add a `vercel.json`:
