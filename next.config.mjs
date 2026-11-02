@@ -11,6 +11,9 @@ await import("./src/env.mjs");
 const config = {
   reactStrictMode: true,
 
+  // Self-contained server in .next/standalone, run by systemd on the EC2 box (see deploy/)
+  output: "standalone",
+
   /**
    * If you have `experimental: { appDir: true }` set, then you must comment the below `i18n` config
    * out.
@@ -86,14 +89,5 @@ export default withSentryConfig(config, {
   // Automatically tree-shake Sentry logger statements to reduce bundle size
   bundleSizeOptimizations: {
     excludeDebugStatements: true
-  },
-
-  webpack: {
-    // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
-    // Only applies to webpack builds.
-    // See the following for more information:
-    // https://docs.sentry.io/product/crons/
-    // https://vercel.com/docs/cron-jobs
-    automaticVercelMonitors: true
   }
 });
