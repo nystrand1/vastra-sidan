@@ -94,8 +94,10 @@ traveller it lists, the same way `cancelBooking` and `changeBus` work today.
 
 Steps, in one `prisma.$transaction`:
 
-1. Lock the participant: `SELECT id FROM Participant WHERE cancellationToken = ? FOR UPDATE`.
-   Not found → `BAD_REQUEST "Participant not found"`.
+1. Find the participant's id by `cancellationToken`, lock that row
+   (`SELECT id FROM Participant WHERE id = ? FOR UPDATE`), then re-read it by id **and** token.
+   (`cancellationToken` has no index, so locking by token would lock every row scanned.)
+   Not found at either point → `BAD_REQUEST "Participant not found"`.
 2. Load it with its event, succeeded payments and refund rows. Reject with `BAD_REQUEST` and a
    Swedish message if:
    - it has no `SUCCEEDED` `StripePayment` ("Bokningen är inte betald");
