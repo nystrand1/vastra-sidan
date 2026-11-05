@@ -20,6 +20,7 @@
 - Member/youth eligibility is not enforced, only stated.
 - Transferred seats are never grouped by email: only a token gives access.
 - After a schema change, `pnpm prisma generate`. Tests push the schema themselves (`test/setup/globalSetup.ts`).
+- `Participant.cancellationToken` becomes `@unique`. Deploying needs the duplicate-token check from the spec's "Data model" section before `prisma db push`; put it in the PR description.
 - Tests follow `AGENTS.md`: callers from `test/helpers/caller.ts`, data from `test/helpers/factories.ts` / `test/helpers/flows.ts`, Stripe via `fakeStripe`, emails via `getSentEmails()` from `test/mocks/ses.ts`, DB assertions via `prisma` from `test/helpers/db.ts`.
 - Checks for every task: `pnpm test test/events`, `pnpm lint`, `pnpm exec tsc --noEmit`.
 
@@ -36,7 +37,7 @@
 ### Task 1: Data model and the `transferBooking` mutation
 
 **Files:**
-- Modify: `prisma/schema.prisma` (new `ParticipantTransfer` model exactly as in the spec's "Data model" section, plus `transfers ParticipantTransfer[]` on `Participant`)
+- Modify: `prisma/schema.prisma` (new `ParticipantTransfer` model exactly as in the spec's "Data model" section; on `Participant`, add `transfers ParticipantTransfer[]` and make `cancellationToken` `@unique`)
 - Modify: `src/utils/zodSchemas.ts`
 - Create: `src/server/utils/transferBooking.ts`
 - Modify: `src/server/api/routers/eventPayment.ts` (add `transferBooking` procedure)
@@ -80,6 +81,7 @@ Inside `describe("transferring a booking", …)`:
 - `it("rejects a seat with a pending refund")`: cancel without completing, then transfer. Rejects with `"Bokningen är avbokad"`.
 - `it("rejects an unpaid booking")`: `book(...)` (from flows) without paying, then transfer that participant's token. Rejects with `"Bokningen är inte betald"`.
 - `it("rejects an unknown token")`: rejects with `"Participant not found"`.
+- `it("never gives two travellers the same manage token")`: setting a second participant's `cancellationToken` to an existing one with `prisma.participant.update` rejects, with Prisma error code `P2002`.
 - `it("lets only one of two simultaneous transfers through")`: `Promise.allSettled([transfer(t, buyer()), transfer(t, buyer({ email: "other@test.se" }))])`. Assert exactly one is fulfilled, the other is rejected with `"Participant not found"`, and `prisma.participantTransfer.count() === 1`.
 
 - [ ] **Step 2: Run them and confirm they fail**

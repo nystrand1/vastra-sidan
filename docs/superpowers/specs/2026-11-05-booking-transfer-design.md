@@ -63,7 +63,21 @@ model ParticipantTransfer {
 and on `Participant`:
 
 ```prisma
-  transfers ParticipantTransfer[]
+  cancellationToken String?               @unique @default(uuid())
+  transfers         ParticipantTransfer[]
+```
+
+`cancellationToken` becomes `@unique` (it had no index). Every manage-page load, cancellation,
+bus change and refund-status check looks travellers up by it, and the transfer relies on a token
+pointing to exactly one traveller. `NULL` stays allowed for several rows.
+
+**Deployment:** the schema is applied with `prisma db push`, which fails if production already has
+duplicate tokens. Before pushing, check that this returns no rows:
+
+```sql
+SELECT cancellationToken, COUNT(*) FROM Participant
+WHERE cancellationToken IS NOT NULL
+GROUP BY cancellationToken HAVING COUNT(*) > 1;
 ```
 
 A participant **is transferred** if it has at least one `ParticipantTransfer` row. There is no
@@ -96,7 +110,7 @@ Steps, in one `prisma.$transaction`:
 
 1. Find the participant's id by `cancellationToken`, lock that row
    (`SELECT id FROM Participant WHERE id = ? FOR UPDATE`), then re-read it by id **and** token.
-   (`cancellationToken` has no index, so locking by token would lock every row scanned.)
+   (Re-reading by token after taking the lock is what makes a second, simultaneous transfer fail.)
    Not found at either point → `BAD_REQUEST "Participant not found"`.
 2. Load it with its event, succeeded payments and refund rows. Reject with `BAD_REQUEST` and a
    Swedish message if:
