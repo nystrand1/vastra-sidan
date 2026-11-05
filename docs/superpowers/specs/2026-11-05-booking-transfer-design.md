@@ -171,7 +171,7 @@ Add an optional `transferred?: boolean` prop to `src/components/emails/EventSign
 - the heading reads "Platsen har överlåtits till dig" instead of "Tack för anmälan";
 - below the booking details, a notice: the seat can't be cancelled through the site, contact
   info@vastrasidan.se; and, if `member` or `youth` is set, that the seat was bought at member/youth
-  price and the bus stewards may check that the traveller qualifies;
+  price and the bus stewards ("bussvärdarna") may check that the traveller qualifies;
 - the "Hantera bokning" button links to `CANCELLATION_URL?token=<new cancellationToken>`, exactly
   as today.
 
@@ -202,7 +202,7 @@ departed:
     info@vastrasidan.se.
   - Du förlorar tillgången till bokningen. Den nya resenären får en egen länk via mejl.
   - (if `member` or `youth`) Platsen är köpt till medlems-/ungdomspris. Den nya resenären måste
-    uppfylla villkoren, och busstewarderna kan kontrollera det.
+    uppfylla villkoren, och bussvärdarna kan kontrollera det.
 - On success: toast "Platsen har överlåtits", then refetch. The traveller disappears from the list.
   If the page's own token belonged to that traveller, the refetch goes through the
   `previousToken` path and shows the "transferred away" message.
