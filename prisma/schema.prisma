@@ -152,31 +152,49 @@ model Bus {
 }
 
 model Participant {
-  id                String          @id @default(cuid())
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  id                String                @id @default(cuid())
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
   name              String
   email             String
   phone             String
-  note              String?         @db.Text
-  event             VastraEvent     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  note              String?               @db.Text
+  event             VastraEvent           @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId           String
-  bus               Bus?            @relation(fields: [busId], references: [id])
+  bus               Bus?                  @relation(fields: [busId], references: [id])
   busId             String?
-  cancellationToken String?         @default(uuid())
+  cancellationToken String?               @unique @default(uuid())
   cancellationDate  DateTime?
   payAmount         Float?
-  checkedIn         Boolean         @default(false)
-  member            Boolean         @default(false)
-  youth             Boolean         @default(false)
+  checkedIn         Boolean               @default(false)
+  member            Boolean               @default(false)
+  youth             Boolean               @default(false)
   userEmail         String?
-  user              User?           @relation(fields: [userEmail], references: [email])
+  user              User?                 @relation(fields: [userEmail], references: [email])
   stripePayments    StripePayment[]
   stripeRefunds     StripeRefund[]
+  transfers         ParticipantTransfer[]
 
   @@index([eventId])
   @@index([busId])
   @@index([userEmail])
+}
+
+model ParticipantTransfer {
+  id            String      @id @default(cuid())
+  createdAt     DateTime    @default(now())
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  previousToken String
+  fromName      String
+  fromEmail     String
+  fromPhone     String
+  toName        String
+  toEmail       String
+  toPhone       String
+
+  @@index([participantId])
+  @@index([previousToken])
 }
 
 model StripePayment {

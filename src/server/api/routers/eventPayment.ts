@@ -19,10 +19,11 @@ import { isEventCancelable } from "~/server/utils/event";
 import { checkRefundStatus } from "~/server/utils/payment";
 import { participantRefundState } from "~/server/utils/refunds";
 import { awayGamePaths, revalidatePages } from "~/server/utils/revalidate";
+import { transferBooking } from "~/server/utils/transferBooking";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { createPaymentIntent, createRefundIntent } from "~/utils/stripeHelpers";
 import { isTrainEvent } from "~/utils/transport";
-import { participantSchema } from "~/utils/zodSchemas";
+import { participantSchema, transferBookingSchema } from "~/utils/zodSchemas";
 
 type ParticipantInput = z.infer<typeof participantSchema>;
 
@@ -569,6 +570,13 @@ export const eventPaymentRouter = createTRPCRouter({
       await revalidatePages(awayGamePaths([participant.eventId]));
 
       return "ok";
+    }),
+  transferBooking: publicProcedure
+    .input(transferBookingSchema)
+    .mutation(async ({ input, ctx }) => {
+      await transferBooking(ctx.prisma, input);
+      // The new token goes only to the new holder, by email
+      return { ok: true };
     }),
   getBooking: publicProcedure
     .input(z.object({ paymentId: z.string() }))
