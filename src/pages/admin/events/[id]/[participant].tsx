@@ -13,6 +13,7 @@ import { Button } from "~/components/ui/button";
 import { Form, FormField } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { api } from "~/utils/api";
+import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { updateParticipantSchema } from "~/utils/zodSchemas";
 
 export const AdminParticipantPage = () => {
@@ -207,6 +208,20 @@ export const AdminParticipantPage = () => {
               Byt buss
             </Button>
           </div>
+          {participant.transfers.length > 0 && (
+            <div className="py-2">
+              <p className="mb-2 font-medium">Överlåtelser</p>
+              <ul className="space-y-1 text-sm">
+                {participant.transfers.map((transfer, index) => (
+                  <li key={index}>
+                    {formatSwedishTime(transfer.createdAt, "yyyy-MM-dd HH:mm")}:{" "}
+                    {transfer.fromName} ({transfer.fromEmail}) →{" "}
+                    {transfer.toName} ({transfer.toEmail})
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <Button
             onClick={handleSendConfirmationEmail}
             disabled={!participant.email}

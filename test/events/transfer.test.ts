@@ -445,4 +445,18 @@ describe("transfer emails", () => {
     expect(emails[0]?.html).toContain(`token=${newToken}`);
     expect(emails[0]?.html).toContain("info@vastrasidan.se");
   });
+
+  it("shows admins the transfer history, newest first", async () => {
+    const { participant: p } = await bookOne();
+    await transfer(p.cancellationToken);
+    const token = (await reload(p.id)).cancellationToken;
+    await transfer(token, buyer({ firstName: "Lisa", lastName: "Lind", email: "lisa@test.se" }));
+
+    const { transfers } = await adminCaller().admin.getEventParticipantById({ id: p.id });
+
+    expect(transfers).toHaveLength(2);
+    expect(transfers[0]).toMatchObject({ toEmail: "lisa@test.se", fromEmail: "kalle@test.se" });
+    expect(transfers[1]).toMatchObject({ fromEmail: p.email, toEmail: "kalle@test.se" });
+    expect(transfers[0]).not.toHaveProperty("previousToken");
+  });
 });
