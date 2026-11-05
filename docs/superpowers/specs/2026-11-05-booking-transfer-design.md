@@ -1,7 +1,7 @@
 # Booking transfer ("Överlåt plats") — design
 
 Date: 2026-11-05
-Status: Draft, awaiting review
+Status: Approved, implemented
 
 ## Purpose
 
@@ -71,20 +71,28 @@ and on `Participant`:
 bus change and refund-status check looks travellers up by it, and the transfer relies on a token
 pointing to exactly one traveller. `NULL` stays allowed for several rows.
 
-**Deployment:** the schema is applied with `prisma db push`, which fails if production already has
-duplicate tokens. Before pushing, check that this returns no rows:
+**Deployment:** the new code reads `transfers` in `getBooking`, `getManagableBooking`,
+`cancelBooking` and the admin participant page, so it breaks (including the thank-you page right
+after payment) if it runs before the schema is in place. For each environment's database
+(staging, production), in this order:
 
-```sql
-SELECT cancellationToken, COUNT(*) FROM Participant
-WHERE cancellationToken IS NOT NULL
-GROUP BY cancellationToken HAVING COUNT(*) > 1;
-```
+1. Check for duplicate tokens; this must return no rows:
+
+   ```sql
+   SELECT cancellationToken, COUNT(*) FROM Participant
+   WHERE cancellationToken IS NOT NULL
+   GROUP BY cancellationToken HAVING COUNT(*) > 1;
+   ```
+
+2. Run `pnpm prisma db push` against that database, interactively: it warns about adding the
+   unique constraint and asks for confirmation. It fails if step 1 found duplicates.
+3. Only then merge and deploy the code.
 
 A participant **is transferred** if it has at least one `ParticipantTransfer` row. There is no
 separate flag. Rows are append-only; an onward transfer adds another row.
 
 `previousToken` is the `cancellationToken` the participant had before that transfer. It lets the
-old link show a message (see "Old link" below) and is never accepted for managing the seat.
+old link show a message (see "`eventPayment.getManagableBooking` (changed)" below) and is never accepted for managing the seat.
 
 ## Server
 
@@ -169,16 +177,25 @@ before any refund logic, so the existing refund code is otherwise unchanged.
    - otherwise (the token belonged to an earlier new holder, who was never part of the group) an
      empty list. That person must not see or manage the original group.
 
-`participantFormatter` gets a new field `transferred: boolean`.
+`participantFormatter` gets new fields `transferred: boolean` and `departed: boolean`
+(`event.date <= now`; the page hides "Överlåt plats" once the trip has departed).
 
 ### `eventPayment.changeBus`
 
 Unchanged. Works by the current token, so the new holder can change bus and the old token no
 longer reaches the seat.
 
-### `getBooking` (thank-you page)
+### `getBooking` (thank-you page, changed)
 
-Unchanged. It's shown right after payment, before any transfer can happen.
+It's a public procedure keyed only by the Stripe PaymentIntent id, which stays in the payer's
+browser history (`/bortaresor/tack?payment_intent=…`). So that it can't be used to reach a seat
+after a transfer:
+
+- it returns no `cancellationToken` for anyone (the page doesn't need it);
+- it leaves out transferred participants entirely;
+- the event name, departure time, game info and `refundable` come from the payment's event, so
+  when every seat has been transferred it returns an empty `participants` list rather than an
+  error, and the page says the seats have been transferred.
 
 ## Emails
 
@@ -231,6 +248,10 @@ Den kan inte avbokas, kontakta info@vastrasidan.se". Bus change and "Överlåt p
 When `transferredAway` is set: show "Den här platsen har överlåtits till en annan person" above any
 remaining travellers in the group.
 
+For a refundable trip, the header's cancellation and refund terms ("Avbokning kan endast ske …",
+"Du blir återbetald …") are hidden when `transferredAway` is set or every listed traveller is
+transferred, since none of those seats can be cancelled.
+
 `ParticipantInfo` needs the traveller's `member` and `youth` flags. Add them to
 `participantFormatter`'s output.
 
@@ -273,6 +294,11 @@ mock:
   token and email, each token's view lists only its own seat, and the rest of the group no longer
   lists either;
 - a transfer works within 36 hours of departure, and is rejected after departure;
+- `getManagableBooking` reports `departed` once the trip has left;
+- a transfer without consent is rejected;
+- the group's old link still shows the rest of the group after an onward transfer;
+- `getBooking` returns no manage tokens and leaves out transferred seats, and returns an empty
+  list when every seat has been transferred;
 - a transfer is rejected for a cancelled seat, a seat with a pending refund, and an unpaid seat;
 - two simultaneous transfers with the same token: exactly one succeeds;
 - emails: the new holder gets a confirmation with the new token's link and the "can't be
