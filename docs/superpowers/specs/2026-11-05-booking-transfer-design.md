@@ -108,7 +108,9 @@ Steps, in one `prisma.$transaction`:
    - `cancellationToken = crypto.randomUUID()`.
 
    `busId`, `payAmount`, `member`, `youth`, `checkedIn` and all payment/refund relations are left
-   unchanged.
+   unchanged. `userEmail` is updated so the seat follows the new holder if user login
+   ("Mina bussresor", behind `ENABLE_LOGIN`, currently off) is turned on later; nothing in this
+   feature depends on it.
 4. Create the `ParticipantTransfer` row with the previous and new details and `previousToken`.
 
 Because the row is locked and the token is replaced, two simultaneous transfers with the same
@@ -117,6 +119,16 @@ token can't both succeed: the second finds no participant with that token.
 After the transaction commits, send both emails (best effort: failures go to Sentry, the transfer
 stands). Return `{ ok: true }`. The new token is **not** returned to the caller; the new holder
 gets it only by email.
+
+### Several seats to the same person
+
+Supported with no extra logic: each transfer is independent, and nothing requires a name or
+email to be unique per trip. Transferring two seats to the same email gives two seats, two emails
+and two separate manage links, each showing only its own seat. Transferred seats are **not**
+grouped by email: only a link grants access to a seat, never an email address.
+
+To keep the passenger list useful for the bus stewards, the form asks for the name of the person
+who will travel (see "Pages").
 
 ### `eventPayment.cancelBooking` (changed)
 
@@ -184,7 +196,8 @@ departed:
 
 - An **"Överlåt plats"** button opens a form (new component
   `src/components/common/TransferBookingForm`, react-hook-form + `transferBookingSchema`) with
-  first name, last name, email and phone, and a consent checkbox. Above the fields, a warning:
+  first name, last name, email and phone, and a consent checkbox. The name fields have the hint
+  "Ange namnet på personen som ska åka". Above the fields, a warning:
   - Platsen kan inte avbokas eller återbetalas efter överlåtelsen. Vid frågor, kontakta
     info@vastrasidan.se.
   - Du förlorar tillgången till bokningen. Den nya resenären får en egen länk via mejl.
@@ -238,6 +251,9 @@ mock:
 - the group view no longer lists the transferred seat;
 - an onward transfer works and adds a second `ParticipantTransfer` row; the intermediate holder's
   old token returns `transferredAway` with an empty list, not the original group;
+- two seats from the same group transferred, one at a time, to the same email: each gets its own
+  token and email, each token's view lists only its own seat, and the rest of the group no longer
+  lists either;
 - a transfer works within 36 hours of departure, and is rejected after departure;
 - a transfer is rejected for a cancelled seat, a seat with a pending refund, and an unpaid seat;
 - two simultaneous transfers with the same token: exactly one succeeds;
