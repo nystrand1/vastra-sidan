@@ -114,7 +114,9 @@ const participantFormatter = (
     member: participant.member,
     youth: participant.youth,
     // Handed over from the original booking; can't be cancelled through the site
-    transferred: participant.transfers.length > 0
+    transferred: participant.transfers.length > 0,
+    // Nothing can be changed or transferred after departure
+    departed: participant.event.date <= new Date()
   };
   return res;
 };
@@ -685,20 +687,26 @@ export const eventPaymentRouter = createTRPCRouter({
         });
       }
 
-      const participants = payment.participants.map(participantFormatter);
-      if (participants.length < 1 || !participants[0]) {
+      const [first] = payment.participants;
+      if (!first) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "No participants found"
         });
       }
+      // Anyone with the PaymentIntent id (it's in the payer's browser history) can call this,
+      // so it shows no manage tokens, and nothing about seats that have been transferred.
+      const participants = payment.participants
+        .filter((p) => p.transfers.length === 0)
+        .map(participantFormatter)
+        .map(({ cancellationToken: _token, ...participant }) => participant);
       return {
         participants,
-        eventName: participants[0].eventName,
-        departureTime: participants[0].departureTime,
+        eventName: first.event.name,
+        departureTime: formatSwedishTime(first.event.date, "HH:mm"),
         totalPrice: payment.amount / 100,
-        gameInfo: payment.participants[0]?.event.description,
-        refundable: participants[0].refundable
+        gameInfo: first.event.description,
+        refundable: first.event.refundable
       };
     })
 });

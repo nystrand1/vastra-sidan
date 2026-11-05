@@ -43,7 +43,7 @@ export const getEventParticipantById = async (id: string) => {
       event: {
         include: busesWithBookedSeats()
       },
-      transfers: { orderBy: { createdAt: "desc" } }
+      transfers: { orderBy: [{ createdAt: "desc" }, { id: "desc" }] }
     }
   });
   return participant;

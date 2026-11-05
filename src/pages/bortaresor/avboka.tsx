@@ -39,6 +39,7 @@ export const ParticipantInfo = ({
     member,
     youth,
     transferred,
+    departed,
   }: Participant ) => {
   const query = useRouter().query;
   const { refetch: refetchParticipant } = api.eventPayment.getManagableBooking.useQuery({ token: query.token as string});
@@ -127,7 +128,7 @@ export const ParticipantInfo = ({
             ) : refundable && !cancellationDisabled && (
               <Button className="w-full" disabled={isCancelling} onClick={() => handleCancel()}>Avboka</Button>
             )}
-            {cancellationToken && (
+            {cancellationToken && !departed && (
               <TransferBookingForm
                 token={cancellationToken}
                 boughtAtReducedPrice={member || youth}
@@ -160,6 +161,8 @@ export const CancelPage = () => {
 
   const { participants, departureTime, eventName, refundable, isTrain } = data;
   const transport = getTransportLabels(isTrain);
+  // Transferred seats can't be cancelled, so the refund terms don't apply to them
+  const noCancellableSeats = data.transferredAway || participants.every((p) => p.transferred);
 
   const busOptions = data.buses.map((bus) => {
     const fullyBooked = bus.availableSeats <= 0;
@@ -175,7 +178,9 @@ export const CancelPage = () => {
         <div className="divide-y divide-gray-100 space-y-4">
           <div>
             <p className="font-bold">Avgångstid: {departureTime}</p>
-            {refundable ? (
+            {!refundable ? (
+              <NonRefundableNotice />
+            ) : !noCancellableSeats && (
               <>
                 <p>
                   Avbokning kan endast ske senast 36 timmar innan avresa annars debiteras du fullt pris.
@@ -184,8 +189,6 @@ export const CancelPage = () => {
                   Du blir återbetald hela summan minus serviceavgift från Stripe. Läs mer om Stripe&apos;s avgifter <a href="https://stripe.com/pricing">här</a>
                 </p>
               </>
-            ) : (
-              <NonRefundableNotice />
             )}
           </div>
           {data.transferredAway && (

@@ -1,5 +1,5 @@
 import { Container, Head, Hr, Html, Img, Section, Tailwind, Text } from "react-email";
-import { type ParticipantTransfer, type VastraEvent } from "~/generated/prisma/client";
+import { type ParticipantTransfer, type VastraEvent } from "~/generated/prisma/browser";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
 
 interface BookingTransferredProps {

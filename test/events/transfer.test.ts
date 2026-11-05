@@ -34,8 +34,10 @@ const bookOne = async ({
 }: { departure?: Date; overrides?: Parameters<typeof participantInput>[1] } = {}) => {
   const event = await createEvent({ departure });
   const busId = event.buses[0]!.id;
-  const { participants } = await bookAndPay(event.id, [participantInput(busId, overrides)]);
-  return { event, busId, participant: participants[0]! };
+  const { participants, paymentIntent } = await bookAndPay(event.id, [
+    participantInput(busId, overrides)
+  ]);
+  return { event, busId, participant: participants[0]!, paymentIntent };
 };
 
 describe("transferring a booking", () => {
@@ -178,6 +180,16 @@ describe("transferring a booking", () => {
     expect(await prisma.participantTransfer.count()).toBe(0);
   });
 
+  it("rejects a transfer without consent", async () => {
+    const { participant } = await bookOne();
+
+    await expect(
+      transfer(participant.cancellationToken, buyer({ consent: false }))
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(await prisma.participantTransfer.count()).toBe(0);
+    expect(await reload(participant.id)).toEqual(participant);
+  });
+
   it("rejects an unknown token", async () => {
     await bookOne();
 
@@ -230,11 +242,11 @@ const view = (token: string | null) =>
 const bookGroup = async (count: number, eventOptions: Parameters<typeof createEvent>[0] = {}) => {
   const event = await createEvent(eventOptions);
   const busId = event.buses[0]!.id;
-  const { participants } = await bookAndPay(
+  const { participants, paymentIntent } = await bookAndPay(
     event.id,
     Array.from({ length: count }, () => participantInput(busId))
   );
-  return { event, busId, participants };
+  return { event, busId, participants, paymentIntent };
 };
 
 const newToken = async (id: string) => (await reload(id)).cancellationToken!;
@@ -309,6 +321,38 @@ describe("managing a transferred seat", () => {
     ]);
 
     expect(await prisma.participantTransfer.count()).toBe(2);
+  });
+
+  it("keeps showing the group's old link the rest of the group after an onward transfer", async () => {
+    const {
+      participants: [a, b]
+    } = await bookGroup(2);
+    await transfer(b!.cancellationToken);
+    await transfer(await newToken(b!.id), buyer({ email: "lisa@test.se" }));
+
+    const booking = await view(b!.cancellationToken);
+
+    expect(booking.transferredAway).toBe(true);
+    expect(booking.participants).toEqual([
+      expect.objectContaining({ email: a!.email, transferred: false })
+    ]);
+  });
+
+  it("tells the page whether the trip has departed", async () => {
+    const { event, participant } = await bookOne();
+
+    expect((await view(participant.cancellationToken)).participants).toEqual([
+      expect.objectContaining({ departed: false })
+    ]);
+
+    await prisma.vastraEvent.update({
+      where: { id: event.id },
+      data: { date: subMinutes(new Date(), 1) }
+    });
+
+    expect((await view(participant.cancellationToken)).participants).toEqual([
+      expect.objectContaining({ departed: true })
+    ]);
   });
 
   it("gives each seat transferred to the same person its own link", async () => {
@@ -389,6 +433,51 @@ describe("managing a transferred seat", () => {
     );
     expect(await reload(p!.id)).toMatchObject({ busId: bus1!.id, email: "kalle@test.se" });
     expect(fakeStripe.requestsTo("POST", "/refunds")).toEqual([]);
+  });
+});
+
+const thankYouPage = (paymentId: string) =>
+  publicCaller().eventPayment.getBooking({ paymentId });
+
+describe("the thank-you page after a transfer", () => {
+  it("leaves out the transferred seat and shows no manage tokens", async () => {
+    const {
+      participants: [a, b],
+      paymentIntent
+    } = await bookGroup(2);
+    await transfer(b!.cancellationToken);
+    const tb = await newToken(b!.id);
+
+    const booking = await thankYouPage(paymentIntent.id);
+    const json = JSON.stringify(booking);
+
+    expect(json).not.toContain(tb);
+    expect(json).not.toContain(a!.cancellationToken);
+    expect(json).not.toContain("kalle@test.se");
+    expect(booking.participants).toEqual([expect.objectContaining({ email: a!.email })]);
+    expect(booking.participants[0]).not.toHaveProperty("cancellationToken");
+  });
+
+  it("does not let the old buyer take back a transferred seat through it", async () => {
+    const { participant: p, paymentIntent } = await bookOne();
+    await transfer(p.cancellationToken);
+
+    const json = JSON.stringify(await thankYouPage(paymentIntent.id));
+
+    expect(json).not.toContain(await newToken(p.id));
+  });
+
+  it("still shows the trip when every seat has been transferred", async () => {
+    const { event, participant: p, paymentIntent } = await bookOne();
+    await transfer(p.cancellationToken);
+
+    const booking = await thankYouPage(paymentIntent.id);
+
+    expect(booking).toMatchObject({
+      participants: [],
+      eventName: event.name,
+      refundable: true
+    });
   });
 });
 
