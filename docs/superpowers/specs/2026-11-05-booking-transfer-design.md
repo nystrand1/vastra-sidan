@@ -110,7 +110,9 @@ Steps, in one `prisma.$transaction`:
 
 1. Find the participant's id by `cancellationToken`, lock that row
    (`SELECT id FROM Participant WHERE id = ? FOR UPDATE`), then re-read it by id **and** token.
-   (Re-reading by token after taking the lock is what makes a second, simultaneous transfer fail.)
+   (Re-reading by token after taking the lock is what makes a second, simultaneous transfer fail.
+   The transaction runs at READ COMMITTED: at MariaDB's default REPEATABLE READ the re-read would
+   still see the snapshot from step 1, and both transfers would succeed.)
    Not found at either point → `BAD_REQUEST "Participant not found"`.
 2. Load it with its event, succeeded payments and refund rows. Reject with `BAD_REQUEST` and a
    Swedish message if:
@@ -248,8 +250,8 @@ includes `transfers`, and `formatEventParticipant` returns them. Read-only.
 ## Known limitation
 
 `cancelBooking` calls Stripe outside a database transaction. If a cancellation and a transfer of
-the same seat are sent within a fraction of a second, the cancellation's refund could go through
-after the transfer. Exploiting this needs the seller to do it deliberately at the same moment.
+the same seat overlap (within the time the Stripe refund call takes, typically about a second),
+both can succeed: the refund goes to the original card and the new holder's seat is cancelled. Exploiting this needs the seller to do it deliberately at the same moment.
 Accepted for now; closing it would mean reworking `cancelBooking`'s locking.
 
 ## Tests
