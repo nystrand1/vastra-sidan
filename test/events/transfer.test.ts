@@ -218,3 +218,172 @@ describe("transferring a booking", () => {
     expect(await prisma.participantTransfer.count()).toBe(1);
   });
 });
+
+const view = (token: string | null) =>
+  publicCaller().eventPayment.getManagableBooking({ token: token ?? "" });
+
+/** Two (or more) paid travellers on one payment. */
+const bookGroup = async (count: number, eventOptions: Parameters<typeof createEvent>[0] = {}) => {
+  const event = await createEvent(eventOptions);
+  const busId = event.buses[0]!.id;
+  const { participants } = await bookAndPay(
+    event.id,
+    Array.from({ length: count }, () => participantInput(busId))
+  );
+  return { event, busId, participants };
+};
+
+const newToken = async (id: string) => (await reload(id)).cancellationToken!;
+
+describe("managing a transferred seat", () => {
+  it("shows the new holder only their own seat", async () => {
+    const {
+      participants: [_a, b]
+    } = await bookGroup(2);
+    await transfer(b!.cancellationToken);
+
+    const booking = await view(await newToken(b!.id));
+
+    expect(booking.participants).toEqual([
+      expect.objectContaining({ email: "kalle@test.se", transferred: true })
+    ]);
+    expect(booking.transferredAway).toBe(false);
+  });
+
+  it("hides a transferred seat from the rest of the group", async () => {
+    const {
+      participants: [a, b]
+    } = await bookGroup(2);
+    await transfer(b!.cancellationToken);
+
+    const booking = await view(a!.cancellationToken);
+
+    expect(booking.participants).toEqual([
+      expect.objectContaining({ email: a!.email, transferred: false })
+    ]);
+    expect(booking.transferredAway).toBe(false);
+  });
+
+  it("shows the group's old link that the seat has been transferred", async () => {
+    const {
+      participants: [a, b]
+    } = await bookGroup(2);
+    await transfer(a!.cancellationToken);
+
+    const booking = await view(a!.cancellationToken);
+
+    expect(booking.transferredAway).toBe(true);
+    expect(booking.participants).toEqual([expect.objectContaining({ email: b!.email })]);
+  });
+
+  it("shows only the message when a one-person booking was transferred", async () => {
+    const { participant } = await bookOne();
+    await transfer(participant.cancellationToken);
+
+    const booking = await view(participant.cancellationToken);
+
+    expect(booking.transferredAway).toBe(true);
+    expect(booking.participants).toEqual([]);
+  });
+
+  it("does not show the original group to an earlier new holder", async () => {
+    const {
+      participants: [_a, b]
+    } = await bookGroup(2);
+    await transfer(b!.cancellationToken);
+    const t2 = await newToken(b!.id);
+    await transfer(t2, buyer({ email: "lisa@test.se" }));
+    const t3 = await newToken(b!.id);
+
+    const earlier = await view(t2);
+    expect(earlier.transferredAway).toBe(true);
+    expect(earlier.participants).toEqual([]);
+
+    const current = await view(t3);
+    expect(current.participants).toEqual([
+      expect.objectContaining({ email: "lisa@test.se", transferred: true })
+    ]);
+
+    expect(await prisma.participantTransfer.count()).toBe(2);
+  });
+
+  it("gives each seat transferred to the same person its own link", async () => {
+    const {
+      participants: [a, b, c]
+    } = await bookGroup(3);
+    await transfer(b!.cancellationToken);
+    await transfer(c!.cancellationToken);
+    const tb = await newToken(b!.id);
+    const tc = await newToken(c!.id);
+
+    expect(tb).not.toBe(tc);
+    expect((await view(tb)).participants).toEqual([
+      expect.objectContaining({ cancellationToken: tb, email: "kalle@test.se" })
+    ]);
+    expect((await view(tc)).participants).toEqual([
+      expect.objectContaining({ cancellationToken: tc, email: "kalle@test.se" })
+    ]);
+    expect((await view(a!.cancellationToken)).participants).toEqual([
+      expect.objectContaining({ email: a!.email })
+    ]);
+  });
+
+  it("refuses to cancel a transferred seat, without asking Stripe for a refund", async () => {
+    const { participant } = await bookOne();
+    await transfer(participant.cancellationToken);
+
+    await expect(cancel(await newToken(participant.id))).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: "Platsen har överlåtits och kan inte avbokas. Kontakta info@vastrasidan.se"
+    });
+    expect(fakeStripe.requestsTo("POST", "/refunds")).toEqual([]);
+    expect((await reload(participant.id)).cancellationDate).toBeNull();
+  });
+
+  it("lets the new holder change bus", async () => {
+    const event = await createEvent({
+      buses: [
+        { name: "Buss 1", seats: 50 },
+        { name: "Buss 2", seats: 50 }
+      ]
+    });
+    const [bus1, bus2] = event.buses;
+    const {
+      participants: [p]
+    } = await bookAndPay(event.id, [participantInput(bus1!.id)]);
+    await transfer(p!.cancellationToken);
+
+    await publicCaller().eventPayment.changeBus({
+      token: await newToken(p!.id),
+      busId: bus2!.id
+    });
+
+    expect((await reload(p!.id)).busId).toBe(bus2!.id);
+  });
+
+  it("stops the old token from managing the seat", async () => {
+    const event = await createEvent({
+      buses: [
+        { name: "Buss 1", seats: 50 },
+        { name: "Buss 2", seats: 50 }
+      ]
+    });
+    const [bus1, bus2] = event.buses;
+    const {
+      participants: [p]
+    } = await bookAndPay(event.id, [participantInput(bus1!.id)]);
+    const oldToken = p!.cancellationToken;
+    await transfer(oldToken);
+    const notFound = { code: "BAD_REQUEST", message: "Participant not found" };
+
+    await expect(cancel(oldToken)).rejects.toMatchObject(notFound);
+    await expect(
+      publicCaller().eventPayment.changeBus({ token: oldToken!, busId: bus2!.id })
+    ).rejects.toMatchObject(notFound);
+    await expect(transfer(oldToken, buyer({ email: "lisa@test.se" }))).rejects.toMatchObject(
+      notFound
+    );
+    expect(await reload(p!.id)).toMatchObject({ busId: bus1!.id, email: "kalle@test.se" });
+    expect(fakeStripe.requestsTo("POST", "/refunds")).toEqual([]);
+  });
+});

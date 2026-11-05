@@ -46,6 +46,7 @@ export type ParticipantWithParticipants = Prisma.ParticipantGetPayload<{
             event: true;
             stripeRefunds: true;
             cancellationDate: true;
+            transfers: { select: { id: true } };
           };
         };
       };
@@ -107,10 +108,68 @@ const participantFormatter = (
     cancellationDisabled: !isCancelable,
     refundable: participant.event.refundable,
     hasCancelled,
-    refundPending
+    refundPending,
+    member: participant.member,
+    youth: participant.youth,
+    // Handed over from the original booking; can't be cancelled through the site
+    transferred: participant.transfers.length > 0
   };
   return res;
 };
+
+/** What a participant row needs to be shown with `participantFormatter`. */
+const formattedParticipantInclude = {
+  event: true,
+  stripeRefunds: true,
+  transfers: { select: { id: true } }
+} satisfies Prisma.ParticipantInclude;
+
+/**
+ * A participant with its event, buses and the participants on its succeeded payment,
+ * for the manage-booking page.
+ */
+const findBookingParticipant = (
+  prisma: Prisma.TransactionClient,
+  where: Prisma.ParticipantWhereUniqueInput
+) =>
+  prisma.participant.findUnique({
+    where,
+    select: {
+      id: true,
+      event: {
+        include: busesWithBookedSeats()
+      },
+      transfers: { select: { id: true } },
+      stripePayments: {
+        select: {
+          id: true,
+          participants: {
+            include: formattedParticipantInclude
+          }
+        },
+        where: {
+          status: StripePaymentStatus.SUCCEEDED
+        }
+      }
+    }
+  });
+
+type BookingParticipant = NonNullable<Awaited<ReturnType<typeof findBookingParticipant>>>;
+
+const succeededPayment = (participant: BookingParticipant) => {
+  const [payment] = participant.stripePayments;
+  if (!payment) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Payment not found"
+    });
+  }
+  return payment;
+};
+
+/** The payment's travellers that are still with the group, i.e. not transferred to someone else. */
+const groupParticipants = (participant: BookingParticipant) =>
+  succeededPayment(participant).participants.filter((p) => p.transfers.length === 0);
 
 export const eventPaymentRouter = createTRPCRouter({
   requestStripePayment: publicProcedure
@@ -291,6 +350,7 @@ export const eventPaymentRouter = createTRPCRouter({
         },
         include: {
           event: true,
+          transfers: { select: { id: true } },
           stripeRefunds: {
             select: {
               stripeRefundId: true,
@@ -314,6 +374,14 @@ export const eventPaymentRouter = createTRPCRouter({
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Participant not found"
+        });
+      }
+
+      // The refund would go to the original buyer's card, not to the new holder
+      if (participant.transfers.length > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Platsen har överlåtits och kan inte avbokas. Kontakta info@vastrasidan.se"
         });
       }
 
@@ -472,68 +540,73 @@ export const eventPaymentRouter = createTRPCRouter({
   getManagableBooking: publicProcedure
     .input(z.object({ token: z.string() }))
     .query(async ({ input, ctx }) => {
-      const payer = await ctx.prisma.participant.findFirst({
-        where: {
-          cancellationToken: input.token
-        },
-        select: {
-          phone: true,
-          busId: true,
-          event: {
-            include: busesWithBookedSeats()
-          },
-          cancellationDate: true,
-          stripePayments: {
-            select: {
-              id: true,
-              participants: {
-                include: {
-                  event: true,
-                  stripeRefunds: true
-                }
-              }
-            },
-            where: {
-              status: StripePaymentStatus.SUCCEEDED,
-              participants: {
-                some: {
-                  cancellationToken: input.token
-                }
-              }
-            }
-          }
-        }
+      const toBooking = (
+        participant: BookingParticipant,
+        participants: BookingParticipant["stripePayments"][number]["participants"],
+        transferredAway: boolean
+      ) => ({
+        participants: participants.map(participantFormatter),
+        // The token's seat has been transferred to someone else
+        transferredAway,
+        eventName: participant.event.name,
+        isTrain: isTrainEvent(participant.event),
+        departureTime: formatSwedishTime(participant.event.date, "HH:mm"),
+        refundable: participant.event.refundable,
+        buses: participant.event.buses.map((bus) => ({
+          ...bus,
+          availableSeats: bus.seats - bus._count.passengers
+        }))
       });
 
-      if (!payer) {
+      const holder = await findBookingParticipant(ctx.prisma, {
+        cancellationToken: input.token
+      });
+
+      if (holder) {
+        if (holder.transfers.length > 0) {
+          // A transferred seat is managed by its new holder alone
+          const own = succeededPayment(holder).participants.filter((p) => p.id === holder.id);
+          return toBooking(holder, own, false);
+        }
+        return toBooking(holder, groupParticipants(holder), false);
+      }
+
+      // The old link of a seat that has since been transferred. It never grants management.
+      const transfer = await ctx.prisma.participantTransfer.findFirst({
+        where: { previousToken: input.token },
+        select: { id: true, participantId: true }
+      });
+
+      if (!transfer) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Participant not found"
         });
       }
 
-      const [payment] = payer.stripePayments;
+      const participant = await findBookingParticipant(ctx.prisma, {
+        id: transfer.participantId
+      });
 
-      if (!payment) {
+      if (!participant) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Payment not found"
+          message: "Participant not found"
         });
       }
 
-      const participants = payment.participants.map(participantFormatter);
+      const firstTransfer = await ctx.prisma.participantTransfer.findFirst({
+        where: { participantId: transfer.participantId },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        select: { id: true }
+      });
 
-      return {
-        participants,
-        eventName: payer.event.name,
-        isTrain: isTrainEvent(payer.event),
-        departureTime: formatSwedishTime(payer.event.date, "HH:mm"),
-        refundable: payer.event.refundable,
-        buses: payer.event.buses.map((bus) => ({
-          ...bus,
-          availableSeats: bus.seats - bus._count.passengers
-        }))
-      };
+      // Only the first transfer's token belonged to the original group. A later one belonged to
+      // an earlier new holder, who must not see the group.
+      const participants =
+        firstTransfer?.id === transfer.id ? groupParticipants(participant) : [];
+
+      return toBooking(participant, participants, true);
     }),
   changeBus: publicProcedure
     .input(z.object({ busId: z.string(), token: z.string() }))
@@ -588,10 +661,7 @@ export const eventPaymentRouter = createTRPCRouter({
         },
         include: {
           participants: {
-            include: {
-              event: true,
-              stripeRefunds: true
-            }
+            include: formattedParticipantInclude
           }
         }
       });
