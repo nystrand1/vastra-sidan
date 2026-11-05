@@ -1,9 +1,13 @@
+import { captureException } from "@sentry/nextjs";
 import { addHours, subMinutes } from "date-fns";
+import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { adminCaller, publicCaller } from "../helpers/caller";
 import { prisma } from "../helpers/db";
 import { createEvent, participantInput } from "../helpers/factories";
 import { availableSeats, book, bookAndPay } from "../helpers/flows";
+import { getSentEmails, resetSentEmails } from "../mocks/ses";
+import { server } from "../mocks/server";
 import { fakeStripe } from "../mocks/stripe";
 
 const buyer = (overrides = {}) => ({
@@ -385,5 +389,60 @@ describe("managing a transferred seat", () => {
     );
     expect(await reload(p!.id)).toMatchObject({ busId: bus1!.id, email: "kalle@test.se" });
     expect(fakeStripe.requestsTo("POST", "/refunds")).toEqual([]);
+  });
+});
+
+describe("transfer emails", () => {
+  it("sends the new holder a confirmation with their own manage link", async () => {
+    const { event, participant: p } = await bookOne();
+    resetSentEmails();
+
+    await transfer(p.cancellationToken);
+
+    const newToken = (await reload(p.id)).cancellationToken;
+    const emails = getSentEmails();
+    const toNew = emails.find((e) => e.to === "kalle@test.se");
+    expect(toNew?.subject).toBe(`Plats överlåten: ${event.name}`);
+    expect(toNew?.html).toContain(`token=${newToken}`);
+    expect(toNew?.html).toContain("info@vastrasidan.se");
+    expect(toNew?.html).not.toContain("medlems-/ungdomspris");
+
+    const toOld = emails.find((e) => e.to === p.email);
+    expect(toOld?.subject).toBe(`Du har överlåtit din plats: ${event.name}`);
+    expect(toOld?.html).toContain("Kalle Köpare");
+  });
+
+  it("tells the new holder the seat was bought at member or youth price", async () => {
+    const { participant: p } = await bookOne({ overrides: { member: true } });
+    resetSentEmails();
+
+    await transfer(p.cancellationToken);
+
+    const toNew = getSentEmails().find((e) => e.to === "kalle@test.se");
+    expect(toNew?.html).toContain("medlems-/ungdomspris");
+  });
+
+  it("keeps the transfer when the email can't be sent", async () => {
+    const { participant: p } = await bookOne();
+    server.use(http.post("https://email.eu-north-1.amazonaws.com/", () => HttpResponse.error()));
+
+    await expect(transfer(p.cancellationToken)).resolves.toEqual({ ok: true });
+
+    expect((await reload(p.id)).email).toBe("kalle@test.se");
+    expect(captureException).toHaveBeenCalled();
+  });
+
+  it("resends the transfer notice from admin", async () => {
+    const { participant: p } = await bookOne();
+    await transfer(p.cancellationToken);
+    const newToken = (await reload(p.id)).cancellationToken;
+    resetSentEmails();
+
+    await adminCaller().admin.sendParticipantEmail({ id: p.id });
+
+    const emails = getSentEmails();
+    expect(emails).toHaveLength(1);
+    expect(emails[0]?.html).toContain(`token=${newToken}`);
+    expect(emails[0]?.html).toContain("info@vastrasidan.se");
   });
 });

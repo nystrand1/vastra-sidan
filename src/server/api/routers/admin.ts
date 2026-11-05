@@ -199,7 +199,9 @@ export const adminRouter = createTRPCRouter({
           message: "Participant not found"
         });
       }
-      await sendEventConfirmationEmail(participant);
+      await sendEventConfirmationEmail(participant, {
+        transferred: participant.transfers.length > 0
+      });
     }),
   updateMember: adminProcedure
     .input(updateMemberSchema)

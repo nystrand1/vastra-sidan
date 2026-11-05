@@ -15,6 +15,8 @@ import {
   releaseExpiredSeatHolds,
   withFreeSeat
 } from "~/server/utils/busCapacity";
+import { sendBookingTransferredEmail } from "~/server/utils/email/sendBookingTransferredEmail";
+import { sendEventConfirmationEmail } from "~/server/utils/email/sendEventConfirmationEmail";
 import { isEventCancelable } from "~/server/utils/event";
 import { checkRefundStatus } from "~/server/utils/payment";
 import { participantRefundState } from "~/server/utils/refunds";
@@ -647,7 +649,17 @@ export const eventPaymentRouter = createTRPCRouter({
   transferBooking: publicProcedure
     .input(transferBookingSchema)
     .mutation(async ({ input, ctx }) => {
-      await transferBooking(ctx.prisma, input);
+      const { participant, transfer } = await transferBooking(ctx.prisma, input);
+      // Emails are best effort: the transfer is already committed.
+      const results = await Promise.allSettled([
+        sendEventConfirmationEmail(participant, { transferred: true }),
+        sendBookingTransferredEmail({ transfer, event: participant.event })
+      ]);
+      for (const result of results) {
+        if (result.status === "rejected") {
+          captureException(result.reason);
+        }
+      }
       // The new token goes only to the new holder, by email
       return { ok: true };
     }),
