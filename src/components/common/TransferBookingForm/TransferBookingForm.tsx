@@ -29,6 +29,8 @@ interface TransferBookingFormProps {
   /** The seat was bought at the member or youth price. */
   boughtAtReducedPrice: boolean;
   onTransferred: () => Promise<void>;
+  /** Something else on the page is in progress, e.g. a cancellation of this seat. */
+  disabled?: boolean;
 }
 
 const defaultValues: TransferBookingFormValues = {
@@ -42,7 +44,8 @@ const defaultValues: TransferBookingFormValues = {
 export const TransferBookingForm = ({
   token,
   boughtAtReducedPrice,
-  onTransferred
+  onTransferred,
+  disabled = false
 }: TransferBookingFormProps) => {
   const [open, setOpen] = useState(false);
   const { mutateAsync: transferBooking } = api.eventPayment.transferBooking.useMutation();
@@ -173,7 +176,7 @@ export const TransferBookingForm = ({
               </FormItem>
             )}
           />
-          <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+          <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || disabled}>
             Överlåt plats
           </Button>
         </form>
@@ -184,7 +187,7 @@ export const TransferBookingForm = ({
   return (
     <DialogDrawer
       title="Överlåt plats"
-      trigger={<Button className="w-full">Överlåt plats</Button>}
+      trigger={<Button className="w-full" disabled={disabled}>Överlåt plats</Button>}
       content={content}
       open={open}
       setOpen={handleOpen}

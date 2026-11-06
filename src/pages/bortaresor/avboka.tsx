@@ -51,7 +51,8 @@ export const ParticipantInfo = ({
   const isMutating = useIsMutating() > 0;
   // Covers the whole cancellation, including the pauses between refund status checks
   const [isCancelling, setIsCancelling] = useState(false);
-  const cancelDisabled = isCancelling || isMutating;
+  // Avboka and Överlåt plats both wait, so a seat can't be cancelled and transferred at once
+  const isBusy = isCancelling || isMutating;
 
   const [selectedBus, setSelectedBus] = useState(busId);
 
@@ -59,7 +60,7 @@ export const ParticipantInfo = ({
 
 
   const handleCancel = async () => {
-    if (!cancellationToken || cancelDisabled) return null;
+    if (!cancellationToken || isBusy) return null;
 
     setIsCancelling(true);
     const toastId = toast.loading("Avbokar...")
@@ -131,21 +132,26 @@ export const ParticipantInfo = ({
               />
               <Button className="w-full" disabled={!hasChangedBus || isChangingBus} onClick={() => handleChangeBus()}>{transport.change}</Button>
             </div>
-            {transferred ? (
+            {transferred && (
               // A transferred seat can't be cancelled, whatever the cancellation window says
               <p className="rounded-md border p-2 text-center">Överlåten plats. Den kan inte avbokas, kontakta info@vastrasidan.se</p>
-            ) : refundable && !cancellationDisabled && (
-              <Button className="w-full" disabled={cancelDisabled} onClick={() => handleCancel()}>Avboka</Button>
             )}
-            {cancellationToken && !departed && (
-              <TransferBookingForm
-                token={cancellationToken}
-                boughtAtReducedPrice={member || youth}
-                onTransferred={async () => {
-                  await refetchParticipant();
-                }}
-              />
-            )}
+            {/* Side by side to keep the page short; a lone button takes the full width */}
+            <div className="grid grid-flow-col auto-cols-fr gap-2 empty:hidden">
+              {!transferred && refundable && !cancellationDisabled && (
+                <Button className="w-full" disabled={isBusy} onClick={() => handleCancel()}>Avboka</Button>
+              )}
+              {cancellationToken && !departed && (
+                <TransferBookingForm
+                  token={cancellationToken}
+                  boughtAtReducedPrice={member || youth}
+                  disabled={isBusy}
+                  onTransferred={async () => {
+                    await refetchParticipant();
+                  }}
+                />
+              )}
+            </div>
           </>
         )}
         {hasCancelled && cancellationDate && (
@@ -184,7 +190,8 @@ export const CancelPage = () => {
   })
 
   return (
-    <Card title={eventName} titleClassName="!text-3xl" className="w-full md:w-96 m-auto">
+    // The margin keeps the card clear of the fixed navigation bar when the page scrolls
+    <Card title={eventName} titleClassName="!text-3xl" className="w-full md:w-96 m-auto mt-4 md:mt-8">
         <div className="divide-y divide-gray-100 space-y-4">
           <div>
             <p className="font-bold">Avgångstid: {departureTime}</p>

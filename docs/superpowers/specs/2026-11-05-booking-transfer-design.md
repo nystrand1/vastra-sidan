@@ -253,9 +253,15 @@ For a refundable trip, the header's cancellation and refund terms ("Avbokning ka
 list), since none of those seats can be cancelled. They stay visible on an old link that still
 lists untransferred travellers, who can still cancel.
 
-The "Avboka" button is disabled while any mutation on the page is in flight (a transfer, a bus
-change, another traveller's cancellation) and for the whole cancellation flow, including the
-refund status polling.
+The "Avboka" and "Överlåt plats" buttons (and the transfer form's submit button) are disabled
+while any mutation on the page is in flight (a transfer, a bus change, a cancellation) and for the
+whole cancellation flow, including the refund status polling. That stops the same page from
+cancelling and transferring a seat at once; it doesn't cover two tabs or devices (see "Known
+limitation").
+
+"Avboka" and "Överlåt plats" sit side by side in equal columns to keep the page short; when only
+one of them is shown it takes the full width. The card has a top margin so it doesn't sit against
+the fixed navigation bar.
 
 `ParticipantInfo` needs the traveller's `member` and `youth` flags. Add them to
 `participantFormatter`'s output.
