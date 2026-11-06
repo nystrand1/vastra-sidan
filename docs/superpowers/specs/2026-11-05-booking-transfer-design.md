@@ -249,8 +249,13 @@ When `transferredAway` is set: show "Den här platsen har överlåtits till en a
 remaining travellers in the group.
 
 For a refundable trip, the header's cancellation and refund terms ("Avbokning kan endast ske …",
-"Du blir återbetald …") are hidden when `transferredAway` is set or every listed traveller is
-transferred, since none of those seats can be cancelled.
+"Du blir återbetald …") are hidden when every listed traveller is transferred (including an empty
+list), since none of those seats can be cancelled. They stay visible on an old link that still
+lists untransferred travellers, who can still cancel.
+
+The "Avboka" button is disabled while any mutation on the page is in flight (a transfer, a bus
+change, another traveller's cancellation) and for the whole cancellation flow, including the
+refund status polling.
 
 `ParticipantInfo` needs the traveller's `member` and `youth` flags. Add them to
 `participantFormatter`'s output.

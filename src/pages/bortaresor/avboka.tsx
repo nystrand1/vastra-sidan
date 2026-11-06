@@ -1,4 +1,5 @@
 import { captureException } from "@sentry/nextjs";
+import { useIsMutating } from "@tanstack/react-query";
 import { TRPCClientError } from "@trpc/client";
 import { type inferRouterOutputs } from "@trpc/server";
 import { type GetServerSidePropsContext } from "next";
@@ -43,9 +44,14 @@ export const ParticipantInfo = ({
   }: Participant ) => {
   const query = useRouter().query;
   const { refetch: refetchParticipant } = api.eventPayment.getManagableBooking.useQuery({ token: query.token as string});
-  const { mutateAsync: cancelBooking, isPending: isCancelling } = api.eventPayment.cancelBooking.useMutation();
+  const { mutateAsync: cancelBooking } = api.eventPayment.cancelBooking.useMutation();
   const { mutateAsync: changeBus, isPending: isChangingBus } = api.eventPayment.changeBus.useMutation();
   const { mutateAsync: checkRefundStatus } = api.eventPayment.checkRefundStatus.useMutation();
+  // Any mutation on the page (a transfer, a bus change, another traveller's cancellation)
+  const isMutating = useIsMutating() > 0;
+  // Covers the whole cancellation, including the pauses between refund status checks
+  const [isCancelling, setIsCancelling] = useState(false);
+  const cancelDisabled = isCancelling || isMutating;
 
   const [selectedBus, setSelectedBus] = useState(busId);
 
@@ -53,8 +59,9 @@ export const ParticipantInfo = ({
 
 
   const handleCancel = async () => {
-    if (!cancellationToken) return null;
+    if (!cancellationToken || cancelDisabled) return null;
 
+    setIsCancelling(true);
     const toastId = toast.loading("Avbokar...")
 
     try {
@@ -77,6 +84,8 @@ export const ParticipantInfo = ({
       });
       console.error(e);
       await refetchParticipant();
+    } finally {
+      setIsCancelling(false);
     }
   }
 
@@ -126,7 +135,7 @@ export const ParticipantInfo = ({
               // A transferred seat can't be cancelled, whatever the cancellation window says
               <p className="rounded-md border p-2 text-center">Överlåten plats. Den kan inte avbokas, kontakta info@vastrasidan.se</p>
             ) : refundable && !cancellationDisabled && (
-              <Button className="w-full" disabled={isCancelling} onClick={() => handleCancel()}>Avboka</Button>
+              <Button className="w-full" disabled={cancelDisabled} onClick={() => handleCancel()}>Avboka</Button>
             )}
             {cancellationToken && !departed && (
               <TransferBookingForm
@@ -161,8 +170,9 @@ export const CancelPage = () => {
 
   const { participants, departureTime, eventName, refundable, isTrain } = data;
   const transport = getTransportLabels(isTrain);
-  // Transferred seats can't be cancelled, so the refund terms don't apply to them
-  const noCancellableSeats = data.transferredAway || participants.every((p) => p.transferred);
+  // Transferred seats can't be cancelled, so the refund terms only apply while some listed seat
+  // isn't transferred. True for an empty list too (the old link of a one-person booking).
+  const noCancellableSeats = participants.every((p) => p.transferred);
 
   const busOptions = data.buses.map((bus) => {
     const fullyBooked = bus.availableSeats <= 0;
