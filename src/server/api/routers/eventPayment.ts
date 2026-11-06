@@ -15,14 +15,17 @@ import {
   releaseExpiredSeatHolds,
   withFreeSeat
 } from "~/server/utils/busCapacity";
+import { sendBookingTransferredEmail } from "~/server/utils/email/sendBookingTransferredEmail";
+import { sendEventConfirmationEmail } from "~/server/utils/email/sendEventConfirmationEmail";
 import { isEventCancelable } from "~/server/utils/event";
 import { checkRefundStatus } from "~/server/utils/payment";
 import { participantRefundState } from "~/server/utils/refunds";
 import { awayGamePaths, revalidatePages } from "~/server/utils/revalidate";
+import { transferBooking } from "~/server/utils/transferBooking";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { createPaymentIntent, createRefundIntent } from "~/utils/stripeHelpers";
 import { isTrainEvent } from "~/utils/transport";
-import { participantSchema } from "~/utils/zodSchemas";
+import { participantSchema, transferBookingSchema } from "~/utils/zodSchemas";
 
 type ParticipantInput = z.infer<typeof participantSchema>;
 
@@ -45,6 +48,7 @@ export type ParticipantWithParticipants = Prisma.ParticipantGetPayload<{
             event: true;
             stripeRefunds: true;
             cancellationDate: true;
+            transfers: { select: { id: true } };
           };
         };
       };
@@ -106,10 +110,70 @@ const participantFormatter = (
     cancellationDisabled: !isCancelable,
     refundable: participant.event.refundable,
     hasCancelled,
-    refundPending
+    refundPending,
+    member: participant.member,
+    youth: participant.youth,
+    // Handed over from the original booking; can't be cancelled through the site
+    transferred: participant.transfers.length > 0,
+    // Nothing can be changed or transferred after departure
+    departed: participant.event.date <= new Date()
   };
   return res;
 };
+
+/** What a participant row needs to be shown with `participantFormatter`. */
+const formattedParticipantInclude = {
+  event: true,
+  stripeRefunds: true,
+  transfers: { select: { id: true } }
+} satisfies Prisma.ParticipantInclude;
+
+/**
+ * A participant with its event, buses and the participants on its succeeded payment,
+ * for the manage-booking page.
+ */
+const findBookingParticipant = (
+  prisma: Prisma.TransactionClient,
+  where: Prisma.ParticipantWhereUniqueInput
+) =>
+  prisma.participant.findUnique({
+    where,
+    select: {
+      id: true,
+      event: {
+        include: busesWithBookedSeats()
+      },
+      transfers: { select: { id: true } },
+      stripePayments: {
+        select: {
+          id: true,
+          participants: {
+            include: formattedParticipantInclude
+          }
+        },
+        where: {
+          status: StripePaymentStatus.SUCCEEDED
+        }
+      }
+    }
+  });
+
+type BookingParticipant = NonNullable<Awaited<ReturnType<typeof findBookingParticipant>>>;
+
+const succeededPayment = (participant: BookingParticipant) => {
+  const [payment] = participant.stripePayments;
+  if (!payment) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Payment not found"
+    });
+  }
+  return payment;
+};
+
+/** The payment's travellers that are still with the group, i.e. not transferred to someone else. */
+const groupParticipants = (participant: BookingParticipant) =>
+  succeededPayment(participant).participants.filter((p) => p.transfers.length === 0);
 
 export const eventPaymentRouter = createTRPCRouter({
   requestStripePayment: publicProcedure
@@ -290,6 +354,7 @@ export const eventPaymentRouter = createTRPCRouter({
         },
         include: {
           event: true,
+          transfers: { select: { id: true } },
           stripeRefunds: {
             select: {
               stripeRefundId: true,
@@ -313,6 +378,14 @@ export const eventPaymentRouter = createTRPCRouter({
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Participant not found"
+        });
+      }
+
+      // The refund would go to the original buyer's card, not to the new holder
+      if (participant.transfers.length > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Platsen har överlåtits och kan inte avbokas. Kontakta info@vastrasidan.se"
         });
       }
 
@@ -471,68 +544,73 @@ export const eventPaymentRouter = createTRPCRouter({
   getManagableBooking: publicProcedure
     .input(z.object({ token: z.string() }))
     .query(async ({ input, ctx }) => {
-      const payer = await ctx.prisma.participant.findFirst({
-        where: {
-          cancellationToken: input.token
-        },
-        select: {
-          phone: true,
-          busId: true,
-          event: {
-            include: busesWithBookedSeats()
-          },
-          cancellationDate: true,
-          stripePayments: {
-            select: {
-              id: true,
-              participants: {
-                include: {
-                  event: true,
-                  stripeRefunds: true
-                }
-              }
-            },
-            where: {
-              status: StripePaymentStatus.SUCCEEDED,
-              participants: {
-                some: {
-                  cancellationToken: input.token
-                }
-              }
-            }
-          }
-        }
+      const toBooking = (
+        participant: BookingParticipant,
+        participants: BookingParticipant["stripePayments"][number]["participants"],
+        transferredAway: boolean
+      ) => ({
+        participants: participants.map(participantFormatter),
+        // The token's seat has been transferred to someone else
+        transferredAway,
+        eventName: participant.event.name,
+        isTrain: isTrainEvent(participant.event),
+        departureTime: formatSwedishTime(participant.event.date, "HH:mm"),
+        refundable: participant.event.refundable,
+        buses: participant.event.buses.map((bus) => ({
+          ...bus,
+          availableSeats: bus.seats - bus._count.passengers
+        }))
       });
 
-      if (!payer) {
+      const holder = await findBookingParticipant(ctx.prisma, {
+        cancellationToken: input.token
+      });
+
+      if (holder) {
+        if (holder.transfers.length > 0) {
+          // A transferred seat is managed by its new holder alone
+          const own = succeededPayment(holder).participants.filter((p) => p.id === holder.id);
+          return toBooking(holder, own, false);
+        }
+        return toBooking(holder, groupParticipants(holder), false);
+      }
+
+      // The old link of a seat that has since been transferred. It never grants management.
+      const transfer = await ctx.prisma.participantTransfer.findFirst({
+        where: { previousToken: input.token },
+        select: { id: true, participantId: true }
+      });
+
+      if (!transfer) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Participant not found"
         });
       }
 
-      const [payment] = payer.stripePayments;
+      const participant = await findBookingParticipant(ctx.prisma, {
+        id: transfer.participantId
+      });
 
-      if (!payment) {
+      if (!participant) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Payment not found"
+          message: "Participant not found"
         });
       }
 
-      const participants = payment.participants.map(participantFormatter);
+      const firstTransfer = await ctx.prisma.participantTransfer.findFirst({
+        where: { participantId: transfer.participantId },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        select: { id: true }
+      });
 
-      return {
-        participants,
-        eventName: payer.event.name,
-        isTrain: isTrainEvent(payer.event),
-        departureTime: formatSwedishTime(payer.event.date, "HH:mm"),
-        refundable: payer.event.refundable,
-        buses: payer.event.buses.map((bus) => ({
-          ...bus,
-          availableSeats: bus.seats - bus._count.passengers
-        }))
-      };
+      // Only the first transfer's token belonged to the original group. A later one belonged to
+      // an earlier new holder, who must not see the group.
+      const participants =
+        firstTransfer?.id === transfer.id ? groupParticipants(participant) : [];
+
+      return toBooking(participant, participants, true);
     }),
   changeBus: publicProcedure
     .input(z.object({ busId: z.string(), token: z.string() }))
@@ -570,6 +648,23 @@ export const eventPaymentRouter = createTRPCRouter({
 
       return "ok";
     }),
+  transferBooking: publicProcedure
+    .input(transferBookingSchema)
+    .mutation(async ({ input, ctx }) => {
+      const { participant, transfer } = await transferBooking(ctx.prisma, input);
+      // Emails are best effort: the transfer is already committed.
+      const results = await Promise.allSettled([
+        sendEventConfirmationEmail(participant, { transferred: true }),
+        sendBookingTransferredEmail({ transfer, event: participant.event })
+      ]);
+      for (const result of results) {
+        if (result.status === "rejected") {
+          captureException(result.reason);
+        }
+      }
+      // The new token goes only to the new holder, by email
+      return { ok: true };
+    }),
   getBooking: publicProcedure
     .input(z.object({ paymentId: z.string() }))
     .query(async ({ input, ctx }) => {
@@ -580,10 +675,7 @@ export const eventPaymentRouter = createTRPCRouter({
         },
         include: {
           participants: {
-            include: {
-              event: true,
-              stripeRefunds: true
-            }
+            include: formattedParticipantInclude
           }
         }
       });
@@ -595,20 +687,26 @@ export const eventPaymentRouter = createTRPCRouter({
         });
       }
 
-      const participants = payment.participants.map(participantFormatter);
-      if (participants.length < 1 || !participants[0]) {
+      const [first] = payment.participants;
+      if (!first) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "No participants found"
         });
       }
+      // Anyone with the PaymentIntent id (it's in the payer's browser history) can call this,
+      // so it shows no manage tokens, and nothing about seats that have been transferred.
+      const participants = payment.participants
+        .filter((p) => p.transfers.length === 0)
+        .map(participantFormatter)
+        .map(({ cancellationToken: _token, ...participant }) => participant);
       return {
         participants,
-        eventName: participants[0].eventName,
-        departureTime: participants[0].departureTime,
+        eventName: first.event.name,
+        departureTime: formatSwedishTime(first.event.date, "HH:mm"),
         totalPrice: payment.amount / 100,
-        gameInfo: payment.participants[0]?.event.description,
-        refundable: participants[0].refundable
+        gameInfo: first.event.description,
+        refundable: first.event.refundable
       };
     })
 });

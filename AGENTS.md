@@ -167,7 +167,7 @@ Always use `~/` imports for project files.
 - Prisma 7 connects through the MariaDB driver adapter (`@prisma/adapter-mariadb`) in `src/server/db.ts`
 - Prisma uses `relationMode = "prisma"` (no foreign key constraints at DB level)
 - The client is generated to `src/generated/prisma` (gitignored). Import from `~/generated/prisma/client` in server code, and from `~/generated/prisma/browser` in anything a page or component can import (enums and model types). Importing `client` there pulls server-only code into the browser bundle and breaks `next build`.
-- Key models: `User`, `Member`, `Membership`, `VastraEvent`, `Bus`, `Participant`, `StripePayment`, `StripeRefund`, `FotballGame`, `TicketSalesRecord`
+- Key models: `User`, `Member`, `Membership`, `VastraEvent`, `Bus`, `Participant`, `ParticipantTransfer`, `StripePayment`, `StripeRefund`, `FotballGame`, `TicketSalesRecord`
 - After schema changes: `pnpm prisma db push` (dev) or `pnpm prisma migrate dev`
 - Generate client: `pnpm prisma generate` (runs automatically on `postinstall`)
 

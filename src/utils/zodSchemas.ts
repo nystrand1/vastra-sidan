@@ -21,6 +21,18 @@ export const participantSchema = z.object({
   youth: z.boolean()
 });
 
+export const transferBookingFormSchema = z.object({
+  firstName: z.string({ required_error: "Ange förnamn" }).trim().min(1, { message: "Ange förnamn" }),
+  lastName: z.string({ required_error: "Ange efternamn" }).trim().min(1, { message: "Ange efternamn" }),
+  email: z.string({ required_error: "Ange email" }).trim().toLowerCase().email({ message: "Felaktig email" }),
+  phone: z.string({ required_error: "Ange telefonnummer" }).trim().min(1, { message: "Ange telefonnummer" }),
+  consent: z.boolean().refine((x) => x, { message: "Du måste bekräfta att du förstår villkoren" })
+});
+
+export const transferBookingSchema = transferBookingFormSchema.extend({
+  token: z.string()
+});
+
 export const eventSignupSchema = z.object({
   participants: participantSchema.array()
 });

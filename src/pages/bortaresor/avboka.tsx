@@ -1,4 +1,5 @@
 import { captureException } from "@sentry/nextjs";
+import { useIsMutating } from "@tanstack/react-query";
 import { TRPCClientError } from "@trpc/client";
 import { type inferRouterOutputs } from "@trpc/server";
 import { type GetServerSidePropsContext } from "next";
@@ -9,6 +10,7 @@ import { Button } from "~/components/ui/button";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { NonRefundableNotice } from "~/components/atoms/NonRefundableNotice/NonRefundableNotice";
 import { SelectField } from "~/components/atoms/SelectField/SelectField";
+import { TransferBookingForm } from "~/components/common/TransferBookingForm/TransferBookingForm";
 import { type AppRouter } from "~/server/api/root";
 import { api } from "~/utils/api";
 import { createSSRHelper } from "~/utils/createSSRHelper";
@@ -35,12 +37,22 @@ export const ParticipantInfo = ({
     busOptions,
     cancellationDate,
     transport,
+    member,
+    youth,
+    transferred,
+    departed,
   }: Participant ) => {
   const query = useRouter().query;
   const { refetch: refetchParticipant } = api.eventPayment.getManagableBooking.useQuery({ token: query.token as string});
-  const { mutateAsync: cancelBooking, isPending: isCancelling } = api.eventPayment.cancelBooking.useMutation();
+  const { mutateAsync: cancelBooking } = api.eventPayment.cancelBooking.useMutation();
   const { mutateAsync: changeBus, isPending: isChangingBus } = api.eventPayment.changeBus.useMutation();
   const { mutateAsync: checkRefundStatus } = api.eventPayment.checkRefundStatus.useMutation();
+  // Any mutation on the page (a transfer, a bus change, another traveller's cancellation)
+  const isMutating = useIsMutating() > 0;
+  // Covers the whole cancellation, including the pauses between refund status checks
+  const [isCancelling, setIsCancelling] = useState(false);
+  // Avboka and Överlåt plats both wait, so a seat can't be cancelled and transferred at once
+  const isBusy = isCancelling || isMutating;
 
   const [selectedBus, setSelectedBus] = useState(busId);
 
@@ -48,8 +60,9 @@ export const ParticipantInfo = ({
 
 
   const handleCancel = async () => {
-    if (!cancellationToken) return null;
+    if (!cancellationToken || isBusy) return null;
 
+    setIsCancelling(true);
     const toastId = toast.loading("Avbokar...")
 
     try {
@@ -72,6 +85,8 @@ export const ParticipantInfo = ({
       });
       console.error(e);
       await refetchParticipant();
+    } finally {
+      setIsCancelling(false);
     }
   }
 
@@ -117,9 +132,26 @@ export const ParticipantInfo = ({
               />
               <Button className="w-full" disabled={!hasChangedBus || isChangingBus} onClick={() => handleChangeBus()}>{transport.change}</Button>
             </div>
-            {refundable && !cancellationDisabled && (
-              <Button className="w-full" disabled={isCancelling} onClick={() => handleCancel()}>Avboka</Button>
+            {transferred && (
+              // A transferred seat can't be cancelled, whatever the cancellation window says
+              <p className="rounded-md border p-2 text-center">Överlåten plats. Den kan inte avbokas, kontakta info@vastrasidan.se</p>
             )}
+            {/* Side by side to keep the page short; a lone button takes the full width */}
+            <div className="grid grid-flow-col auto-cols-fr gap-2 empty:hidden">
+              {!transferred && refundable && !cancellationDisabled && (
+                <Button className="w-full" disabled={isBusy} onClick={() => handleCancel()}>Avboka</Button>
+              )}
+              {cancellationToken && !departed && (
+                <TransferBookingForm
+                  token={cancellationToken}
+                  boughtAtReducedPrice={member || youth}
+                  disabled={isBusy}
+                  onTransferred={async () => {
+                    await refetchParticipant();
+                  }}
+                />
+              )}
+            </div>
           </>
         )}
         {hasCancelled && cancellationDate && (
@@ -128,7 +160,7 @@ export const ParticipantInfo = ({
         {refundPending && (
           <p className="rounded-md border p-2 text-center">Avbokad, återbetalningen behandlas</p>
         )}
-        {refundable && cancellationDisabled && !hasCancelled && !refundPending && (
+        {refundable && cancellationDisabled && !transferred && !hasCancelled && !refundPending && (
           <p>Du kan inte avboka inom 36h från avgång</p>
         )}
       </div>
@@ -144,6 +176,9 @@ export const CancelPage = () => {
 
   const { participants, departureTime, eventName, refundable, isTrain } = data;
   const transport = getTransportLabels(isTrain);
+  // Transferred seats can't be cancelled, so the refund terms only apply while some listed seat
+  // isn't transferred. True for an empty list too (the old link of a one-person booking).
+  const noCancellableSeats = participants.every((p) => p.transferred);
 
   const busOptions = data.buses.map((bus) => {
     const fullyBooked = bus.availableSeats <= 0;
@@ -155,11 +190,14 @@ export const CancelPage = () => {
   })
 
   return (
-    <Card title={eventName} titleClassName="!text-3xl" className="w-full md:w-96 m-auto">
+    // The margin keeps the card clear of the fixed navigation bar when the page scrolls
+    <Card title={eventName} titleClassName="!text-3xl" className="w-full md:w-96 m-auto mt-4 md:mt-8">
         <div className="divide-y divide-gray-100 space-y-4">
           <div>
             <p className="font-bold">Avgångstid: {departureTime}</p>
-            {refundable ? (
+            {!refundable ? (
+              <NonRefundableNotice />
+            ) : !noCancellableSeats && (
               <>
                 <p>
                   Avbokning kan endast ske senast 36 timmar innan avresa annars debiteras du fullt pris.
@@ -168,10 +206,14 @@ export const CancelPage = () => {
                   Du blir återbetald hela summan minus serviceavgift från Stripe. Läs mer om Stripe&apos;s avgifter <a href="https://stripe.com/pricing">här</a>
                 </p>
               </>
-            ) : (
-              <NonRefundableNotice />
             )}
           </div>
+          {data.transferredAway && (
+            // Wrapped so the parent's divide-y doesn't strip the box's bottom border
+            <div className="pt-4">
+              <p className="rounded-md border p-2 text-center">Den här platsen har överlåtits till en annan person</p>
+            </div>
+          )}
           {participants.map((participant) => (
             <ParticipantInfo key={participant.cancellationToken} {...participant} busOptions={busOptions} transport={transport} />               
           ))}

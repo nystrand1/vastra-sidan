@@ -5,7 +5,8 @@ import { render } from "react-email";
 import { sendSesEmail } from "./sendSesEmail";
 
 export const sendEventConfirmationEmail = async (
-  participant: ParticipantWithBusAndEvent
+  participant: ParticipantWithBusAndEvent,
+  options: { transferred?: boolean } = {}
 ) => {
   const cancellationUrl = `${env.CANCELLATION_URL}?token=${
     participant?.cancellationToken || ""
@@ -13,7 +14,11 @@ export const sendEventConfirmationEmail = async (
 
   return await sendSesEmail({
     to: participant.email,
-    subject: `Anmälan till ${participant?.event?.name}`,
-    body: await render(EventSignUp({ participant, cancellationUrl }))
+    subject: options.transferred
+      ? `Plats överlåten: ${participant?.event?.name}`
+      : `Anmälan till ${participant?.event?.name}`,
+    body: await render(
+      EventSignUp({ participant, cancellationUrl, transferred: options.transferred })
+    )
   });
 };
