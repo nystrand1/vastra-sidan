@@ -63,9 +63,10 @@ const mockParticipant: EventSignUpProps["participant"] = {
   checkedIn: false
 };
 
+// VERCEL_URL on Vercel previews, WEBSITE_URL on EC2
 const baseUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
-  : "http://localhost:3000";
+  : (process.env.WEBSITE_URL ?? "http://localhost:3000");
 
 export const EventSignUp = ({
   participant = mockParticipant,

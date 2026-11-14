@@ -15,7 +15,7 @@ The website for **Västra Sidan**, a Swedish football supporters association. It
 | Forms      | react-hook-form + Zod validation                            |
 | 3D/graphics| react-three-fiber, drei, rapier                             |
 | Validation | Zod, with env vars validated via `@t3-oss/env-nextjs`      |
-| Deployment | Vercel                                                      |
+| Deployment | EC2 (Next.js standalone behind Apache), moving off Vercel  |
 
 This project started from the [T3 Stack](https://create.t3.gg/) scaffold and has since grown well beyond it.
 
@@ -123,7 +123,7 @@ Tests named `[known bug] …` (`itKnownBug`) describe the intended behaviour of 
 
 ## Deployment
 
-The app is deployed on [Vercel](https://vercel.com). See the [T3 Stack deployment guides](https://create.t3.gg/en/deployment/vercel) for general Next.js/Vercel deployment guidance, and make sure all required environment variables (see above) are configured in the Vercel project settings.
+The app is moving from [Vercel](https://vercel.com) to the EC2 box that already hosts MySQL and WordPress. It runs there as a Next.js standalone server behind Apache. See [`deploy/README.md`](./deploy/README.md) for how to deploy, roll back and operate it.
 
 ## More details
 
