@@ -124,7 +124,7 @@ export const Navigation = () => {
           </Link>
           <Link prefetch={false}
             className="hover:text-gray-200"
-            href="https://api.vastrasidan.se"
+            href="https://forum.vastrasidan.se"
             target="_blank"
           >
             Forum
@@ -270,7 +270,7 @@ export const Navigation = () => {
             </li>
             <li className="divide-y divide-gray-100">
               <Link prefetch={false}
-                href="https://api.vastrasidan.se"
+                href="https://forum.vastrasidan.se"
                 className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
                 aria-current="page"
               >
