@@ -31,7 +31,7 @@ const handleStripeEvent = async (event: Stripe.Event) => {
         event.data.object.metadata.type === "MEMBERSHIP" && membership
           ? members.map((m) => sendMemberConfirmationEmail(m, membership))
           : event.data.object.metadata.type === "EVENT"
-            ? participants.map(sendEventConfirmationEmail)
+            ? participants.map((p) => sendEventConfirmationEmail(p))
             : [];
       // Emails are best effort: the payment is already saved, so failing the webhook would
       // only make Stripe retry an event that is then skipped.

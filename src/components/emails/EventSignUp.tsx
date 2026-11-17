@@ -16,6 +16,7 @@ import { getTransportLabels, isTrainEvent } from "~/utils/transport";
 interface EventSignUpProps {
   participant: ParticipantWithBusAndEvent;
   cancellationUrl: string;
+  transferred?: boolean;
 }
 
 const mockBus: EventSignUpProps["participant"]["bus"] = {
@@ -69,7 +70,8 @@ const baseUrl = process.env.VERCEL_URL
 
 export const EventSignUp = ({
   participant = mockParticipant,
-  cancellationUrl
+  cancellationUrl,
+  transferred = false
 }: EventSignUpProps) => {
   const { name, payAmount, note, bus, event } = participant;
 
@@ -82,7 +84,7 @@ export const EventSignUp = ({
     <Tailwind>
       <Html className="bg-slate-900 font-sans">
         <Head>
-          <title>Anmälan till {eventName}</title>
+          <title>{transferred ? `Plats överlåten: ${eventName}` : `Anmälan till ${eventName}`}</title>
         </Head>
         <Section className="bg-slate-900 p-4">
           <Img
@@ -93,7 +95,9 @@ export const EventSignUp = ({
         </Section>
         <Section className="bg-slate-800 p-4 text-white">
           <Container>
-            <Text className="text-center text-5xl">Tack för anmälan</Text>
+            <Text className="text-center text-5xl">
+              {transferred ? "Platsen har överlåtits till dig" : "Tack för anmälan"}
+            </Text>
             <Hr />
             <Container>
               <Text className="text-lg">Event: {eventName}</Text>
@@ -105,6 +109,18 @@ export const EventSignUp = ({
               {note && <Text className="text-lg">Övrigt: {note}</Text>}
             </Container>
             <Hr />
+            {transferred && (
+              <Text className="text-lg">
+                Platsen kan inte avbokas via hemsidan. Kontakta info@vastrasidan.se om du
+                behöver avboka.
+              </Text>
+            )}
+            {transferred && (participant.member || participant.youth) && (
+              <Text className="text-lg">
+                Platsen är köpt till medlems-/ungdomspris. Du måste uppfylla villkoren för det,
+                och bussvärdarna kan kontrollera det.
+              </Text>
+            )}
             <Text className="text-lg">
               Du kan hantera din bokning genom att klicka på knappen nedan
             </Text>
