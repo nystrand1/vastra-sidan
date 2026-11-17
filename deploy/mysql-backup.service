@@ -1,0 +1,11 @@
+[Unit]
+Description=Dump all MySQL databases to /var/backups/mysql
+After=mysql.service
+Requires=mysql.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/mysql-backup
+# Stay out of the way of the site and WordPress
+Nice=10
+IOSchedulingClass=idle

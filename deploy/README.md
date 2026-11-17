@@ -33,6 +33,7 @@ box only unpacks and runs it.
 | `/srv/vss-event/shared/.env`  | Production env (`deploy:vss-event`, mode 640), rewritten by every deploy |
 | `/srv/vss-event/shared/cache` | `.next/cache` (ISR pages, optimised images), kept across deploys |
 | `/etc/systemd/system/vss-event.service` | From `deploy/vss-event.service`                    |
+| `/var/backups/mysql/*.sql.gz` | Nightly database dumps (root only), the last 30 days         |
 
 ## Configuration
 
@@ -99,6 +100,33 @@ ssh VastraAWS 'sudo journalctl -u vss-event -f'
 
 Cron jobs are WP-Cron events in WordPress (`themes/storefront/inc/vss-functions.php`). They
 POST to `https://www.vastrasidan.se/api/trpc/cron.*`, which is this box.
+
+## Backups
+
+| What                  | When           | Kept    | Covers                                             |
+| --------------------- | -------------- | ------- | -------------------------------------------------- |
+| `mysql-backup.timer`  | 02:00 UTC      | 30 days | Every database, as `/var/backups/mysql/<database>-<date>.sql.gz` |
+| EBS snapshot (Data Lifecycle Manager, instances tagged `Backup=daily`) | 03:00 UTC | 14 days | The whole disk, including that night's dumps |
+
+The dump job is `deploy/mysql-backup.sh` with `deploy/mysql-backup.{service,timer}`. To install
+or update it:
+
+```bash
+scp deploy/mysql-backup.sh deploy/mysql-backup.service deploy/mysql-backup.timer VastraAWS:/tmp/
+ssh VastraAWS 'sudo install -m 755 /tmp/mysql-backup.sh /usr/local/sbin/mysql-backup && sudo install -m 644 /tmp/mysql-backup.{service,timer} /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now mysql-backup.timer'
+```
+
+Check the last run with `ssh VastraAWS 'systemctl status mysql-backup.service'`.
+
+**Restoring.** A dump has no `CREATE DATABASE` or `USE`, so you always choose where it goes.
+Restore into a new database first and copy what you need from there:
+
+```bash
+ssh VastraAWS 'sudo mysql -e "CREATE DATABASE restore_vss_prod" && sudo zcat /var/backups/mysql/vss_prod-<date>.sql.gz | sudo mysql restore_vss_prod'
+```
+
+Only restore over a live database (`... | sudo mysql vss_prod`) when replacing all of it, with
+`vss-event` stopped.
 
 ## Reaching MySQL from your machine
 
