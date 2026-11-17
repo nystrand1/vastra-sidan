@@ -1,7 +1,7 @@
 import {
+  Prisma,
   StripePaymentStatus,
   StripeRefundStatus,
-  type Prisma,
   type VastraEvent
 } from "~/generated/prisma/client";
 import { captureException, captureMessage } from "@sentry/nextjs";
@@ -562,55 +562,66 @@ export const eventPaymentRouter = createTRPCRouter({
         }))
       });
 
-      const holder = await findBookingParticipant(ctx.prisma, {
-        cancellationToken: input.token
-      });
+      // Prisma reads the related rows (transfers, the payment's travellers and their tokens) in
+      // separate queries. One snapshot for all of them keeps a transfer that commits mid-request
+      // from handing the old link the new holder's token.
+      return ctx.prisma.$transaction(
+        async (tx) => {
+          const holder = await findBookingParticipant(tx, {
+            cancellationToken: input.token
+          });
 
-      if (holder) {
-        if (holder.transfers.length > 0) {
-          // A transferred seat is managed by its new holder alone
-          const own = succeededPayment(holder).participants.filter((p) => p.id === holder.id);
-          return toBooking(holder, own, false);
-        }
-        return toBooking(holder, groupParticipants(holder), false);
-      }
+          if (holder) {
+            if (holder.transfers.length > 0) {
+              // A transferred seat is managed by its new holder alone. Only ever return the seat
+              // under the token that was asked for.
+              const own = succeededPayment(holder).participants.filter(
+                (p) => p.id === holder.id && p.cancellationToken === input.token
+              );
+              return toBooking(holder, own, false);
+            }
+            return toBooking(holder, groupParticipants(holder), false);
+          }
 
-      // The old link of a seat that has since been transferred. It never grants management.
-      const transfer = await ctx.prisma.participantTransfer.findFirst({
-        where: { previousToken: input.token },
-        select: { id: true, participantId: true }
-      });
+          // The old link of a seat that has since been transferred. It never grants management.
+          const transfer = await tx.participantTransfer.findFirst({
+            where: { previousToken: input.token },
+            select: { id: true, participantId: true }
+          });
 
-      if (!transfer) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Participant not found"
-        });
-      }
+          if (!transfer) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Participant not found"
+            });
+          }
 
-      const participant = await findBookingParticipant(ctx.prisma, {
-        id: transfer.participantId
-      });
+          const participant = await findBookingParticipant(tx, {
+            id: transfer.participantId
+          });
 
-      if (!participant) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Participant not found"
-        });
-      }
+          if (!participant) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Participant not found"
+            });
+          }
 
-      const firstTransfer = await ctx.prisma.participantTransfer.findFirst({
-        where: { participantId: transfer.participantId },
-        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-        select: { id: true }
-      });
+          const firstTransfer = await tx.participantTransfer.findFirst({
+            where: { participantId: transfer.participantId },
+            orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+            select: { id: true }
+          });
 
-      // Only the first transfer's token belonged to the original group. A later one belonged to
-      // an earlier new holder, who must not see the group.
-      const participants =
-        firstTransfer?.id === transfer.id ? groupParticipants(participant) : [];
+          // Only the first transfer's token belonged to the original group. A later one belonged to
+          // an earlier new holder, who must not see the group.
+          const participants =
+            firstTransfer?.id === transfer.id ? groupParticipants(participant) : [];
 
-      return toBooking(participant, participants, true);
+          return toBooking(participant, participants, true);
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead }
+      );
     }),
   changeBus: publicProcedure
     .input(z.object({ busId: z.string(), token: z.string() }))
@@ -634,16 +645,25 @@ export const eventPaymentRouter = createTRPCRouter({
 
       await releaseExpiredSeatHolds(ctx.prisma, ctx.stripe, participant.eventId);
 
-      await withFreeSeat(ctx.prisma, participant.eventId, input.busId, (tx) =>
-        tx.participant.update({
+      await withFreeSeat(ctx.prisma, participant.eventId, input.busId, async (tx) => {
+        // Only while the token is still the seat's: a transfer may have replaced it while this
+        // request waited for the bus lock
+        const { count } = await tx.participant.updateMany({
           where: {
-            id: participant.id
+            id: participant.id,
+            cancellationToken: input.token
           },
           data: {
             busId: input.busId
           }
-        })
-      );
+        });
+        if (count === 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Participant not found"
+          });
+        }
+      });
       await revalidatePages(awayGamePaths([participant.eventId]));
 
       return "ok";

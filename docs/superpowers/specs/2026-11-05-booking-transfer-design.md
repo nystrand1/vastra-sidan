@@ -165,6 +165,11 @@ before any refund logic, so the existing refund code is otherwise unchanged.
 
 ### `eventPayment.getManagableBooking` (changed)
 
+All reads run in one `RepeatableRead` transaction. Prisma loads the related rows (transfers, the
+payment's travellers and their tokens) in separate queries after the token lookup; without one
+snapshot, a transfer committing in between could hand the old link the new holder's token. As a
+second guard, a transferred seat is only returned when its token equals the one asked for.
+
 1. Look up the participant by `cancellationToken`.
    - **Found and transferred** → return only that participant (the new holder manages it alone).
    - **Found and not transferred** → as today, but leave out participants on the payment that
@@ -181,10 +186,13 @@ before any refund logic, so the existing refund code is otherwise unchanged.
 `participantFormatter` gets new fields `transferred: boolean` and `transferDisabled: boolean`
 (`!isEventCancelable(event.date)`; the page hides "Överlåt plats" from 36 hours before departure).
 
-### `eventPayment.changeBus`
+### `eventPayment.changeBus` (changed)
 
-Unchanged. Works by the current token, so the new holder can change bus and the old token no
-longer reaches the seat.
+Works by the current token, so the new holder can change bus and the old token no longer reaches
+the seat. The seat is first found by token, then updated inside `withFreeSeat` once the bus is
+locked; that update also requires `cancellationToken = input.token`. If a transfer replaced the
+token while the request waited for the bus lock, nothing is updated and the request fails with
+"Participant not found", so an old link can't move the new holder's seat.
 
 ### `getBooking` (thank-you page, changed)
 
@@ -322,3 +330,8 @@ mock:
 - emails: the new holder gets a confirmation with the new token's link and the "can't be
   cancelled" notice (plus the member/youth notice when relevant); the previous holder gets the
   receipt.
+- requests racing a transfer (through a test Prisma client that runs a hook before each SQL
+  statement, `test/helpers/hookedPrisma.ts`): a transfer committing right after
+  `getManagableBooking`'s token lookup never puts the new token in its response, for a first or an
+  onward transfer; and a transfer committing while `changeBus` waits for the bus lock makes the
+  old link's bus change fail, leaving the new holder's seat where it was.

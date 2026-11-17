@@ -6,6 +6,7 @@ import { adminCaller, publicCaller } from "../helpers/caller";
 import { prisma } from "../helpers/db";
 import { createEvent, participantInput } from "../helpers/factories";
 import { availableSeats, book, bookAndPay } from "../helpers/flows";
+import { createHookedPrisma, publicCallerUsing } from "../helpers/hookedPrisma";
 import { getSentEmails, resetSentEmails } from "../mocks/ses";
 import { server } from "../mocks/server";
 import { fakeStripe } from "../mocks/stripe";
@@ -559,5 +560,107 @@ describe("transfer emails", () => {
     expect(transfers[0]).toMatchObject({ toEmail: "lisa@test.se", fromEmail: "kalle@test.se" });
     expect(transfers[1]).toMatchObject({ fromEmail: p.email, toEmail: "kalle@test.se" });
     expect(transfers[0]).not.toHaveProperty("previousToken");
+  });
+});
+
+/**
+ * These tests make a transfer commit at an exact point inside another request, through a Prisma
+ * client that runs a hook before each SQL statement. The transfer itself goes through the app's
+ * own client.
+ */
+describe("requests racing a transfer", () => {
+  /**
+   * Runs `race` once, and holds every SQL statement from the trigger point on until it has
+   * committed. Prisma may send a query's relation reads in parallel, so holding only the first
+   * one isn't enough.
+   */
+  const raceAt = (trigger: "after" | "before", match: RegExp, race: () => Promise<unknown>) => {
+    let armed = false;
+    let raced: Promise<unknown> | undefined;
+    const client = createHookedPrisma(async (sql) => {
+      if (!armed && trigger === "before" && match.test(sql)) armed = true;
+      if (armed) {
+        raced ??= race();
+        await raced;
+      }
+      if (!armed && trigger === "after" && match.test(sql)) armed = true;
+    });
+    return { client, fired: () => raced !== undefined };
+  };
+  /** Commits `race` right after the first SQL statement that matches `match`. */
+  const raceAfter = (match: RegExp, race: () => Promise<unknown>) => raceAt("after", match, race);
+  /** Commits `race` right before the first SQL statement that matches `match`. */
+  const raceBefore = (match: RegExp, race: () => Promise<unknown>) => raceAt("before", match, race);
+
+  const tokenLookup = /`cancellationToken` = \?/;
+
+  it("never shows the old link the new token when the seat's transfer commits mid-request", async () => {
+    const { participant } = await bookOne();
+    const oldToken = participant.cancellationToken!;
+    const { client, fired } = raceAfter(tokenLookup, () => transfer(oldToken));
+
+    try {
+      const booking = await publicCallerUsing(client).eventPayment.getManagableBooking({
+        token: oldToken
+      });
+
+      const newToken = (await reload(participant.id)).cancellationToken!;
+      expect(fired()).toBe(true);
+      expect(newToken).not.toBe(oldToken);
+      expect(JSON.stringify(booking)).not.toContain(newToken);
+    } finally {
+      await client.$disconnect();
+    }
+  });
+
+  it("never shows a holder the next holder's token when an onward transfer commits mid-request", async () => {
+    const { participant } = await bookOne();
+    await transfer(participant.cancellationToken);
+    const kallesToken = (await reload(participant.id)).cancellationToken!;
+    const { client, fired } = raceAfter(tokenLookup, () =>
+      transfer(kallesToken, buyer({ email: "lisa@test.se", firstName: "Lisa" }))
+    );
+
+    try {
+      const booking = await publicCallerUsing(client).eventPayment.getManagableBooking({
+        token: kallesToken
+      });
+
+      const lisasToken = (await reload(participant.id)).cancellationToken!;
+      expect(fired()).toBe(true);
+      expect(lisasToken).not.toBe(kallesToken);
+      expect(JSON.stringify(booking)).not.toContain(lisasToken);
+    } finally {
+      await client.$disconnect();
+    }
+  });
+
+  it("doesn't let the old link move the seat when the transfer commits mid-request", async () => {
+    const event = await createEvent({
+      buses: [
+        { name: "Buss 1", seats: 10 },
+        { name: "Buss 2", seats: 10 }
+      ]
+    });
+    const [bus1, bus2] = event.buses;
+    const {
+      participants: [participant]
+    } = await bookAndPay(event.id, [participantInput(bus1!.id)]);
+    const oldToken = participant!.cancellationToken!;
+    // Commit the transfer after changeBus has found the seat, while it waits for the bus lock
+    const { client, fired } = raceBefore(/FOR UPDATE/, () => transfer(oldToken));
+
+    try {
+      await expect(
+        publicCallerUsing(client).eventPayment.changeBus({ token: oldToken, busId: bus2!.id })
+      ).rejects.toMatchObject({ code: "BAD_REQUEST", message: "Participant not found" });
+
+      expect(fired()).toBe(true);
+      const seat = await reload(participant!.id);
+      expect(seat.email).toBe("kalle@test.se");
+      expect(seat.busId).toBe(bus1!.id);
+    } finally {
+      await client.$disconnect();
+    }
   });
 });
