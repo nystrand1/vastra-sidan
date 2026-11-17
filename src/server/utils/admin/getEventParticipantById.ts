@@ -21,7 +21,14 @@ export const formatEventParticipant = (
     youth: participant.youth,
     createdAt: participant.createdAt,
     bus: participant.bus,
-    note: participant.note
+    note: participant.note,
+    transfers: participant.transfers.map((transfer) => ({
+      createdAt: transfer.createdAt,
+      fromName: transfer.fromName,
+      fromEmail: transfer.fromEmail,
+      toName: transfer.toName,
+      toEmail: transfer.toEmail
+    }))
   };
 };
 
@@ -35,7 +42,8 @@ export const getEventParticipantById = async (id: string) => {
       bus: true,
       event: {
         include: busesWithBookedSeats()
-      }
+      },
+      transfers: { orderBy: [{ createdAt: "desc" }, { id: "desc" }] }
     }
   });
   return participant;

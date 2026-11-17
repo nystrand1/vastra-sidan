@@ -46,8 +46,12 @@ const ThanksPage = () => {
         className="order-2 md:order-1"
       >
         <div className="divide-y-2">
-          {data.participants.map((participant) => (
-            <div key={participant.cancellationToken} className="flex justify-between flex-col py-2">
+          {data.participants.length === 0 && (
+            // Every seat on the booking has been transferred to someone else
+            <p className="py-2">Platserna i den här bokningen har överlåtits.</p>
+          )}
+          {data.participants.map((participant, i) => (
+            <div key={i} className="flex justify-between flex-col py-2">
               <p>Namn: {participant.name}</p>
               <p>Email: {participant.email}</p>
               <p>Pris: {participant.payAmount} kr</p>
