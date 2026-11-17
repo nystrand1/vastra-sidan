@@ -115,31 +115,56 @@ open it with every `ssh VastraAWS`, add `LocalForward 3307 127.0.0.1:3306` to th
 
 ## Cutover checklist
 
-0. The `.se` registry delegates `vastrasidan.se` to both Vercel (`ns1/ns2.vercel-dns.com`) and
-   Loopia (`ns1/ns2.loopia.se`), and resolvers pick either. Loopia has its own zone, with a
-   wildcard to its parking page. A record changed only in Vercel reaches about half the
-   visitors. Either make the same changes in Loopia's DNS editor, or first remove the Loopia
-   nameservers at Loopia (the registrar) after copying anything only Loopia has (it still lists
-   the old `ASPMX.L.GOOGLE.COM` MX records).
-1. Fill in the `Production` environment on GitHub and run the workflow by hand. The app
-   starts on the box but nothing routes to it yet.
-2. Stop Vercel deploying `main`. Add a `vercel.json`:
-   ```json
-   { "git": { "deploymentEnabled": { "main": false } } }
-   ```
-   The last production deployment keeps serving until DNS moves.
-3. Install the vhost: copy `deploy/apache-vss-event.conf` to `/etc/apache2/sites-available/vss-event.conf`,
+DNS for `vastrasidan.se` lives in Loopia, the registrar, and is edited in its DNS editor
+(`ns1/ns2.loopia.se` only, since 2026-11-17). Loopia's zone has a wildcard to its parking
+page, so a name without a record shows that page instead of failing.
+
+**Before the day**
+
+1. The `Production` environment on GitHub is filled in, with `NEXTAUTH_URL` set to
+   `https://www.vastrasidan.se`, and `main` deploys to the box. The app runs, but nothing
+   routes to it yet.
+2. Install the vhost: copy `deploy/apache-vss-event.conf` to `/etc/apache2/sites-available/vss-event.conf`,
    `sudo a2ensite vss-event && sudo apache2ctl configtest && sudo systemctl reload apache2`.
-4. In Stripe, check that the production webhook endpoint is on `https://www.vastrasidan.se`.
-   `event.vastrasidan.se` only redirects from now on, and Stripe doesn't follow redirects.
-5. In Vercel: Project → Settings → Domains, remove `vastrasidan.se`, `www.vastrasidan.se` and
-   `event.vastrasidan.se` from the project (they stay in the team's DNS). Under the team's
-   Domains → vastrasidan.se, add `A @`, `A www` and `A event` → the Elastic IP. Leave
-   `staging.event` on the project for previews.
-6. Once `dig +short www.vastrasidan.se` shows the box:
-   `sudo certbot --apache -d vastrasidan.se -d www.vastrasidan.se -d event.vastrasidan.se`, then
-   `sudo systemctl enable vss-event`.
-7. Check a booking end to end, and that `https://event.vastrasidan.se/admin` lands on `www`.
+3. In Stripe, the production webhook endpoint is on `https://www.vastrasidan.se`. The apex
+   only redirects, and Stripe doesn't follow redirects.
+4. In Loopia, set the TTL of `@` and `www` to 300 at least an hour ahead, so the switch and a
+   rollback take minutes.
+5. Get the certificate before DNS moves, with Let's Encrypt's DNS challenge:
+   ```bash
+   sudo certbot certonly --manual --preferred-challenges dns --cert-name vastrasidan.se -d vastrasidan.se -d www.vastrasidan.se
+   ```
+   It prints a TXT value for `_acme-challenge` and one for `_acme-challenge.www`. Add both in
+   Loopia (TTL 300), wait until `dig +short TXT _acme-challenge.vastrasidan.se @ns1.loopia.se`
+   shows them, and press Enter. Then `sudo certbot install --apache --cert-name vastrasidan.se --redirect`
+   adds the HTTPS vhost. Remove the TXT records afterwards.
+
+**On the day**
+
+6. Merge the PR that adds `vercel.json` (`{ "git": { "deploymentEnabled": { "main": false } } }`).
+   Vercel stops deploying `main`, and its last production deployment keeps serving until DNS moves.
+7. In Loopia, point `@` (A, now `76.76.21.21`) at the Elastic IP, and replace the `www` CNAME
+   (`cname.vercel-dns.com`) with an A record to the Elastic IP. Leave `staging.event`, which
+   is the Vercel previews.
+8. Once `dig +short www.vastrasidan.se @1.1.1.1` shows the box:
+   - `sudo systemctl enable vss-event`, so the app starts on boot.
+   - A manual certificate doesn't renew itself. Reissue it over HTTP, which does:
+     `sudo certbot --apache --cert-name vastrasidan.se -d vastrasidan.se -d www.vastrasidan.se --force-renewal`,
+     then `sudo certbot renew --dry-run --cert-name vastrasidan.se`.
+9. Check:
+   - a booking end to end, with the webhook delivered in Stripe's dashboard
+   - admin login and a confirmation email
+   - `/api/trpc/cron.*` requests from WordPress in `/var/log/apache2/vss-event-access.log`
+
+**Rollback:** in Loopia, set `@` back to A `76.76.21.21` and `www` back to CNAME
+`cname.vercel-dns.com`. Vercel still serves its last production deployment as long as the
+domains stay on the project.
+
+**After a quiet week or two:**
+- Remove `vastrasidan.se`, `www.vastrasidan.se` and `event.vastrasidan.se` from the Vercel
+  project (Settings → Domains). Keep `staging.event.vastrasidan.se`.
+- Remove the dry-run host: `sudo a2dissite vss-event-test vss-event-test-le-ssl`,
+  `sudo certbot delete --cert-name test-new-prod.vastrasidan.se`, and its A record in Loopia.
 
 Previews on Vercel still connect to `vss_dev` over the public MySQL port, so it stays open.
 Give them a user that can only touch `vss_dev`, and limit the production user to `localhost`.
