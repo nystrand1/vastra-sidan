@@ -123,10 +123,22 @@ describe("transferring a booking", () => {
     expect(await prisma.participantTransfer.count()).toBe(1);
   });
 
-  it("allows a transfer within 36 hours of departure", async () => {
-    const { participant } = await bookOne({ departure: addHours(new Date(), 2) });
+  it("allows a transfer until 36 hours before departure", async () => {
+    const { participant } = await bookOne({ departure: addHours(new Date(), 37) });
 
     await expect(transfer(participant.cancellationToken)).resolves.toEqual({ ok: true });
+  });
+
+  it("rejects a transfer within 36 hours of departure, like a cancellation", async () => {
+    const { participant } = await bookOne({ departure: addHours(new Date(), 35) });
+
+    await expect(transfer(participant.cancellationToken)).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: "Du kan inte överlåta platsen inom 36h från avgång"
+    });
+    expect(await prisma.participantTransfer.count()).toBe(0);
+    const unchanged = await reload(participant.id);
+    expect(unchanged.cancellationToken).toBe(participant.cancellationToken);
   });
 
   it("rejects a transfer after departure", async () => {
@@ -138,7 +150,7 @@ describe("transferring a booking", () => {
 
     await expect(transfer(participant.cancellationToken)).rejects.toMatchObject({
       code: "BAD_REQUEST",
-      message: "Resan har redan avgått"
+      message: "Du kan inte överlåta platsen inom 36h från avgång"
     });
     expect(await prisma.participantTransfer.count()).toBe(0);
   });
@@ -338,20 +350,20 @@ describe("managing a transferred seat", () => {
     ]);
   });
 
-  it("tells the page whether the trip has departed", async () => {
+  it("tells the page when transfers have closed, 36 hours before departure", async () => {
     const { event, participant } = await bookOne();
 
     expect((await view(participant.cancellationToken)).participants).toEqual([
-      expect.objectContaining({ departed: false })
+      expect.objectContaining({ transferDisabled: false })
     ]);
 
     await prisma.vastraEvent.update({
       where: { id: event.id },
-      data: { date: subMinutes(new Date(), 1) }
+      data: { date: addHours(new Date(), 35) }
     });
 
     expect((await view(participant.cancellationToken)).participants).toEqual([
-      expect.objectContaining({ departed: true })
+      expect.objectContaining({ transferDisabled: true })
     ]);
   });
 

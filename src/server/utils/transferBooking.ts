@@ -8,6 +8,7 @@ import {
 import { TRPCError } from "@trpc/server";
 import { type z } from "zod";
 import type { ParticipantWithBusAndEvent } from "~/server/api/routers/eventPayment";
+import { isEventCancelable } from "~/server/utils/event";
 import { participantRefundState } from "~/server/utils/refunds";
 import { type transferBookingSchema } from "~/utils/zodSchemas";
 
@@ -56,8 +57,12 @@ export const transferBooking = async (
       throw new TRPCError({ code: "BAD_REQUEST", message: "Bokningen är avbokad" });
     }
 
-    if (current.event.date <= new Date()) {
-      throw new TRPCError({ code: "BAD_REQUEST", message: "Resan har redan avgått" });
+    // Transfers close 36 hours before departure, at the same time as cancellations
+    if (!isEventCancelable(current.event.date)) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Du kan inte överlåta platsen inom 36h från avgång"
+      });
     }
 
     const name = `${firstName} ${lastName}`;

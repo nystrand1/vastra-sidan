@@ -40,7 +40,7 @@ export const ParticipantInfo = ({
     member,
     youth,
     transferred,
-    departed,
+    transferDisabled,
   }: Participant ) => {
   const query = useRouter().query;
   const { refetch: refetchParticipant } = api.eventPayment.getManagableBooking.useQuery({ token: query.token as string});
@@ -141,7 +141,7 @@ export const ParticipantInfo = ({
               {!transferred && refundable && !cancellationDisabled && (
                 <Button className="w-full" disabled={isBusy} onClick={() => handleCancel()}>Avboka</Button>
               )}
-              {cancellationToken && !departed && (
+              {cancellationToken && !transferDisabled && (
                 <TransferBookingForm
                   token={cancellationToken}
                   boughtAtReducedPrice={member || youth}
@@ -160,8 +160,12 @@ export const ParticipantInfo = ({
         {refundPending && (
           <p className="rounded-md border p-2 text-center">Avbokad, återbetalningen behandlas</p>
         )}
-        {refundable && cancellationDisabled && !transferred && !hasCancelled && !refundPending && (
-          <p>Du kan inte avboka inom 36h från avgång</p>
+        {transferDisabled && !hasCancelled && !refundPending && (
+          <p>
+            {refundable && !transferred
+              ? "Du kan inte avboka eller överlåta platsen inom 36h från avgång"
+              : "Du kan inte överlåta platsen inom 36h från avgång"}
+          </p>
         )}
       </div>
     </div>

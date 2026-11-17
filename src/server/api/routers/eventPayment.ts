@@ -115,8 +115,8 @@ const participantFormatter = (
     youth: participant.youth,
     // Handed over from the original booking; can't be cancelled through the site
     transferred: participant.transfers.length > 0,
-    // Nothing can be changed or transferred after departure
-    departed: participant.event.date <= new Date()
+    // Transfers close 36 hours before departure, at the same time as cancellations
+    transferDisabled: !isCancelable
   };
   return res;
 };

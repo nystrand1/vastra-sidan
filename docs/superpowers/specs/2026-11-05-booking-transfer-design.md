@@ -20,7 +20,7 @@ if anything, the buyer paid.
 | --- | --- |
 | Refund after a transfer | A transferred seat can't be cancelled or refunded on the site. The new holder contacts info@vastrasidan.se. This is stated clearly when transferring and in the emails. |
 | Member / youth price | Not enforced in code. The seller and the new holder are told that the seat was bought at member/youth price, and that the bus stewards may check this. |
-| Cut-off | A seat can be transferred until departure (`VastraEvent.date`). |
+| Cut-off | A seat can be transferred until 36 hours before departure, the same window as cancelling (`isEventCancelable` in `src/server/utils/event.ts`). (Changed from "until departure".) |
 | Who can transfer | Anyone who can manage the traveller today: the traveller and the rest of their group booking (including the person who paid). Once a seat is transferred, the group loses control of it. |
 | Onward transfers | Allowed, any number of times. |
 | Resale price | None of the club's business. Not recorded. |
@@ -127,7 +127,8 @@ Steps, in one `prisma.$transaction`:
    - it has no `SUCCEEDED` `StripePayment` ("Bokningen är inte betald");
    - it is cancelled (`cancellationDate` set) or `participantRefundState` says refunded or
      pending ("Bokningen är avbokad");
-   - the event has departed (`event.date <= now`) ("Resan har redan avgått").
+   - it is within 36 hours of departure, or later (`!isEventCancelable(event.date)`, the same check
+     as `cancelBooking`) ("Du kan inte överlåta platsen inom 36h från avgång").
 3. Update the participant:
    - `name = "${firstName} ${lastName}"`, `email`, `phone`, `userEmail = email`;
    - `note = null`;
@@ -177,8 +178,8 @@ before any refund logic, so the existing refund code is otherwise unchanged.
    - otherwise (the token belonged to an earlier new holder, who was never part of the group) an
      empty list. That person must not see or manage the original group.
 
-`participantFormatter` gets new fields `transferred: boolean` and `departed: boolean`
-(`event.date <= now`; the page hides "Överlåt plats" once the trip has departed).
+`participantFormatter` gets new fields `transferred: boolean` and `transferDisabled: boolean`
+(`!isEventCancelable(event.date)`; the page hides "Överlåt plats" from 36 hours before departure).
 
 ### `eventPayment.changeBus`
 
@@ -226,8 +227,8 @@ refund will be made.
 
 ### `src/pages/bortaresor/avboka.tsx`
 
-For each listed traveller who isn't cancelled, isn't pending a refund, and whose trip hasn't
-departed:
+For each listed traveller who isn't cancelled, isn't pending a refund, and whose trip is more
+than 36 hours away (`!transferDisabled`):
 
 - An **"Överlåt plats"** button opens a form (new component
   `src/components/common/TransferBookingForm`, react-hook-form + `transferBookingSchema`) with
@@ -244,6 +245,11 @@ departed:
 
 For a **transferred** traveller (the new holder's view): hide "Avboka" and show "Överlåten plats.
 Den kan inte avbokas, kontakta info@vastrasidan.se". Bus change and "Överlåt plats" stay available.
+
+Within 36 hours of departure, instead of "Överlåt plats" (and "Avboka"), the traveller sees "Du kan
+inte avboka eller överlåta platsen inom 36h från avgång" if the seat could otherwise be cancelled
+(a refundable trip, not transferred), and "Du kan inte överlåta platsen inom 36h från avgång"
+otherwise. This replaces the earlier "Du kan inte avboka inom 36h från avgång".
 
 When `transferredAway` is set: show "Den här platsen har överlåtits till en annan person" above any
 remaining travellers in the group.
@@ -304,8 +310,9 @@ mock:
 - two seats from the same group transferred, one at a time, to the same email: each gets its own
   token and email, each token's view lists only its own seat, and the rest of the group no longer
   lists either;
-- a transfer works within 36 hours of departure, and is rejected after departure;
-- `getManagableBooking` reports `departed` once the trip has left;
+- a transfer works until 36 hours before departure, and is rejected within 36 hours and after
+  departure;
+- `getManagableBooking` reports `transferDisabled` from 36 hours before departure;
 - a transfer without consent is rejected;
 - the group's old link still shows the rest of the group after an onward transfer;
 - `getBooking` returns no manage tokens and leaves out transferred seats, and returns an empty
