@@ -1,0 +1,10 @@
+[Unit]
+Description=Nightly MySQL dump, an hour before the 03:00 UTC EBS snapshot
+
+[Timer]
+OnCalendar=*-*-* 02:00:00 UTC
+# Run at boot if the box was off at 02:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
