@@ -1,18 +1,18 @@
 import { Role } from "~/generated/prisma/client";
-import { type Session } from "next-auth";
 import { type apolloClient } from "~/server/utils/apolloClient";
 import { appRouter } from "~/server/api/root";
+import { type AppSession } from "~/server/auth";
 import { createCallerFactory, createInnerTRPCContext } from "~/server/api/trpc";
 
 const createCaller = createCallerFactory(appRouter);
 
-const sessionFor = (role: Role, user: Partial<Session["user"]> = {}): Session => ({
-  expires: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+const sessionFor = (role: Role, user: Partial<AppSession["user"]> = {}): AppSession => ({
   user: {
     id: `test-${role.toLowerCase()}`,
     role,
     firstName: "Test",
     lastName: role === Role.ADMIN ? "Admin" : "User",
+    name: role === Role.ADMIN ? "Test Admin" : "Test User",
     isMember: false,
     phone: "0700000000",
     email: `${role.toLowerCase()}@test.vastrasidan.se`,
@@ -20,17 +20,17 @@ const sessionFor = (role: Role, user: Partial<Session["user"]> = {}): Session =>
   }
 });
 
-const callerWith = (session: Session | null) =>
+const callerWith = (session: AppSession | null) =>
   createCaller(createInnerTRPCContext({ session, cronKey: null, apolloClient: null }));
 
 /** An anonymous visitor on the public site. */
 export const publicCaller = () => callerWith(null);
 
 /** A logged-in user without admin rights. */
-export const userCaller = (user?: Partial<Session["user"]>) => callerWith(sessionFor(Role.USER, user));
+export const userCaller = (user?: Partial<AppSession["user"]>) => callerWith(sessionFor(Role.USER, user));
 
 /** A logged-in admin. */
-export const adminCaller = (user?: Partial<Session["user"]>) => callerWith(sessionFor(Role.ADMIN, user));
+export const adminCaller = (user?: Partial<AppSession["user"]>) => callerWith(sessionFor(Role.ADMIN, user));
 
 /** The scheduled cron job, authenticated with the cron key. */
 export const cronCaller = ({ wordpress = null }: { wordpress?: typeof apolloClient | null } = {}) =>

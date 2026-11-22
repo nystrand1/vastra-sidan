@@ -6,7 +6,6 @@ import {
 } from "~/generated/prisma/client";
 import { addDays, addMonths, subMonths } from "date-fns";
 import { type z } from "zod";
-import { sha256 } from "~/server/auth";
 import {
   type adminAddMemberSchema,
   type memberSignupSchema,
@@ -210,21 +209,24 @@ export const fillSeats = async (eventId: string, busId: string, count: number) =
   }
 };
 
-/** A site account that can log in with `password`. */
+/** A site account with a verified email, as signing in with a code creates it. */
 export const createUser = async ({
   role = Role.USER,
-  password = "hemligt-lösenord"
-}: { role?: Role; password?: string } = {}) => {
+  email
+}: { role?: Role; email?: string } = {}) => {
   const n = next();
+  const firstName = "Anna";
+  const lastName = `Användare ${n}`;
   const user = await prisma.user.create({
     data: {
-      email: `user${n}@test.se`,
-      firstName: "Anna",
-      lastName: `Användare ${n}`,
+      email: email ?? `user${n}@test.se`,
+      emailVerified: true,
+      name: `${firstName} ${lastName}`,
+      firstName,
+      lastName,
       phone: "0700000000",
-      password: sha256(password),
       role
     }
   });
-  return { user, password };
+  return { user };
 };

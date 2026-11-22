@@ -54,16 +54,6 @@ export type AdminUserProfile = Prisma.UserGetPayload<{
         stripeRefunds: true;
       };
     };
-    memberShips: {
-      select: {
-        type: true;
-        stripePayments: {
-          select: {
-            createdAt: true;
-          };
-        };
-      };
-    };
   };
   where: {
     id: true;

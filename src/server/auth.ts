@@ -1,173 +1,171 @@
-import { type Role } from "~/generated/prisma/client";
-import { createHash } from "crypto";
-import { type GetServerSidePropsContext } from "next";
-import {
-  getServerSession,
-  type DefaultSession,
-  type NextAuthOptions
-} from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
+import { passkey } from "@better-auth/passkey";
+import { captureException } from "@sentry/nextjs";
+import { betterAuth, type BetterAuthOptions } from "better-auth";
+import { prismaAdapter } from "better-auth/adapters/prisma";
+import { APIError, createAuthMiddleware } from "better-auth/api";
+import { fromNodeHeaders } from "better-auth/node";
+import { customSession, emailOTP } from "better-auth/plugins";
+import { type IncomingMessage } from "http";
+import { render } from "react-email";
+import LoginCode from "~/components/emails/LoginCode";
+import { env } from "~/env.mjs";
+import { Role } from "~/generated/prisma/client";
 import { prisma } from "~/server/db";
+import { sendSesEmail } from "~/server/utils/email/sendSesEmail";
+import { isMemberEmail } from "~/server/utils/member/isMemberEmail";
+import { normaliseEmail } from "~/utils/email";
+import { featureFlags } from "~/utils/featureFlags";
 
-/**
- * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
- * object and keep type safety.
- *
- * @see https://next-auth.js.org/getting-started/typescript#module-augmentation
- */
-declare module "next-auth" {
-  interface Session extends DefaultSession {
-    token?: string;
-    error?: string;
-    user: {
-      id: string;
-      role: Role;
-      firstName: string;
-      lastName: string;
-      isMember: boolean;
-      phone: string;
-      email: string;
-    } & DefaultSession["user"];
-  }
-
-  interface User {
+/** The signed-in user, as tRPC procedures and pages see it. */
+export type AppSession = {
+  user: {
+    id: string;
     role: Role;
     firstName: string;
     lastName: string;
+    name: string;
+    email: string;
+    phone: string;
     isMember: boolean;
-    phone?: string;
-  }
-}
-
-declare module "next-auth/jwt" {
-  /** Returned by the `jwt` callback and `getToken`, when using JWT sessions */
-  interface JWT {
-    refreshTokenExpires?: number;
-    accessTokenExpires?: number;
-    refreshToken?: string;
-    token: string;
-    exp?: number;
-    iat?: number;
-    jti?: string;
-    firstName?: string;
-    lastName?: string;
-    phone?: string;
-  }
-}
-
-export const sha256 = (content: string) => {
-  return createHash("sha256").update(content).digest("hex");
+  };
 };
 
-/** Loads a user with the fields we keep in the session token, plus their password hash. */
-const findSessionUser = async (where: { id: string } | { email: string }) => {
-  const user = await prisma.user.findFirst({
-    where,
-    include: {
-      memberShips: {
-        where: {
-          endDate: {
-            gte: new Date()
-          }
-        }
+const LOGIN_CODE_SUBJECT = "Din inloggningskod till Västra Sidan";
+
+/**
+ * Emails a sign-in code. While login is off, only admins get one; everyone else gets
+ * the same response from the endpoint but no email, so nobody else can sign in.
+ * Failures are reported, not thrown, so the response never depends on them.
+ */
+const sendLoginCode = async ({ email, otp, type }: { email: string; otp: string; type: string }) => {
+  // Codes for password reset or email verification are useless without passwords.
+  if (type !== "sign-in") return;
+  try {
+    if (!featureFlags.ENABLE_LOGIN) {
+      const user = await prisma.user.findUnique({ where: { email }, select: { role: true } });
+      if (user?.role !== Role.ADMIN) return;
+    }
+    const signInUrl = `${env.WEBSITE_URL}/loggain?email=${encodeURIComponent(email)}&kod=${otp}`;
+    await sendSesEmail({
+      to: email,
+      subject: LOGIN_CODE_SUBJECT,
+      body: await render(LoginCode({ code: otp, signInUrl }))
+    });
+  } catch (error) {
+    captureException(error);
+  }
+};
+
+const options = {
+  database: prismaAdapter(prisma, { provider: "mysql" }),
+  baseURL: env.BETTER_AUTH_URL,
+  secret: env.BETTER_AUTH_SECRET,
+  trustedOrigins: [env.WEBSITE_URL],
+  advanced: {
+    // Let Prisma fill ids with `@default(cuid())`
+    database: { generateId: false },
+    ipAddress: { ipAddressHeaders: ["x-forwarded-for"] }
+  },
+  session: {
+    expiresIn: 60 * 60 * 24 * 14,
+    updateAge: 60 * 60 * 24
+  },
+  user: {
+    // `input: false`: the browser can never set these, on sign-up or on update-user
+    additionalFields: {
+      firstName: { type: "string", required: false, input: false, defaultValue: "" },
+      lastName: { type: "string", required: false, input: false, defaultValue: "" },
+      phone: { type: "string", required: false, input: false },
+      role: { type: "string", required: false, input: false, defaultValue: Role.USER }
+    }
+  },
+  // On in production only (the library default)
+  rateLimit: {
+    storage: "memory",
+    customRules: {
+      "/email-otp/send-verification-otp": { window: 60, max: 3 },
+      "/sign-in/email-otp": { window: 60, max: 10 }
+    }
+  },
+  hooks: {
+    // Better Auth lowercases emails but does not trim them
+    before: createAuthMiddleware((ctx) => {
+      const body: unknown = ctx.body;
+      return Promise.resolve(
+        body && typeof body === "object" && "email" in body && typeof body.email === "string"
+          ? { context: { body: { ...body, email: normaliseEmail(body.email) } } }
+          : undefined
+      );
+    })
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        // Refused while login is off, so only existing admins can sign in
+        before: () =>
+          featureFlags.ENABLE_LOGIN
+            ? Promise.resolve()
+            : Promise.reject(new APIError("FORBIDDEN", { message: "Kontoregistrering är avstängd" }))
       }
     }
-  });
-  if (!user) return null;
+  },
+  plugins: [
+    emailOTP({
+      otpLength: 6,
+      expiresIn: 600,
+      allowedAttempts: 3,
+      sendVerificationOTP: sendLoginCode
+    }),
+    passkey({
+      rpID: env.PASSKEY_RP_ID,
+      rpName: "Västra Sidan",
+      origin: env.WEBSITE_URL
+    })
+  ]
+} satisfies BetterAuthOptions;
+
+export const auth = betterAuth({
+  ...options,
+  plugins: [
+    ...options.plugins,
+    customSession(
+      async ({ user, session }) => ({
+        user: { ...user, isMember: await isMemberEmail(prisma, user.email) },
+        session
+      }),
+      options
+    )
+  ]
+});
+
+type AuthSessionUser = {
+  id: string;
+  email: string;
+  role?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+  isMember: boolean;
+};
+
+/** Maps what Better Auth's get-session returns to the session the app uses. */
+export const toAppSession = (session: { user: AuthSessionUser } | null): AppSession | null => {
+  if (!session) return null;
+  const { id, email, role, firstName, lastName, phone, isMember } = session.user;
   return {
-    passwordHash: user.password,
-    sessionUser: {
-      id: user.id,
-      name: `${user.firstName} ${user.lastName}`,
-      email: user.email,
-      role: user.role,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      isMember: !!user.memberShips.length,
-      ...(user.phone && { phone: user.phone })
+    user: {
+      id,
+      email,
+      role: role === Role.ADMIN ? Role.ADMIN : Role.USER,
+      firstName: firstName ?? "",
+      lastName: lastName ?? "",
+      name: `${firstName ?? ""} ${lastName ?? ""}`.trim(),
+      phone: phone ?? "",
+      isMember
     }
   };
 };
 
-/**
- * Options for NextAuth.js used to configure adapters, providers, callbacks, etc.
- *
- * @see https://next-auth.js.org/configuration/options
- */
-export const authOptions: NextAuthOptions = {
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60 // 30 days
-  },
-  callbacks: {
-    session: ({ session, token }) => {
-      if (token && session.user) {
-        session.user.role = token.role as Role;
-        session.user.firstName = token.firstName ?? "";
-        session.user.lastName = token.lastName ?? "";
-        session.user.name = `${session.user.firstName} ${session.user.lastName}`;
-        session.user.isMember = !!token.isMember;
-        session.user.phone = token.phone ?? "";
-      }
-      return session;
-    },
-    jwt: async ({ token, user, trigger }) => {
-      if (user) {
-        token.role = user.role;
-        token.firstName = user.firstName;
-        token.lastName = user.lastName;
-        token.isMember = user.isMember;
-        token.phone = user.phone;
-      }
-      // `useSession().update(data)` lets the browser send anything as `data`, so it must
-      // never reach the token. Reload the user from the database instead (e.g. after a
-      // profile edit).
-      if (trigger === "update" && token.sub) {
-        const dbUser = (await findSessionUser({ id: token.sub }))?.sessionUser;
-        if (dbUser) {
-          token.name = dbUser.name;
-          token.email = dbUser.email;
-          token.role = dbUser.role;
-          token.firstName = dbUser.firstName;
-          token.lastName = dbUser.lastName;
-          token.isMember = dbUser.isMember;
-          token.phone = dbUser.phone;
-        }
-      }
-      return token;
-    }
-  },
-  providers: [
-    CredentialsProvider({
-      name: "Credentials",
-      credentials: {
-        username: { label: "Email", type: "text", placeholder: "email" },
-        password: { label: "Password", type: "password" }
-      },
-      authorize: async (credentials) => {
-        if (!credentials?.username || !credentials?.password) {
-          return null;
-        }
-        const found = await findSessionUser({ email: credentials.username });
-        if (!found) return null;
-        if (found.passwordHash !== sha256(credentials.password)) return null;
-        return found.sessionUser;
-      }
-    })
-  ],
-  pages: {
-    signIn: "/loggain"
-  }
-};
-
-/**
- * Wrapper for `getServerSession` so that you don't need to import the `authOptions` in every file.
- *
- * @see https://next-auth.js.org/configuration/nextjs
- */
-export const getServerAuthSession = (ctx: {
-  req: GetServerSidePropsContext["req"];
-  res: GetServerSidePropsContext["res"];
-}) => {
-  return getServerSession(ctx.req, ctx.res, authOptions);
-};
+/** The session of the request's cookie, read from the database, or null when signed out. */
+export const getServerAuthSession = async (ctx: { req: IncomingMessage }): Promise<AppSession | null> =>
+  toAppSession(await auth.api.getSession({ headers: fromNodeHeaders(ctx.req.headers) }));

@@ -1,23 +1,12 @@
 import {
-  Role,
   StripePaymentStatus,
   StripeRefundStatus,
   type Prisma
 } from "~/generated/prisma/client";
-import { render } from "react-email";
 import { TRPCError } from "@trpc/server";
-import { z } from "zod";
-import UserSignup from "~/components/emails/UserSignup";
-import { env } from "~/env.mjs";
-import {
-  createTRPCRouter,
-  publicProcedure,
-  userProcedure
-} from "~/server/api/trpc";
-import { sha256 } from "~/server/auth";
-import { sendSesEmail } from "~/server/utils/email/sendSesEmail";
+import { createTRPCRouter, userProcedure } from "~/server/api/trpc";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
-import { profileSchema, signupSchema } from "~/utils/zodSchemas";
+import { profileSchema } from "~/utils/zodSchemas";
 
 type UserData = Prisma.UserGetPayload<{
   include: {
@@ -77,44 +66,6 @@ const eventFormatter = (awayGame: UserData["eventParticipations"][number]) => ({
 });
 
 export const userRouter = createTRPCRouter({
-  createNewUser: publicProcedure
-    .input(signupSchema)
-    .mutation(async ({ ctx, input }) => {
-      const { phone, email, password, firstName, lastName } = input;
-
-      const existingUser = await ctx.prisma.user.findFirst({
-        where: {
-          email
-        }
-      });
-
-      if (existingUser) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Email används redan"
-        });
-      }
-
-      const user = await ctx.prisma.user.create({
-        data: {
-          email,
-          phone,
-          firstName,
-          lastName,
-          password: sha256(password),
-          role: Role.USER
-        }
-      });
-
-      await sendSesEmail({
-        to: env.USE_DEV_MODE === "true" ? "filip.nystrand@gmail.com" : email,
-        subject: "Bekräfta email din email",
-        body: await render(UserSignup({ token: user.id }))
-      });
-      return {
-        status: 201
-      };
-    }),
   getProfile: userProcedure.query(async ({ ctx }) => {
     if (!ctx.session.user.email) {
       throw new TRPCError({
@@ -181,32 +132,6 @@ export const userRouter = createTRPCRouter({
         .map(eventFormatter)
     };
   }),
-  verifyEmail: publicProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const user = await ctx.prisma.user.findUnique({
-        where: {
-          id: input.id
-        }
-      });
-      if (!user) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Bad user"
-        });
-      }
-      await ctx.prisma.user.update({
-        where: {
-          id: input.id
-        },
-        data: {
-          emailVerified: new Date()
-        }
-      });
-      return {
-        status: 200
-      };
-    }),
   updateProfile: userProcedure
     .input(profileSchema)
     .mutation(async ({ ctx, input }) => {

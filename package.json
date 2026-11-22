@@ -24,6 +24,7 @@
   "dependencies": {
     "@apollo/client": "^3.11.8",
     "@aws-sdk/client-ses": "^3.1156.0",
+    "@better-auth/passkey": "1.7.27",
     "@graphql-typed-document-node/core": "^3.2.0",
     "@hookform/resolvers": "^3.9.1",
     "@prisma/adapter-mariadb": "~7.10.1",
@@ -46,6 +47,7 @@
     "@trpc/next": "^11.19.0",
     "@trpc/react-query": "^11.19.0",
     "@trpc/server": "^11.19.0",
+    "better-auth": "1.7.27",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
