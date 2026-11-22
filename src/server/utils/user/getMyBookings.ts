@@ -1,4 +1,4 @@
-import { type PrismaClient, StripePaymentStatus } from "~/generated/prisma/client";
+import { type Prisma, type PrismaClient, StripePaymentStatus } from "~/generated/prisma/client";
 import {
   formattedParticipantInclude,
   participantFormatter
@@ -34,11 +34,19 @@ export type MyTrip = {
 
 const succeeded = { status: StripePaymentStatus.SUCCEEDED };
 
+const eventInclude = { include: busesWithBookedSeats() };
+
+type EventWithBuses = Prisma.VastraEventGetPayload<typeof eventInclude>;
+
 /**
  * The signed-in user's paid trips, upcoming (soonest first) and past (latest first).
- * A seat is listed when its current holder is the user, when the user paid for its booking, or
- * when the user transferred it away. Matching is on plain emails (stored lowercased; `email` is
- * already normalised).
+ * Listed: seats the user holds, seats still with the group on bookings the user paid for, and
+ * seats the user transferred away.
+ *
+ * Never shows data tied to another email. A seat the user gave away is built from the transfer
+ * record (the user's own name and email at the time), never from the seat row, which now holds
+ * the new holder's data. A seat someone else transferred away is not listed for the payer at all,
+ * like on the booking link.
  *
  * A seat's manage token is the capability, so it is only returned for a seat the user may
  * manage on a trip that hasn't left yet: their own seat, or, as payer, any seat still with the
@@ -53,15 +61,31 @@ export const getMyBookings = async (
       stripePayments: { some: succeeded },
       OR: [
         { email },
-        { stripePayments: { some: { ...succeeded, payerEmail: email } } },
-        { transfers: { some: { fromEmail: email } } }
+        {
+          transfers: { none: {} },
+          stripePayments: { some: { ...succeeded, payerEmail: email } }
+        }
       ]
     },
     include: {
       ...formattedParticipantInclude,
-      event: { include: busesWithBookedSeats() },
-      transfers: { select: { id: true } },
+      event: eventInclude,
       stripePayments: { where: succeeded, select: { payerEmail: true } }
+    },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }]
+  });
+
+  // Seats the user gave away and no longer holds (a seat that came back to them is listed above)
+  const transfers = await prisma.participantTransfer.findMany({
+    where: {
+      fromEmail: email,
+      participant: { email: { not: email }, stripePayments: { some: succeeded } }
+    },
+    select: {
+      participantId: true,
+      fromName: true,
+      fromEmail: true,
+      participant: { select: { event: eventInclude } }
     },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }]
   });
@@ -69,22 +93,7 @@ export const getMyBookings = async (
   const now = new Date();
   const byEvent = new Map<string, MyTrip>();
 
-  for (const participant of participants) {
-    const { event } = participant;
-    const iPaid = isPayer(email, participant.stripePayments[0]?.payerEmail ?? null);
-    const isOwn = participant.email === email;
-    const hasTransfers = participant.transfers.length > 0;
-    const isPast = event.date < now;
-    // The token is the capability: only for a seat still with the user or, as payer, the group
-    const canManage = !isPast && (isOwn || (iPaid && !hasTransfers));
-
-    const seat: MySeat = {
-      ...participantFormatter(participant),
-      isOwn,
-      transferredAway: hasTransfers && !isOwn,
-      cancellationToken: canManage ? participant.cancellationToken : null
-    };
-
+  const tripFor = (event: EventWithBuses) => {
     let trip = byEvent.get(event.id);
     if (!trip) {
       trip = {
@@ -105,7 +114,51 @@ export const getMyBookings = async (
       };
       byEvent.set(event.id, trip);
     }
-    trip.seats.push(seat);
+    return trip;
+  };
+
+  for (const participant of participants) {
+    const { event } = participant;
+    const isOwn = participant.email === email;
+    const iPaid = isPayer(email, participant.stripePayments[0]?.payerEmail ?? null);
+    // The token is the capability: only for a seat still with the user or, as payer, the group
+    const canManage = event.date >= now && (isOwn || (iPaid && participant.transfers.length === 0));
+    tripFor(event).seats.push({
+      ...participantFormatter(participant),
+      isOwn,
+      transferredAway: false,
+      cancellationToken: canManage ? participant.cancellationToken : null
+    });
+  }
+
+  const seenSeats = new Set<string>();
+  for (const transfer of transfers) {
+    if (seenSeats.has(transfer.participantId)) continue;
+    seenSeats.add(transfer.participantId);
+    const { event } = transfer.participant;
+    // Only what the user themselves put on the seat. Everything else about it now belongs to the
+    // current holder, so it is left neutral.
+    tripFor(event).seats.push({
+      name: transfer.fromName,
+      email: transfer.fromEmail,
+      cancellationToken: null,
+      eventName: event.name,
+      payAmount: null,
+      busId: null,
+      departureTime: formatSwedishTime(event.date, "HH:mm"),
+      cancellationDate: null,
+      note: null,
+      cancellationDisabled: true,
+      refundable: event.refundable,
+      hasCancelled: false,
+      refundPending: false,
+      member: false,
+      youth: false,
+      transferred: true,
+      transferDisabled: true,
+      isOwn: false,
+      transferredAway: true
+    });
   }
 
   const trips = [...byEvent.values()];

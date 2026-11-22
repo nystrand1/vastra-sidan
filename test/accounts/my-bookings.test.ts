@@ -1,6 +1,6 @@
 import { addDays, subDays } from "date-fns";
 import { describe, expect, it } from "vitest";
-import { publicCaller, userCaller } from "../helpers/caller";
+import { adminCaller, publicCaller, userCaller } from "../helpers/caller";
 import { prisma } from "../helpers/db";
 import { createEvent, participantInput } from "../helpers/factories";
 import { book, bookAndPay } from "../helpers/flows";
@@ -116,7 +116,7 @@ describe("Mina bussresor", () => {
     }
   });
 
-  it("shows a seat transferred away as transferred, without a token", async () => {
+  it("shows a seat I transferred away as mine, transferred, without a token or the new holder's data", async () => {
     const event = await createEvent();
     const busId = event.buses[0]!.id;
     const { participants } = await bookAndPay(event.id, [
@@ -128,12 +128,23 @@ describe("Mina bussresor", () => {
       token: b!.cancellationToken!,
       ...buyer("d@x.se")
     });
+    const dToken = (await prisma.participant.findUniqueOrThrow({ where: { id: b!.id } }))
+      .cancellationToken!;
 
-    // B gave their seat away. They see it, read-only, and nothing else.
+    // B gave their seat away. They see it, read-only, as they booked it.
     const asB = await trips("b@x.se");
     expect(asB.upcoming[0]!.seats).toEqual([
-      expect.objectContaining({ isOwn: false, transferredAway: true, cancellationToken: null })
+      expect.objectContaining({
+        name: b!.name,
+        email: "b@x.se",
+        isOwn: false,
+        transferredAway: true,
+        cancellationToken: null
+      })
     ]);
+    expect(JSON.stringify(asB)).not.toContain("d@x.se");
+    expect(JSON.stringify(asB)).not.toContain("Doris");
+    expect(JSON.stringify(asB)).not.toContain(dToken);
 
     // D holds it now, with a token.
     const asD = await trips("d@x.se");
@@ -142,23 +153,20 @@ describe("Mina bussresor", () => {
         email: "d@x.se",
         isOwn: true,
         transferredAway: false,
-        cancellationToken: expect.any(String)
+        cancellationToken: dToken
       })
     ]);
-    expect(asD.upcoming[0]!.seats[0]!.cancellationToken).not.toBe(b!.cancellationToken);
 
-    // The payer sees their own seat with a token and the transferred one once, without.
+    // The payer doesn't see a seat someone else transferred away, like the booking link.
     const asA = await trips("a@x.se");
-    const seats = asA.upcoming[0]!.seats;
-    expect(seats).toHaveLength(2);
-    expect(seats.find((s) => s.email === "a@x.se")).toMatchObject({
-      cancellationToken: a!.cancellationToken
-    });
-    expect(seats.find((s) => s.email === "d@x.se")).toMatchObject({
-      isOwn: false,
-      transferredAway: true,
-      cancellationToken: null
-    });
+    expect(asA.upcoming[0]!.seats).toEqual([
+      expect.objectContaining({ email: "a@x.se", cancellationToken: a!.cancellationToken })
+    ]);
+    const json = JSON.stringify(asA);
+    expect(json).not.toContain("d@x.se");
+    expect(json).not.toContain("Doris");
+    expect(json).not.toContain(dToken);
+    expect(json).not.toContain(b!.cancellationToken);
   });
 
   it("shows the payer their own seat once, transferred away, when they gave it away", async () => {
@@ -173,11 +181,72 @@ describe("Mina bussresor", () => {
       ...buyer("d@x.se")
     });
 
-    const { upcoming } = await trips("a@x.se");
+    const res = await trips("a@x.se");
 
-    expect(upcoming[0]!.seats).toHaveLength(2);
-    expect(upcoming[0]!.seats.filter((s) => s.transferredAway)).toEqual([
-      expect.objectContaining({ email: "d@x.se", cancellationToken: null })
+    const seats = res.upcoming[0]!.seats;
+    expect(seats).toHaveLength(2);
+    expect(seats.filter((s) => s.transferredAway)).toEqual([
+      expect.objectContaining({ email: "a@x.se", cancellationToken: null })
+    ]);
+    expect(seats.find((s) => s.email === "b@x.se")).toMatchObject({
+      cancellationToken: participants[1]!.cancellationToken
+    });
+    expect(JSON.stringify(res)).not.toContain("d@x.se");
+  });
+
+  it("keeps a seat passed on twice from everyone but its holder", async () => {
+    const event = await createEvent();
+    const busId = event.buses[0]!.id;
+    const { participants } = await bookAndPay(event.id, [participantInput(busId, { email: "a@x.se" })]);
+    const [a] = participants;
+    await publicCaller().eventPayment.transferBooking({
+      token: a!.cancellationToken!,
+      ...buyer("d@x.se")
+    });
+    const dToken = (await prisma.participant.findUniqueOrThrow({ where: { id: a!.id } }))
+      .cancellationToken!;
+    await publicCaller().eventPayment.transferBooking({
+      token: dToken,
+      firstName: "Elsa",
+      lastName: "Efter",
+      email: "e@x.se",
+      phone: "0701112233",
+      consent: true
+    });
+    const eToken = (await prisma.participant.findUniqueOrThrow({ where: { id: a!.id } }))
+      .cancellationToken!;
+
+    for (const [who, own] of [
+      ["a@x.se", "a@x.se"],
+      ["d@x.se", "d@x.se"]
+    ] as const) {
+      const res = await trips(who);
+      expect(res.upcoming[0]!.seats).toEqual([
+        expect.objectContaining({ email: own, transferredAway: true, cancellationToken: null })
+      ]);
+      const json = JSON.stringify(res);
+      for (const leak of ["e@x.se", "Elsa", eToken]) expect(json).not.toContain(leak);
+    }
+    expect((await trips("e@x.se")).upcoming[0]!.seats).toEqual([
+      expect.objectContaining({
+        email: "e@x.se",
+        isOwn: true,
+        transferredAway: false,
+        cancellationToken: eToken
+      })
+    ]);
+  });
+
+  it("lists an admin comp booking as my own seat", async () => {
+    const event = await createEvent();
+    const { consent: _consent, ...input } = participantInput(event.buses[0]!.id, { email: "ada@x.se" });
+    await adminCaller().admin.addParticipant({ ...input, eventId: event.id });
+    const seat = await prisma.participant.findFirstOrThrow({ where: { email: "ada@x.se" } });
+
+    const { upcoming } = await trips("ada@x.se");
+
+    expect(upcoming[0]!.seats).toEqual([
+      expect.objectContaining({ isOwn: true, cancellationToken: seat.cancellationToken })
     ]);
   });
 
@@ -302,6 +371,9 @@ describe("Mina bussresor", () => {
         if (!manageable) expect(seat.cancellationToken).toBeNull();
       }
       const json = JSON.stringify(res);
+      const dToken = (await prisma.participant.findUniqueOrThrow({ where: { id: c!.id } }))
+        .cancellationToken!;
+      if (email === "a@x.se") expect(json).not.toContain(dToken);
       if (email === "b@x.se") {
         expect(json).not.toContain(a!.cancellationToken);
         expect(json).not.toContain(c!.cancellationToken);

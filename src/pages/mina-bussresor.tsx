@@ -28,7 +28,7 @@ const ReadOnlySeat = ({ seat, busName }: { seat: MySeat; busName?: string }) => 
       <p>Namn: {seat.name}</p>
       <p>Email: {seat.email}</p>
       {busName && <p>Plats: {busName}</p>}
-      <p>Pris: {seat.payAmount} kr</p>
+      {seat.payAmount !== null && <p>Pris: {seat.payAmount} kr</p>}
       {status && <p className="mt-2 rounded-md border p-2 text-center">{status}</p>}
     </div>
   );
