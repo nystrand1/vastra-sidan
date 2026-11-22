@@ -336,9 +336,24 @@ describe("managing a transferred seat", () => {
     expect(await prisma.participantTransfer.count()).toBe(2);
   });
 
-  it("keeps showing the group's old link the rest of the group after an onward transfer", async () => {
+  it("keeps showing the payer's old link the rest of the group after an onward transfer", async () => {
     const {
       participants: [a, b]
+    } = await bookGroup(2);
+    await transfer(a!.cancellationToken);
+    await transfer(await newToken(a!.id), buyer({ email: "lisa@test.se" }));
+
+    const booking = await view(a!.cancellationToken);
+
+    expect(booking.transferredAway).toBe(true);
+    expect(booking.participants).toEqual([
+      expect.objectContaining({ email: b!.email, transferred: false })
+    ]);
+  });
+
+  it("shows a traveller's old link nothing after an onward transfer", async () => {
+    const {
+      participants: [_a, b]
     } = await bookGroup(2);
     await transfer(b!.cancellationToken);
     await transfer(await newToken(b!.id), buyer({ email: "lisa@test.se" }));
@@ -346,9 +361,7 @@ describe("managing a transferred seat", () => {
     const booking = await view(b!.cancellationToken);
 
     expect(booking.transferredAway).toBe(true);
-    expect(booking.participants).toEqual([
-      expect.objectContaining({ email: a!.email, transferred: false })
-    ]);
+    expect(booking.participants).toEqual([]);
   });
 
   it("tells the page when transfers have closed, 36 hours before departure", async () => {

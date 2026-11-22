@@ -22,6 +22,7 @@ import { checkRefundStatus } from "~/server/utils/payment";
 import { participantRefundState } from "~/server/utils/refunds";
 import { awayGamePaths, revalidatePages } from "~/server/utils/revalidate";
 import { transferBooking } from "~/server/utils/transferBooking";
+import { isPayer } from "~/server/utils/accounts/bookingAccess";
 import { normaliseEmail } from "~/utils/email";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { createPaymentIntent, createRefundIntent } from "~/utils/stripeHelpers";
@@ -141,6 +142,7 @@ const findBookingParticipant = (
     where,
     select: {
       id: true,
+      email: true,
       event: {
         include: busesWithBookedSeats()
       },
@@ -148,6 +150,7 @@ const findBookingParticipant = (
       stripePayments: {
         select: {
           id: true,
+          payerEmail: true,
           participants: {
             include: formattedParticipantInclude
           }
@@ -584,7 +587,17 @@ export const eventPaymentRouter = createTRPCRouter({
               );
               return toBooking(holder, own, false);
             }
-            return toBooking(holder, groupParticipants(holder), false);
+            // Only the payer's link manages the whole booking. A traveller's link is their own seat.
+            // A payment without a recorded payer (not yet backfilled) has no payer, so everyone gets
+            // their own seat.
+            const holderIsPayer = isPayer(holder.email, succeededPayment(holder).payerEmail);
+            return toBooking(
+              holder,
+              holderIsPayer
+                ? groupParticipants(holder)
+                : succeededPayment(holder).participants.filter((p) => p.id === holder.id),
+              false
+            );
           }
 
           // The old link of a seat that has since been transferred. It never grants management.
@@ -614,13 +627,17 @@ export const eventPaymentRouter = createTRPCRouter({
           const firstTransfer = await tx.participantTransfer.findFirst({
             where: { participantId: transfer.participantId },
             orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-            select: { id: true }
+            select: { id: true, fromEmail: true }
           });
 
-          // Only the first transfer's token belonged to the original group. A later one belonged to
-          // an earlier new holder, who must not see the group.
+          // Only the first transfer's token belonged to the original group, and only the payer's
+          // link manages it. A later one belonged to an earlier new holder, who must not see the
+          // group.
           const participants =
-            firstTransfer?.id === transfer.id ? groupParticipants(participant) : [];
+            firstTransfer?.id === transfer.id &&
+            isPayer(firstTransfer.fromEmail, succeededPayment(participant).payerEmail)
+              ? groupParticipants(participant)
+              : [];
 
           return toBooking(participant, participants, true);
         },

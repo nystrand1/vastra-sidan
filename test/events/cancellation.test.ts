@@ -86,9 +86,9 @@ describe("cancelling a booking", () => {
     expect(cancelled.cancellationDate).toBeInstanceOf(Date);
     expect(await availableSeats(event.id, busId)).toBe(9);
 
-    // The other traveller in the booking is unaffected
+    // The other traveller in the booking is unaffected, as the payer's link shows
     const booking = await publicCaller().eventPayment.getManagableBooking({
-      token: nonMember.cancellationToken!
+      token: member.cancellationToken!
     });
     expect(booking.participants).toEqual(
       expect.arrayContaining([
@@ -368,7 +368,7 @@ describe("cancelling a booking", () => {
     // A's refund being done must not make B's look done
     expect(await refundStatusOf(a)).toEqual({ status: StripeRefundStatus.REFUNDED });
     expect(await refundStatusOf(b)).toEqual({ status: StripeRefundStatus.CREATED });
-    const booking = await publicCaller().eventPayment.getManagableBooking({ token: c.cancellationToken! });
+    const booking = await publicCaller().eventPayment.getManagableBooking({ token: a.cancellationToken! });
     expect(booking.participants).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ email: a.email, hasCancelled: true, refundPending: false }),
