@@ -56,14 +56,16 @@ const UserMenu = ({ className }: UserMenuProps) => {
             </Link>
           </li>
         )}
-        <li>
-          <Link prefetch={false}
-            href="/mina-bussresor"
-            className="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 hover:text-white"
-          >
-            Mina bussresor
-          </Link>
-        </li>
+        {featureFlags.ENABLE_LOGIN && (
+          <li>
+            <Link prefetch={false}
+              href="/mina-bussresor"
+              className="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 hover:text-white"
+            >
+              Mina bussresor
+            </Link>
+          </li>
+        )}
         {user?.role === "ADMIN" && (
           <li>
             <Link prefetch={false}
@@ -177,11 +179,11 @@ export const Navigation = () => {
                   await router.push("/loggain");
                 }}
               >
-                <p>Logga In</p>
+                <p>Logga in</p>
               </Button>
             </>
           )}
-          {firstNameInitial && lastNameInitial && (
+          {featureFlags.ENABLE_LOGIN && firstNameInitial && lastNameInitial && (
             <div
               onClick={() => setOpenUserMenu(!openUserMenu)}
               className="relative mr-3 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-blue-900 p-5 hover:bg-blue-800"
@@ -311,6 +313,16 @@ export const Navigation = () => {
             {!user && featureFlags.ENABLE_LOGIN && (
               <li className="divide-y divide-gray-100">
                 <Link prefetch={false}
+                  href="/loggain"
+                  className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
+                >
+                  Logga in
+                </Link>
+              </li>
+            )}
+            {!user && featureFlags.ENABLE_LOGIN && (
+              <li className="divide-y divide-gray-100">
+                <Link prefetch={false}
                   href="/skapakonto"
                   className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
                   aria-current="page"
@@ -319,7 +331,7 @@ export const Navigation = () => {
                 </Link>
               </li>
             )}
-            {user?.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
+            {user && featureFlags.ENABLE_LOGIN && featureFlags.ENABLE_MEMBERSHIPS && (
               <li>
                 <Link prefetch={false}
                   href="/mina-medlemskap"
@@ -340,7 +352,7 @@ export const Navigation = () => {
                 </Link>
               </li>
             )}
-            {user && (
+            {user && featureFlags.ENABLE_LOGIN && (
               <>
                 <li>
                   <Link prefetch={false}

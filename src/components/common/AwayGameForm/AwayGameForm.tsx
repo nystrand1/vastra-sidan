@@ -3,7 +3,7 @@ import { captureException } from "@sentry/nextjs";
 import { Elements } from "@stripe/react-stripe-js";
 import { TRPCClientError } from "@trpc/client";
 import { useRouter } from "next/router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "react-hot-toast";
 import { twMerge } from "tailwind-merge";
@@ -20,6 +20,7 @@ import { api } from "../../../utils/api";
 import { StripeWidget } from "../StripeWidget/StripeWidget";
 import { getParticipantPrice } from "~/utils/event/getParticipantPrice";
 import { Textarea } from "~/components/ui/textarea";
+import { useAppSession } from "~/utils/authClient";
 import { getTransportLabels, isTrainEvent } from "~/utils/transport";
 
 const stripePromise = getStripe();
@@ -35,15 +36,16 @@ export const AwayGameForm = () => {
   const firstAvailableBus = awayGame?.buses.find((bus) => bus.availableSeats > 0);
   const isTrain = !!awayGame && isTrainEvent(awayGame);
   const transport = getTransportLabels(isTrain);
+  const { user } = useAppSession();
   const form = useForm<z.infer<typeof eventSignupSchema>>({
     resolver: zodResolver(eventSignupSchema),
     defaultValues: {
       participants: [
         {
-          firstName: '',
-          lastName: '',
-          email: '',
-          phone: '',
+          firstName: user?.firstName ?? '',
+          lastName: user?.lastName ?? '',
+          email: user?.email ?? '',
+          phone: user?.phone ?? '',
           member: false,
           youth: false,
           busId: firstAvailableBus?.id ?? '',
@@ -63,6 +65,18 @@ export const AwayGameForm = () => {
     },
   });
   const [modalOpen, setModalOpen] = useState(false);
+
+  // The session can arrive after the form mounted: fill only what is still empty
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (!user || prefilled.current) return;
+    prefilled.current = true;
+    const account = { firstName: user.firstName, lastName: user.lastName, email: user.email, phone: user.phone ?? '' };
+    for (const key of ['firstName', 'lastName', 'email', 'phone'] as const) {
+      const name = `participants.0.${key}` as const;
+      if (!form.getValues(name)) form.setValue(name, account[key]);
+    }
+  }, [user, form]);
   const formRef = useRef<HTMLFormElement>(null);
 
   if (!id) return null
