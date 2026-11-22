@@ -139,7 +139,12 @@ export const withFreeSeat = <T>(
 export const cancelPendingPayment = async (
   prisma: PrismaClient,
   stripe: Stripe,
-  payment: { stripePaymentId: string; amount: number; participants: { id: string }[] }
+  payment: {
+    stripePaymentId: string;
+    amount: number;
+    payerEmail: string | null;
+    participants: { id: string }[];
+  }
 ) => {
   try {
     await stripe.paymentIntents.cancel(payment.stripePaymentId);
@@ -153,6 +158,7 @@ export const cancelPendingPayment = async (
       stripePaymentId: payment.stripePaymentId,
       amount: payment.amount,
       status: StripePaymentStatus.CANCELED,
+      payerEmail: payment.payerEmail,
       participants: {
         connect: payment.participants
       }
@@ -194,6 +200,7 @@ export const releaseExpiredSeatHolds = async (
     select: {
       stripePaymentId: true,
       amount: true,
+      payerEmail: true,
       participants: {
         select: {
           id: true

@@ -9,7 +9,8 @@ const COLUMNS: { table: Table; column: string }[] = [
   { table: "Participant", column: "email" },
   { table: "Participant", column: "userEmail" },
   { table: "ParticipantTransfer", column: "fromEmail" },
-  { table: "ParticipantTransfer", column: "toEmail" }
+  { table: "ParticipantTransfer", column: "toEmail" },
+  { table: "StripePayment", column: "payerEmail" }
 ];
 
 const UNIQUE_TABLES = ["User", "Member"] as const;

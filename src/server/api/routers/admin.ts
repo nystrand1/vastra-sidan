@@ -28,6 +28,7 @@ import { sendEventConfirmationEmail } from "~/server/utils/email/sendEventConfir
 import { sendMemberConfirmationEmail } from "~/server/utils/email/sendMemberConfirmationEmail";
 import { findOrCreateMember } from "~/server/utils/member/findOrCreateMember";
 import { findOrCreateFamilyMembers, linkFamilyMembers } from "~/server/utils/member/findOrCreateFamilyMembers";
+import { normaliseEmail } from "~/utils/email";
 import { awayGamePaths, revalidatePages } from "~/server/utils/revalidate";
 import { parseForMembershipType } from "~/server/utils/member/parseForMembershipType";
 import { isMembershipOnSale } from "~/server/utils/membership";
@@ -246,6 +247,7 @@ export const adminRouter = createTRPCRouter({
               stripePaymentId: `admin-comp-${created.id}`,
               amount: 0,
               status: StripePaymentStatus.SUCCEEDED,
+              payerEmail: normaliseEmail(created.email),
               participants: {
                 connect: [{ id: created.id }]
               }

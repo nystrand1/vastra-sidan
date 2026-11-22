@@ -210,9 +210,12 @@ model StripePayment {
   user            User?               @relation(fields: [userId], references: [id])
   status          StripePaymentStatus
   stripeRefunds   StripeRefund[]
+  /// Who paid for the booking. Always lowercased. Null for membership payments.
+  payerEmail      String?
 
   @@index([stripePaymentId])
   @@index([userId])
+  @@index([payerEmail])
 }
 
 enum StripePaymentStatus {

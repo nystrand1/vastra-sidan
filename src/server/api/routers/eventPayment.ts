@@ -22,6 +22,7 @@ import { checkRefundStatus } from "~/server/utils/payment";
 import { participantRefundState } from "~/server/utils/refunds";
 import { awayGamePaths, revalidatePages } from "~/server/utils/revalidate";
 import { transferBooking } from "~/server/utils/transferBooking";
+import { normaliseEmail } from "~/utils/email";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { createPaymentIntent, createRefundIntent } from "~/utils/stripeHelpers";
 import { isTrainEvent } from "~/utils/transport";
@@ -283,6 +284,8 @@ export const eventPaymentRouter = createTRPCRouter({
             stripePaymentId: stripeRes.id,
             amount: cost,
             status: StripePaymentStatus.CREATED,
+            // A signed-in buyer pays for the whole booking, otherwise the first traveller does
+            payerEmail: normaliseEmail(ctx.session?.user.email ?? payee.email),
             participants: {
               connect: participants.map((p) => ({ id: p.id }))
             }
@@ -325,6 +328,7 @@ export const eventPaymentRouter = createTRPCRouter({
         select: {
           stripePaymentId: true,
           amount: true,
+          payerEmail: true,
           participants: {
             select: {
               id: true

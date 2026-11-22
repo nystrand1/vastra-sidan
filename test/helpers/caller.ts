@@ -6,7 +6,7 @@ import { createCallerFactory, createInnerTRPCContext } from "~/server/api/trpc";
 
 const createCaller = createCallerFactory(appRouter);
 
-const sessionFor = (role: Role): Session => ({
+const sessionFor = (role: Role, user: Partial<Session["user"]> = {}): Session => ({
   expires: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
   user: {
     id: `test-${role.toLowerCase()}`,
@@ -15,7 +15,8 @@ const sessionFor = (role: Role): Session => ({
     lastName: role === Role.ADMIN ? "Admin" : "User",
     isMember: false,
     phone: "0700000000",
-    email: `${role.toLowerCase()}@test.vastrasidan.se`
+    email: `${role.toLowerCase()}@test.vastrasidan.se`,
+    ...user
   }
 });
 
@@ -26,10 +27,10 @@ const callerWith = (session: Session | null) =>
 export const publicCaller = () => callerWith(null);
 
 /** A logged-in user without admin rights. */
-export const userCaller = () => callerWith(sessionFor(Role.USER));
+export const userCaller = (user?: Partial<Session["user"]>) => callerWith(sessionFor(Role.USER, user));
 
 /** A logged-in admin. */
-export const adminCaller = () => callerWith(sessionFor(Role.ADMIN));
+export const adminCaller = (user?: Partial<Session["user"]>) => callerWith(sessionFor(Role.ADMIN, user));
 
 /** The scheduled cron job, authenticated with the cron key. */
 export const cronCaller = ({ wordpress = null }: { wordpress?: typeof apolloClient | null } = {}) =>
