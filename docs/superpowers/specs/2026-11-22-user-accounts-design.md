@@ -1,7 +1,7 @@
 # User accounts ("Mina sidor") — design
 
 Date: 2026-11-22
-Status: Draft, awaiting approval
+Status: Approved
 
 ## Purpose
 
@@ -59,7 +59,7 @@ Accounts are optional. Guest checkout and the email links keep working.
 | Email normalisation | Every email is stored trimmed and lowercased, everywhere. One-off clean-up of existing rows. |
 | Who manages a booking | The **payer** manages every (non-transferred) seat on the payment. Each **traveller** manages only their own seat. Applies to accounts *and* the email link. |
 | Payer identity | New `StripePayment.payerEmail`. Signed-in booking: the account email. Guest booking: the first traveller's email (today's `payee`). Backfilled for old payments. |
-| Family memberships | **Open:** what the family owner sees. Recommended: the memberships bought on the same payment as the owner's own ("the family memberships I paid for"), not everything on members whose `familyMemberShipOwnerId` currently points at the owner (that link is rewritten each season by `linkFamilyMembers`). Each family member sees only their own. |
+| Family memberships | The family owner sees the memberships bought on the same payment as one of their own memberships ("the family memberships I paid for"), not everything on members whose `familyMemberShipOwnerId` currently points at them (that link is rewritten each season by `linkFamilyMembers`). Each family member sees only their own. |
 | Sign-up vs sign-in | Separate "Skapa konto" and "Logga in" pages that share the email-code step. Signing in with an unknown email does not error; it continues into account creation. |
 | Profile prefill | After the email is verified, name and phone are prefilled from that email's latest `Member`, else latest `Participant`. Never before verification. |
 | Sessions | Better Auth database sessions, about 14 days, renewed while in use. "Sign out on all devices" on the profile page. |
@@ -253,8 +253,8 @@ today. No new mutations needed.
 
 - Memberships on the `Member` with the user's email.
 - If that member is a family owner, also family members' memberships, grouped under their name.
-  Scope is open (see Decisions); recommended: only memberships on the same `StripePayment` as
-  one of the owner's own memberships.
+  Scope: only memberships on the same succeeded `StripePayment` as one of the owner's own
+  memberships. Nothing else about family members is shown.
 - Each active card links to the existing member card page (`/medlem/<memberToken>`) for the
   membership card itself. No need to rebuild the card.
 
