@@ -227,7 +227,7 @@ model StripePayment {
   userId          String?
   status          StripePaymentStatus
   stripeRefunds   StripeRefund[]
-  /// Who paid for the booking. Always lowercased. Null for membership payments.
+  /// Who paid (booking or membership). Always lowercased. Null until backfilled, or when no payer could be found.
   payerEmail      String?
   /// The Membership a membership payment bought. Null for event payments and older records.
   membershipId    String?

@@ -45,6 +45,24 @@ describe("Mina bussresor", () => {
     ]);
   });
 
+  it("treats my seat as mine when it was stored with another case", async () => {
+    const event = await createEvent();
+    const busId = event.buses[0]!.id;
+    const { participants } = await bookAndPay(event.id, [
+      participantInput(busId, { email: "a@x.se" }),
+      participantInput(busId, { email: "b@x.se" })
+    ]);
+    const [, b] = participants;
+    // A row from before emails were normalised
+    await prisma.participant.update({ where: { id: b!.id }, data: { email: "B@X.se" } });
+
+    const seats = allSeats(await trips("b@x.se"));
+
+    expect(seats).toEqual([
+      expect.objectContaining({ isOwn: true, cancellationToken: b!.cancellationToken })
+    ]);
+  });
+
   it("lists every seat I paid for", async () => {
     const event = await createEvent();
     const busId = event.buses[0]!.id;

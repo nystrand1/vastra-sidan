@@ -56,7 +56,7 @@ export const backfillPayerEmails = async (db: PrismaClient, stripe: Stripe) => {
       source = "adminComp";
     } else {
       const customerEmail = await stripeCustomerEmail(stripe, stripePaymentId);
-      payerEmail = customerEmail ?? firstTraveller;
+      payerEmail = customerEmail || firstTraveller;
       source = customerEmail ? "fromStripe" : "fromFirstTraveller";
     }
 
@@ -170,7 +170,8 @@ const backfillMembershipPayers = async (
 const customerEmailOf = (paymentIntent: Stripe.PaymentIntent) => {
   const { customer } = paymentIntent;
   return customer && typeof customer !== "string" && !customer.deleted
-    ? (customer.email ?? undefined)
+    ? // An empty email counts as none
+      customer.email || undefined
     : undefined;
 };
 

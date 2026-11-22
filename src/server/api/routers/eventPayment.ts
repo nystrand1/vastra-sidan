@@ -600,7 +600,8 @@ export const eventPaymentRouter = createTRPCRouter({
             );
           }
 
-          // The old link of a seat that has since been transferred. It never grants management.
+          // The old link of a seat that has since been transferred. It never grants management of
+          // the transferred seat; the payer's old link still manages the rest of the group.
           const transfer = await tx.participantTransfer.findFirst({
             where: { previousToken: input.token },
             select: { id: true, participantId: true }

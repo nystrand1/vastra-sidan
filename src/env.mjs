@@ -34,8 +34,8 @@ export const env = createEnv({
     ),
     USE_DEV_MODE: z.literal("true").or(z.literal("false")).default("false"),
     WEBSITE_URL: z.preprocess(
-      // This makes Vercel deployments not fail if you don't set NEXTAUTH_URL
-      // Since NextAuth.js automatically uses the VERCEL_URL if present.
+      // On Vercel, WEBSITE_URL is always the deployment's own URL (even when set), so each
+      // preview links to itself. Auth uses BETTER_AUTH_URL instead, which is not overridden.
       (str) => process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : str,
       // VERCEL_URL doesn't include `https` so it cant be validated as a URL
       process.env.VERCEL ? z.string().min(1) : z.string().url()

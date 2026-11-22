@@ -115,6 +115,16 @@ describe("backfillPayerEmails", () => {
     expect((await paymentFor(paymentIntent.id)).payerEmail).toBe("betalare@x.se");
   });
 
+  it("falls back to the first-created traveller when the Stripe customer's email is empty", async () => {
+    const { paymentIntent, participants } = await bookTwo();
+    fakeStripe.customers().find((c) => c.id === paymentIntent.customer)!.email = "";
+
+    const result = await backfillPayerEmails(prisma, stripe);
+
+    expect(result).toEqual({ fromStripe: 0, fromFirstTraveller: 1, adminComp: 0, memberships: noMemberships });
+    expect((await paymentFor(paymentIntent.id)).payerEmail).toBe(participants[0]!.email);
+  });
+
   it("falls back to the first-created traveller", async () => {
     const { paymentIntent, participants } = await bookTwo();
     // Stripe no longer knows the payment

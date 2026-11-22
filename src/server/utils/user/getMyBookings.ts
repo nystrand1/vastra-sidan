@@ -5,6 +5,7 @@ import {
 } from "~/server/api/routers/eventPayment";
 import { isPayer } from "~/server/utils/accounts/bookingAccess";
 import { busesWithBookedSeats } from "~/server/utils/busCapacity";
+import { normaliseEmail } from "~/utils/email";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { isTrainEvent } from "~/utils/transport";
 
@@ -119,7 +120,7 @@ export const getMyBookings = async (
 
   for (const participant of participants) {
     const { event } = participant;
-    const isOwn = participant.email === email;
+    const isOwn = normaliseEmail(participant.email) === email;
     const iPaid = isPayer(email, participant.stripePayments[0]?.payerEmail ?? null);
     // The token is the capability: only for a seat still with the user or, as payer, the group
     const canManage = event.date >= now && (isOwn || (iPaid && participant.transfers.length === 0));

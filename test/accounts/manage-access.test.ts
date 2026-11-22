@@ -100,6 +100,25 @@ describe("who a booking link manages", () => {
     expect(booking.participants).toEqual([]);
   });
 
+  it("shows each link only its own seat when the payment has no recorded payer", async () => {
+    const { a } = await bookThree();
+    // An old payment the backfill has not reached yet
+    await prisma.stripePayment.updateMany({
+      where: { participants: { some: { id: a.id } } },
+      data: { payerEmail: null }
+    });
+
+    expect((await view(a.cancellationToken)).participants).toEqual([
+      expect.objectContaining({ cancellationToken: a.cancellationToken })
+    ]);
+
+    await transfer(a.cancellationToken);
+    const booking = await view(a.cancellationToken);
+
+    expect(booking.transferredAway).toBe(true);
+    expect(booking.participants).toEqual([]);
+  });
+
   it("does not let a traveller act on another seat", async () => {
     const { a, b, c } = await bookThree();
 
