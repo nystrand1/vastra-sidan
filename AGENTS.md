@@ -140,7 +140,7 @@ pnpm compile
 
 ### Accounts
 
-Login is by email code (Better Auth `emailOTP`); the email also links to `/loggain#email=…&kod=…` (in the fragment, so the code never reaches server logs, analytics or Sentry), which auto-submits only in the browser that asked for the code. Passkeys are added on `/profil` and need a fresh session. `trustedOrigins` and the passkey origin are `WEBSITE_URL` only. Env vars: `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `PASSKEY_RP_ID`. Account routes: `/loggain`, `/skapakonto`, `/profil`, `/mina-bussresor`, `/mina-medlemskap`. With `ENABLE_LOGIN` off only admins can sign in. Rollout steps: "User accounts rollout" in `deploy/README.md`.
+Login is by email code (Better Auth `emailOTP`); the email also links to `/loggain#email=…&kod=…` (in the fragment, so the code never reaches server logs, analytics or Sentry), which auto-submits only in the browser that asked for the code. Passkeys are added on `/profil` and need a fresh session. Better Auth trusts `BETTER_AUTH_URL`'s origin and `WEBSITE_URL`; the passkey origin and the sign-in link use `BETTER_AUTH_URL`. Codes are limited per email (5 sends, 15 failed sign-ins an hour, in memory; `resetEmailLimits()` runs before each test) on top of the per-IP limit, and are emailed in the background (tests wait with `loginCode(email)` / `settleLoginCodes()` from `test/helpers/auth.ts`). Env vars: `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `PASSKEY_RP_ID`. Account routes: `/loggain`, `/skapakonto`, `/profil`, `/mina-bussresor`, `/mina-medlemskap`. With `ENABLE_LOGIN` off only admins can sign in: only they are sent codes, and no other user can start a session. Rollout steps: "User accounts rollout" in `deploy/README.md`.
 
 ### Feature Flags
 

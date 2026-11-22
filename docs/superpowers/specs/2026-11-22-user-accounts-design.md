@@ -15,6 +15,19 @@ Status: Implemented
 - The sign-in link carries the email and code in the fragment (`/loggain#email=…&kod=…`), not the
   query, so they never reach the Apache log, Google Analytics or Sentry.
 - Adding a passkey needs a fresh session.
+- The payer is not shown seats that other people transferred away, on "Mina bussresor" or the
+  booking link: the seat row now holds the new holder's data. Whoever gave a seat away still sees
+  it as transferred, built from the transfer record.
+- Sign-in codes are also limited per email: at most 5 sends and 15 failed sign-ins per email per
+  hour (in memory). Over the limit, a send answers as usual without making or sending a code, and
+  a sign-in is rejected like a wrong code.
+- While `ENABLE_LOGIN` is off, the auth server also refuses to create a session for anyone but an
+  admin (codes and passkeys), not just to send them codes or create accounts. Existing sessions
+  are not ended.
+- The code email is sent in the background, so the send endpoint answers in the same time whether
+  or not an email goes out.
+- The passkey origin and the sign-in link use `BETTER_AUTH_URL`, which Better Auth always trusts,
+  so a staging host works without code changes.
 
 ## Purpose
 

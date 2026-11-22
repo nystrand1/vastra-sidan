@@ -200,6 +200,11 @@ Give them a user that can only touch `vss_dev`, and limit the production user to
 
 ## User accounts rollout
 
+> **Do not merge the PR until step 6.5. Merging is the deploy.** `deploy.yml` deploys `main` on
+> every push, so merging the PR runs the new code at once. Before step 6.4 the database does not
+> have Better Auth's `Session`/`Verification` columns or `StripePayment.membershipId`, so admin
+> sign-in and every Stripe webhook would fail.
+
 Passwordless accounts (Better Auth, email codes, passkeys) replace NextAuth. The schema change
 is destructive and `User.email` becomes required, so go in this order and stop if a check fails.
 Design: `docs/superpowers/specs/2026-11-22-user-accounts-design.md`.
@@ -221,24 +226,52 @@ SKIP_ENV_VALIDATION=true NODE_ENV=production DATABASE_URL='mysql://vss:…@127.0
 finds none of the payment intents, and the rows fall back to the first traveller). Keep
 `NEXT_PUBLIC_ENABLE_LOGIN` unset or `false` until step 9.
 
-**Before you start: origins.** `trustedOrigins` is `[WEBSITE_URL]`, so exactly one origin is
-allowed, and the passkey origin is `WEBSITE_URL` too. `deploy/apache-vss-event.conf` makes
+**Before you start: origins.** Better Auth always trusts the origin of its base URL,
+`BETTER_AUTH_URL`; `trustedOrigins` adds `WEBSITE_URL`. The passkey origin and the link in the
+sign-in email are `BETTER_AUTH_URL` too. `deploy/apache-vss-event.conf` makes
 `https://www.vastrasidan.se` canonical: the apex `vastrasidan.se` answers with a 308 redirect to
 www (certbot copies that rule to the :443 vhost). So `WEBSITE_URL`, `NEXT_PUBLIC_WEBSITE_URL` and
 `BETTER_AUTH_URL` must all be `https://www.vastrasidan.se`, and `PASSKEY_RP_ID` is
 `vastrasidan.se` (a passkey's RP ID may be the parent domain of the origin). If you ever serve
-both hosts without the redirect, sign-in from the other host is rejected as an untrusted origin.
-That would be a required follow-up (add the second origin to `trustedOrigins`), not something
-that works today.
+both hosts without the redirect, sign-in from the host that is not `BETTER_AUTH_URL` or
+`WEBSITE_URL` is rejected as an untrusted origin.
 
 1. **Back up.** Run `sudo systemctl start mysql-backup.service` on the box and check it with
    `systemctl status mysql-backup.service`; the dump is `/var/backups/mysql/vss_prod-<date>.sql.gz`
    (`deploy/mysql-backup.sh`).
-2. **Deploy the payer-email half with login off.** Deploy the code up to and including commit
-   `2925516` with `NEXT_PUBLIC_ENABLE_LOGIN=false`, then `pnpm prisma db push` (no flag needed: at
-   that commit the push only adds `StripePayment.payerEmail` and its index). Skip this step and
-   step 4's first run if you deploy everything at once; then do steps 3 and 5 before step 6, and
-   run the backfill in step 7.
+2. **Ship the payer-email half with login off.** Steps 2–4 run from a local checkout of commit
+   `2925516`, the last commit of that half:
+   ```bash
+   git fetch origin
+   git checkout 2925516
+   pnpm install
+   ```
+   1. **Push the schema first.** With production's `DATABASE_URL` (through the tunnel):
+      ```bash
+      DATABASE_URL='mysql://vss:…@127.0.0.1:3307/vss_prod' pnpm prisma db push
+      ```
+      No flag is needed: at this commit the push only adds the nullable
+      `StripePayment.payerEmail` and its index. The code running now never reads that column, so
+      it is safe to add before the deploy. The other order is not: the new code reads and writes
+      `payerEmail` on every `StripePayment` query and fails with "column does not exist" until
+      the push.
+   2. **Deploy `2925516`.** `deploy.yml` runs on every push to `main`, and by hand
+      (`workflow_dispatch`). `2925516` sits directly on top of `main`, so fast-forward `main` to
+      it; that push starts "Deploy to EC2":
+      ```bash
+      git merge-base --is-ancestor origin/main 2925516 && git push origin 2925516:main
+      ```
+      If the check fails, `main` has moved on: stop and rebase the branch first. If branch
+      protection refuses a direct push to `main`, push the commit to a branch instead
+      (`git push origin 2925516:refs/heads/accounts-rollout-1`), then in GitHub Actions run
+      "Deploy to EC2" with "Use workflow from" set to `accounts-rollout-1`. That run checks out
+      and deploys that branch, but only if the Production environment allows deployments from it
+      (Settings → Environments → Production → Deployment branches); add it there for the run if
+      not. Keep `NEXT_PUBLIC_ENABLE_LOGIN=false`. The workflow at this commit still reads
+      `NEXTAUTH_SECRET` and `NEXTAUTH_URL`, so keep them until step 6.1.
+
+   To deploy everything at once instead, skip step 2 and step 4's first run; do steps 3 and 5
+   before step 6, and run the backfill in step 7.
 3. **Normalise emails.** With the invocation above:
    ```bash
    pnpm script scripts/accounts/normalise-emails.ts --dry-run
@@ -255,34 +288,53 @@ that works today.
    SELECT COUNT(*) FROM StripePayment
    WHERE payerEmail IS NULL AND id IN (SELECT B FROM _ParticipantToStripePayment);
    ```
-   Membership payments are legitimately null here; step 7 fills them.
-5. **Check the admins.** Admins sign in with an email code, so every admin needs a working
-   address. `User.email` also becomes required, so the first count must be 0 before step 6:
+   Membership payments are legitimately null here; step 7 fills them. Then go back to the PR's
+   branch head for the rest (`git checkout claude/quirky-curie-a1r4on && git pull && pnpm install`).
+5. **Check the admins and the old auth tables.** Admins sign in with an email code, so every admin
+   needs a working address. `User.email` also becomes required, so the first count must be 0
+   before step 6:
    ```sql
    SELECT COUNT(*) FROM User WHERE email IS NULL;
    SELECT id, firstName, lastName, email FROM User WHERE role = 'ADMIN';
+   SELECT COUNT(*) FROM Account;
+   SELECT COUNT(*) FROM Session;
+   SELECT COUNT(*) FROM VerificationToken;
    ```
-   Every admin on the second list must have an email they can open. Fix by hand if not.
-6. **Prepare the switch.** In this order:
+   Every admin on the second list must have an email they can open. Fix by hand if not. NextAuth
+   ran with JWT sessions and the Credentials provider only, so the last three should be 0; any
+   rows in them are worthless and step 6.4 deletes them.
+6. **Prepare the switch.** In this order, from a checkout of the PR's branch head:
    1. On GitHub (Production environment), add the secret `BETTER_AUTH_SECRET` and the variables
       `BETTER_AUTH_URL` and `PASSKEY_RP_ID` (values above); delete `NEXTAUTH_SECRET` and
-      `NEXTAUTH_URL`. `deploy.yml` already lists the new names in `ENV_NAMES`.
-   2. Fix the proxy header (see "Rate limiting" below) on the box, before any traffic reaches the
-      new code.
+      `NEXTAUTH_URL`. `deploy.yml` on the branch already lists the new names in `ENV_NAMES`.
+   2. Optionally fix the proxy header on the box (see "Rate limiting" below; recommended, no
+      longer required).
    3. Pick a quiet window. Between 6.4 and 6.6 admin sign-in is unavailable, and between 6.4 and
       6.5 the site is mid-switch.
-   4. Run `pnpm prisma db push --accept-data-loss` against production, **immediately before** the
-      deploy. It drops `User.password`, the old NextAuth `Account`, `Session` and
-      `VerificationToken` tables (Better Auth creates its own `Session`, `Account`,
-      `Verification` and `Passkey`), the `User`–`Membership` join table and the old `User`
-      relations to participants and payments. `relationMode = "prisma"` means those relations
-      never had foreign keys in MySQL; the `userId` columns on `Participant`, `StripePayment` and
-      `StripeRefund` are kept. `emailVerified` changes from `DATETIME` to a boolean
-      (`TINYINT(1)`); Prisma may convert or drop and recreate it, and the `UPDATE` below makes
-      the result the same either way. The old code cannot run after this (no `password`), so
-      deploy straight away.
-   5. Run the "Deploy to EC2" workflow (login still off). If the new code runs before the push,
-      admin sign-in fails instead; hence this order.
+   4. Against production, **immediately before** the merge, empty the old auth tables and push:
+      ```sql
+      DELETE FROM Session; DELETE FROM Account; DELETE FROM VerificationToken;
+      ```
+      ```bash
+      DATABASE_URL='mysql://vss:…@127.0.0.1:3307/vss_prod' pnpm prisma db push --accept-data-loss
+      ```
+      The push does **not** drop the old NextAuth `Account` and `Session` tables: it `ALTER`s
+      them into Better Auth's, dropping the NextAuth columns and adding `NOT NULL` columns
+      without defaults (`Session.token`, `expiresAt`, `updatedAt`; `Account.accountId`,
+      `providerId`, `updatedAt`), and last of all creates the unique `Session_token_key`. If
+      either table has rows, the push can fail partway, after `User.password` and
+      `emailVerified` are already gone; MySQL DDL is not transactional, so nothing rolls back
+      except the backup from step 1. Hence the `DELETE`s. It also drops `VerificationToken`, the
+      `User`–`Membership` join table and `User.password`, replaces `emailVerified` (`DATETIME`)
+      with a boolean that defaults to false, makes `User.email` `NOT NULL`, adds
+      `StripePayment.membershipId`, and creates `Verification` and `Passkey`. The exact SQL is in
+      "SQL of step 6.4" below. `relationMode = "prisma"` means the dropped `User` relations to
+      participants and payments never had foreign keys in MySQL; the `userId` columns on
+      `Participant`, `StripePayment` and `StripeRefund` are kept. The running code (`2925516`)
+      cannot run after this (no `password`), so merge straight away.
+   5. **Merge the PR now. This triggers the deploy** ("Deploy to EC2" runs on the push to `main`),
+      with login still off. If the new code ran before the push, admin sign-in and the Stripe
+      webhooks would fail; hence this order.
    6. **Immediately after the push**, run once:
       ```sql
       UPDATE User SET emailVerified = 1, name = CONCAT(firstName, ' ', lastName);
@@ -290,7 +342,7 @@ that works today.
       (`name` is `VARCHAR(191)`.) It has no `WHERE`: run it once, while the table holds only the
       legacy rows. Until it has run, `emailVerified` is 0 and `name` is empty. Existing admin
       sessions stop working. Admins sign in again with a code at `/loggain?admin`; while login is
-      off only admins are sent a code and sign-up is refused.
+      off only admins are sent a code, sign-up is refused, and no other user can start a session.
 7. **Backfill membership payers.** The columns `StripePayment.membershipId` and the membership
    backfill only exist after step 6. Run the backfill again (with the invocation above):
    ```bash
@@ -310,21 +362,21 @@ that works today.
    `membershipId`; some old ones may remain, which show no family (safe). `_MemberToStripePayment`
    is Prisma's join table for `Member`–`StripePayment`, `B` is the payment id.
 8. **Staging first.** The preview at `staging.event.vastrasidan.se` uses the database `vss_dev`,
-   so it needs everything above done to that database first: `prisma db push --accept-data-loss`
-   and the same `UPDATE` (in that order, as in step 6), then the normalise and backfill scripts
-   with `vss_dev`'s `DATABASE_URL` and the Stripe key that environment uses. On Vercel, set
-   `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (`https://staging.event.vastrasidan.se`),
-   `PASSKEY_RP_ID` (`staging.event.vastrasidan.se`, or `vastrasidan.se`) and
-   `NEXT_PUBLIC_ENABLE_LOGIN=true`.
+   so it needs everything above done to that database first: the `DELETE`s,
+   `prisma db push --accept-data-loss` and the same `UPDATE` (in that order, as in step 6), then
+   the normalise and backfill scripts with `vss_dev`'s `DATABASE_URL` and the Stripe key that environment uses.
+   On Vercel (Preview environment), set `BETTER_AUTH_SECRET`,
+   `BETTER_AUTH_URL=https://staging.event.vastrasidan.se`,
+   `PASSKEY_RP_ID=staging.event.vastrasidan.se` and `NEXT_PUBLIC_ENABLE_LOGIN=true`.
 
-   **Required follow-up before staging can work:** `src/env.mjs` (lines 36-41) overrides
-   `WEBSITE_URL` with `https://$VERCEL_URL` whenever `VERCEL_URL` is set, and that is the
-   per-deployment host, not the staging alias. `trustedOrigins` and the passkey origin are both
-   `WEBSITE_URL`, so sign-in on `staging.event.vastrasidan.se` is rejected as an untrusted
-   origin, and passkeys fail. A fixed staging origin is not possible without a code change (use
-   the explicit `WEBSITE_URL` when set, or add the staging host to `trustedOrigins`). Until
-   then, test the whole flow in a local run against `vss_dev` instead, or sign in through the
-   deployment's own `*.vercel.app` URL with `BETTER_AUTH_URL` and `PASSKEY_RP_ID` set to that host.
+   No code change is needed. `src/env.mjs` overrides `WEBSITE_URL` with `https://$VERCEL_URL`,
+   the per-deployment host, but Better Auth trusts its base URL's origin (`BETTER_AUTH_URL`) as
+   well as `WEBSITE_URL`, and the passkey origin and the sign-in link use `BETTER_AUTH_URL`. So
+   email codes, the link and passkeys all work on `staging.event.vastrasidan.se`. On the
+   deployment's own `*.vercel.app` URL, email codes work (that origin is `WEBSITE_URL`), but the
+   link in the email goes to the staging host and passkeys fail. Use `staging.event…` rather than
+   `vastrasidan.se` as the RP ID, so passkeys made against `vss_dev` are never offered on
+   production.
 
    Go through: sign-up with a code, the link in the email, passkey on iOS Safari and Android
    Chrome (add it on `/profil`, which needs a fresh sign-in), signing in with the passkey,
@@ -334,21 +386,141 @@ that works today.
    variable on GitHub to `true` does nothing until the workflow runs again: set it, re-run "Deploy
    to EC2" (a rebuild and redeploy), then check `/loggain`, sign-up and one booking.
 
-**Rate limiting (required, step 6.2).** `src/server/auth.ts` trusts `x-forwarded-for` for the
-client address, and its counters are in memory (they reset on restart). `mod_proxy` appends to a
-value the client sent, so a client could spoof the header and dodge the limit. The repo's
-`deploy/apache-vss-event.conf` only has the `:80` vhost; production traffic is served by the
-`:443` vhost certbot generated from it, `/etc/apache2/sites-available/vss-event-le-ssl.conf` on
-the box. Add `RequestHeader unset X-Forwarded-For` above the `ProxyPass` lines in **both** files
-(the repo copy so a re-install keeps it, the SSL vhost on the server so it takes effect), then
-`sudo apache2ctl configtest && sudo systemctl reload apache2`. Verify:
+**Rate limiting (step 6.2, recommended).** `src/server/auth.ts` takes the client address from
+`X-Forwarded-For` and trusts only `127.0.0.1` and `::1` as proxies
+(`advanced.ipAddress.trustedProxies`). So it takes the rightmost address in the header that is
+not one of those: the one Apache appended for the client. `mod_proxy` appends to a value the
+client sent, but anything the client put there sits to the left and is ignored, so it can't dodge
+the per-address limit by spoofing the header. Unsetting the header in Apache is still worth doing,
+so nothing downstream ever sees a spoofed value. The repo's `deploy/apache-vss-event.conf` only
+has the `:80` vhost; production traffic is served by the `:443` vhost certbot generated from it,
+`/etc/apache2/sites-available/vss-event-le-ssl.conf` on the box. Add `RequestHeader unset
+X-Forwarded-For` above the `ProxyPass` lines in **both** files (the repo copy so a re-install
+keeps it, the SSL vhost on the server so it takes effect), then
+`sudo apache2ctl configtest && sudo systemctl reload apache2`. Either way, verify:
 ```bash
 curl -s -H 'X-Forwarded-For: 1.2.3.4' https://www.vastrasidan.se/api/auth/get-session -o /dev/null
 ```
 and check that the address Better Auth records (`Session.ipAddress` after a sign-in, or the
-Apache access log) is yours, not `1.2.3.4`. Without the header every visitor would share one
-address and a few codes would lock everyone out.
+Apache access log) is yours, not `1.2.3.4`. The per-address counters are in memory and reset on
+restart. On top of them, each email gets at most 5 codes and 15 failed sign-ins an hour (also in
+memory); a request over that limit gets the usual answer, but no code is sent or accepted.
 
-**Rollback.** Set `NEXT_PUBLIC_ENABLE_LOGIN` back to `false` and redeploy to close sign-up (admin
-sign-in keeps working). Rolling the code back past step 6 also needs the backup from step 1,
-because `db push --accept-data-loss` is not reversible.
+**Rollback.** Set `NEXT_PUBLIC_ENABLE_LOGIN` back to `false` and redeploy. That closes sign-up
+and stops new sessions for anyone but admins, by code or passkey (admin sign-in keeps working).
+Sessions that already exist keep working until they expire, up to 14 days, unless you revoke
+them:
+```sql
+DELETE FROM Session WHERE userId IN (SELECT id FROM User WHERE role <> 'ADMIN');
+```
+Rolling the code back past step 6 also needs the backup from step 1, because
+`db push --accept-data-loss` is not reversible.
+
+<details>
+<summary><strong>SQL of step 6.4</strong> (what <code>db push</code> runs against a database at <code>2925516</code>)</summary>
+
+Generated from the branch head with:
+
+```bash
+git show 2925516:prisma/schema.prisma > /tmp/schema-2925516.prisma
+pnpm -s prisma migrate diff --from-schema /tmp/schema-2925516.prisma \
+  --to-schema prisma/schema.prisma --script
+```
+
+```sql
+-- DropIndex
+DROP INDEX `Account_provider_providerAccountId_key` ON `Account`;
+
+-- DropIndex
+DROP INDEX `Session_sessionToken_key` ON `Session`;
+
+-- AlterTable
+ALTER TABLE `Account` DROP COLUMN `access_token`,
+    DROP COLUMN `expires_at`,
+    DROP COLUMN `id_token`,
+    DROP COLUMN `provider`,
+    DROP COLUMN `providerAccountId`,
+    DROP COLUMN `refresh_token`,
+    DROP COLUMN `session_state`,
+    DROP COLUMN `token_type`,
+    DROP COLUMN `type`,
+    ADD COLUMN `accessToken` TEXT NULL,
+    ADD COLUMN `accessTokenExpiresAt` DATETIME(3) NULL,
+    ADD COLUMN `accountId` VARCHAR(191) NOT NULL,
+    ADD COLUMN `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    ADD COLUMN `idToken` TEXT NULL,
+    ADD COLUMN `password` VARCHAR(191) NULL,
+    ADD COLUMN `providerId` VARCHAR(191) NOT NULL,
+    ADD COLUMN `refreshToken` TEXT NULL,
+    ADD COLUMN `refreshTokenExpiresAt` DATETIME(3) NULL,
+    ADD COLUMN `updatedAt` DATETIME(3) NOT NULL;
+
+-- AlterTable
+ALTER TABLE `Session` DROP COLUMN `expires`,
+    DROP COLUMN `sessionToken`,
+    ADD COLUMN `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    ADD COLUMN `expiresAt` DATETIME(3) NOT NULL,
+    ADD COLUMN `ipAddress` VARCHAR(191) NULL,
+    ADD COLUMN `token` VARCHAR(191) NOT NULL,
+    ADD COLUMN `updatedAt` DATETIME(3) NOT NULL,
+    ADD COLUMN `userAgent` TEXT NULL;
+
+-- AlterTable
+ALTER TABLE `User` DROP COLUMN `password`,
+    ADD COLUMN `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    ADD COLUMN `name` VARCHAR(191) NOT NULL DEFAULT '',
+    ADD COLUMN `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    MODIFY `firstName` VARCHAR(191) NOT NULL DEFAULT '',
+    MODIFY `lastName` VARCHAR(191) NOT NULL DEFAULT '',
+    MODIFY `email` VARCHAR(191) NOT NULL,
+    DROP COLUMN `emailVerified`,
+    ADD COLUMN `emailVerified` BOOLEAN NOT NULL DEFAULT false;
+
+-- AlterTable
+ALTER TABLE `StripePayment` ADD COLUMN `membershipId` VARCHAR(191) NULL;
+
+-- DropTable
+DROP TABLE `VerificationToken`;
+
+-- DropTable
+DROP TABLE `_MembershipToUser`;
+
+-- CreateTable
+CREATE TABLE `Verification` (
+    `id` VARCHAR(191) NOT NULL,
+    `identifier` VARCHAR(191) NOT NULL,
+    `value` TEXT NOT NULL,
+    `expiresAt` DATETIME(3) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    INDEX `Verification_identifier_idx`(`identifier`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Passkey` (
+    `id` VARCHAR(191) NOT NULL,
+    `name` VARCHAR(191) NULL,
+    `publicKey` TEXT NOT NULL,
+    `userId` VARCHAR(191) NOT NULL,
+    `credentialID` TEXT NOT NULL,
+    `counter` INTEGER NOT NULL,
+    `deviceType` VARCHAR(191) NOT NULL,
+    `backedUp` BOOLEAN NOT NULL,
+    `transports` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `aaguid` VARCHAR(191) NULL,
+
+    INDEX `Passkey_userId_idx`(`userId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateIndex
+CREATE UNIQUE INDEX `Session_token_key` ON `Session`(`token`);
+
+-- CreateIndex
+CREATE INDEX `StripePayment_membershipId_idx` ON `StripePayment`(`membershipId`);
+```
+
+</details>
