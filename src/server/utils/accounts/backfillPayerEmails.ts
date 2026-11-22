@@ -17,7 +17,8 @@ export const backfillPayerEmails = async (db: PrismaClient, stripe: Stripe) => {
       fromStripe: 0,
       fromOwnerMetadata: 0,
       adminComp: 0,
-      unresolved: 0
+      unresolved: 0,
+      membershipIds: 0
     }
   };
 
@@ -73,6 +74,7 @@ export const backfillPayerEmails = async (db: PrismaClient, stripe: Stripe) => {
  * Membership payments (linked to members, not travellers). The Stripe customer is the person who
  * filled in the form. Without one, the owner recorded in the PaymentIntent metadata. Otherwise the
  * payer stays null, which shows the family nothing but their own memberships. Never guessed.
+ * The membership bought comes from the PaymentIntent metadata; without it the payment shows no family.
  * Admin-added memberships have no Stripe payment: a payment with exactly one member is theirs.
  */
 const backfillMembershipPayers = async (
@@ -83,24 +85,27 @@ const backfillMembershipPayers = async (
     fromOwnerMetadata: number;
     adminComp: number;
     unresolved: number;
+    membershipIds: number;
   }
 ) => {
   const rows = await db.stripePayment.findMany({
     where: {
-      payerEmail: null,
+      OR: [{ payerEmail: null }, { membershipId: null }],
       members: { some: {} },
       participants: { none: {} }
     },
     select: {
       id: true,
       stripePaymentId: true,
+      payerEmail: true,
+      membershipId: true,
       members: { select: { email: true } }
     }
   });
 
   // Admin payments are named after the owner, so one id can cover several seasons: go by row
-  for (const row of rows.filter((r) =>
-    r.stripePaymentId.startsWith("admin-comp-")
+  for (const row of rows.filter(
+    (r) => r.stripePaymentId.startsWith("admin-comp-") && r.payerEmail === null
   )) {
     const [only, ...rest] = row.members;
     if (only && rest.length === 0) {
@@ -122,28 +127,43 @@ const backfillMembershipPayers = async (
     )
   ].sort();
   for (const stripePaymentId of intents) {
+    const intentRows = rows.filter(
+      (r) => r.stripePaymentId === stripePaymentId
+    );
     const paymentIntent = await retrievePaymentIntent(stripe, stripePaymentId);
-    let payerEmail = paymentIntent && customerEmailOf(paymentIntent);
-    let source: "fromStripe" | "fromOwnerMetadata" = "fromStripe";
-    const ownerId = paymentIntent?.metadata?.membershipOwnerId;
-    if (!payerEmail && ownerId) {
-      payerEmail = (
-        await db.member.findUnique({
-          where: { id: ownerId },
-          select: { email: true }
-        })
-      )?.email;
-      source = "fromOwnerMetadata";
+
+    if (intentRows.some((r) => r.payerEmail === null)) {
+      let payerEmail = paymentIntent && customerEmailOf(paymentIntent);
+      let source: "fromStripe" | "fromOwnerMetadata" = "fromStripe";
+      const ownerId = paymentIntent?.metadata?.membershipOwnerId;
+      if (!payerEmail && ownerId) {
+        payerEmail = (
+          await db.member.findUnique({
+            where: { id: ownerId },
+            select: { email: true }
+          })
+        )?.email;
+        source = "fromOwnerMetadata";
+      }
+      if (payerEmail) {
+        await db.stripePayment.updateMany({
+          where: { stripePaymentId, payerEmail: null },
+          data: { payerEmail: normaliseEmail(payerEmail) }
+        });
+        result[source] += 1;
+      } else {
+        result.unresolved += 1;
+      }
     }
-    if (!payerEmail) {
-      result.unresolved += 1;
-      continue;
+
+    const membershipId = paymentIntent?.metadata?.membershipId;
+    if (membershipId && intentRows.some((r) => r.membershipId === null)) {
+      await db.stripePayment.updateMany({
+        where: { stripePaymentId, membershipId: null },
+        data: { membershipId }
+      });
+      result.membershipIds += 1;
     }
-    await db.stripePayment.updateMany({
-      where: { stripePaymentId, payerEmail: null },
-      data: { payerEmail: normaliseEmail(payerEmail) }
-    });
-    result[source] += 1;
   }
 };
 

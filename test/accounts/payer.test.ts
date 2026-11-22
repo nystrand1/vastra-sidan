@@ -91,7 +91,7 @@ describe("payer across the payment's status history", () => {
   });
 });
 
-const noMemberships = { fromStripe: 0, fromOwnerMetadata: 0, adminComp: 0, unresolved: 0 };
+const noMemberships = { fromStripe: 0, fromOwnerMetadata: 0, adminComp: 0, unresolved: 0, membershipIds: 0 };
 
 describe("backfillPayerEmails", () => {
   const bookTwo = async () => {
@@ -204,7 +204,7 @@ describe("backfillPayerEmails", () => {
       const paymentIntent = await signUpAndPay(
         memberSignupInput(family, { email: "owner@test.se", additionalMembers: [x] })
       );
-      await prisma.stripePayment.updateMany({ data: { payerEmail: null } });
+      await prisma.stripePayment.updateMany({ data: { payerEmail: null, membershipId: null } });
       return { paymentIntent, x };
     };
     const payers = async () =>
@@ -219,10 +219,24 @@ describe("backfillPayerEmails", () => {
         fromStripe: 0,
         fromFirstTraveller: 0,
         adminComp: 0,
-        memberships: { ...noMemberships, fromStripe: 1 }
+        memberships: { ...noMemberships, fromStripe: 1, membershipIds: 1 }
       });
       expect(await payers()).toEqual(["owner@test.se", "owner@test.se"]);
       expect((await paymentFor(paymentIntent.id)).payerEmail).toBe("owner@test.se");
+    });
+
+    it("restores what was bought from the PaymentIntent metadata", async () => {
+      const { family } = await createSeason();
+      await signUpAndPay(
+        memberSignupInput(family, { email: "owner@test.se", additionalMembers: [familyMember()] })
+      );
+      await prisma.stripePayment.updateMany({ data: { membershipId: null } });
+
+      const result = await backfillPayerEmails(prisma, stripe);
+
+      expect(result.memberships).toEqual({ ...noMemberships, membershipIds: 1 });
+      const rows = await prisma.stripePayment.findMany();
+      expect(rows.map((p) => p.membershipId)).toEqual([family.id, family.id]);
     });
 
     it("falls back to the owner in the PaymentIntent metadata when Stripe has no email", async () => {
@@ -231,7 +245,7 @@ describe("backfillPayerEmails", () => {
 
       const result = await backfillPayerEmails(prisma, stripe);
 
-      expect(result.memberships).toEqual({ ...noMemberships, fromOwnerMetadata: 1 });
+      expect(result.memberships).toEqual({ ...noMemberships, fromOwnerMetadata: 1, membershipIds: 1 });
       expect(await payers()).toEqual(["owner@test.se", "owner@test.se"]);
     });
 

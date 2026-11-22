@@ -333,6 +333,7 @@ export const adminRouter = createTRPCRouter({
             stripePaymentId: `admin-comp-${membershipOwner!.id}`,
             amount: 0,
             status: StripePaymentStatus.SUCCEEDED,
+            membershipId: membership.id,
             members: {
               connect: memberIds.map((id) => ({ id }))
             }

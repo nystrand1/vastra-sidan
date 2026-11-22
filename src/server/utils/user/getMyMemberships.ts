@@ -15,9 +15,9 @@ export type MyMemberships = {
     active: MembershipCard[];
     expired: MembershipCard[];
   } | null;
+  /** No member tokens: anyone can name an existing member as family, so a token would leak their card. */
   family: {
     name: string;
-    memberToken: string;
     memberships: MembershipCard[];
   }[];
 };
@@ -25,14 +25,13 @@ export type MyMemberships = {
 /**
  * The signed-in user's own memberships, plus the family memberships they paid for.
  *
- * A membership purchase is stored as a SUCCEEDED StripePayment linked to every member it
- * buys for, and each of those members gets the purchased Membership. The payment does not
- * record which Membership it bought, so it is the one every member on the payment holds.
- * Only those are shown for the other members on the payment: nothing else about them, and
- * not `familyMemberShipOwnerId`, which is rewritten each season.
+ * A membership purchase is stored as a SUCCEEDED StripePayment linked to every member it buys
+ * for, and records the Membership it bought in `membershipId`. For each payment the viewer paid
+ * for, every other member on it is shown with exactly that membership, if they hold it. Nothing
+ * else about them, and not `familyMemberShipOwnerId`, which is rewritten each season.
  *
- * Only the payer sees the rest of a payment's members. A payment without a recorded payer shows
- * the viewer nothing but their own memberships (`familyMemberShipOwnerId` is never trusted).
+ * A payment without a recorded payer or membership shows the viewer nothing but their own
+ * memberships.
  */
 export const getMyMemberships = async (
   prisma: PrismaClient,
@@ -59,30 +58,21 @@ export const getMyMemberships = async (
 
   const family = new Map<
     string,
-    {
-      name: string;
-      memberToken: string;
-      memberships: Map<string, MembershipCard>;
-    }
+    { name: string; memberships: Map<string, MembershipCard> }
   >();
   for (const payment of payments.values()) {
-    const others = payment.members.filter((m) => m.id !== member.id);
-    const paidByMe = isPayer(email, payment.payerEmail);
-    if (!paidByMe) continue;
-    const boughtTogether = member.memberships.filter((owned) =>
-      payment.members.every((m) =>
-        m.memberships.some((ms) => ms.id === owned.id)
-      )
-    );
-    for (const other of others) {
+    if (!isPayer(email, payment.payerEmail) || !payment.membershipId) continue;
+    for (const other of payment.members) {
+      if (other.id === member.id) continue;
+      const bought = other.memberships.find(
+        (m) => m.id === payment.membershipId
+      );
+      if (!bought) continue;
       const entry = family.get(other.id) ?? {
         name: `${other.firstName} ${other.lastName}`,
-        memberToken: other.memberToken,
         memberships: new Map<string, MembershipCard>()
       };
-      for (const membership of boughtTogether) {
-        entry.memberships.set(membership.id, toMembershipCard(membership));
-      }
+      entry.memberships.set(bought.id, toMembershipCard(bought));
       family.set(other.id, entry);
     }
   }
@@ -93,10 +83,8 @@ export const getMyMemberships = async (
       ...splitMemberships(member.memberships)
     },
     family: [...family.values()]
-      .filter((f) => f.memberships.size > 0)
       .map((f) => ({
         name: f.name,
-        memberToken: f.memberToken,
         memberships: [...f.memberships.values()].sort(
           (a, b) => b.expiresAt.getTime() - a.expiresAt.getTime()
         )

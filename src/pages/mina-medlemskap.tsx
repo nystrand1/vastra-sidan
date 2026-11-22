@@ -110,20 +110,14 @@ export const MembershipsPage = () => {
       {family.length > 0 && (
         <section className="flex w-full flex-col items-center gap-4">
           <h2 className="text-2xl font-semibold">Familj</h2>
-          {family.map((f) => (
+          {family.map((f, i) => (
             <div
-              key={f.memberToken}
+              key={`${i}-${f.name}`}
               className="flex w-full flex-col items-center gap-4"
             >
               <h3 className="text-xl font-semibold">{f.name}</h3>
               {f.memberships.map((m) => (
-                <MembershipItem
-                  key={m.id}
-                  membership={m}
-                  memberToken={
-                    m.expiresAt > new Date() ? f.memberToken : undefined
-                  }
-                />
+                <MembershipItem key={m.id} membership={m} />
               ))}
             </div>
           ))}

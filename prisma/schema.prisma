@@ -229,10 +229,13 @@ model StripePayment {
   stripeRefunds   StripeRefund[]
   /// Who paid for the booking. Always lowercased. Null for membership payments.
   payerEmail      String?
+  /// The Membership a membership payment bought. Null for event payments and older records.
+  membershipId    String?
 
   @@index([stripePaymentId])
   @@index([userId])
   @@index([payerEmail])
+  @@index([membershipId])
 }
 
 enum StripePaymentStatus {

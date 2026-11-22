@@ -85,6 +85,7 @@ export const memberPaymentRouter = createTRPCRouter({
             status: StripePaymentStatus.CREATED,
             // Whoever fills in the form pays for everyone on it
             payerEmail: normaliseEmail(input.email),
+            membershipId: membership.id,
             members: {
               connect: members.map((member) => ({ id: member.id }))
             }
