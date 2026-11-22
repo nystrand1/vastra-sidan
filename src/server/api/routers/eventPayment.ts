@@ -88,7 +88,7 @@ const calculateCost = (
   return totalCost * 100;
 };
 
-const participantFormatter = (
+export const participantFormatter = (
   participant: ParticipantWithParticipants["stripePayments"][number]["participants"][number]
 ) => {
   const isCancelable = isEventCancelable(participant.event.date);
@@ -124,7 +124,7 @@ const participantFormatter = (
 };
 
 /** What a participant row needs to be shown with `participantFormatter`. */
-const formattedParticipantInclude = {
+export const formattedParticipantInclude = {
   event: true,
   stripeRefunds: true,
   transfers: { select: { id: true } }
