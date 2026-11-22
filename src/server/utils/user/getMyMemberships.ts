@@ -31,9 +31,8 @@ export type MyMemberships = {
  * Only those are shown for the other members on the payment: nothing else about them, and
  * not `familyMemberShipOwnerId`, which is rewritten each season.
  *
- * Only the payer sees the rest of a payment's members. Payments made before `payerEmail` was
- * stored for memberships have none; for those the payer is the member the other members on
- * the payment currently point at.
+ * Only the payer sees the rest of a payment's members. A payment without a recorded payer shows
+ * the viewer nothing but their own memberships (`familyMemberShipOwnerId` is never trusted).
  */
 export const getMyMemberships = async (
   prisma: PrismaClient,
@@ -68,11 +67,7 @@ export const getMyMemberships = async (
   >();
   for (const payment of payments.values()) {
     const others = payment.members.filter((m) => m.id !== member.id);
-    const paidByMe =
-      payment.payerEmail !== null
-        ? isPayer(email, payment.payerEmail)
-        : member.familyMemberShipOwnerId === null &&
-          others.some((m) => m.familyMemberShipOwnerId === member.id);
+    const paidByMe = isPayer(email, payment.payerEmail);
     if (!paidByMe) continue;
     const boughtTogether = member.memberships.filter((owned) =>
       payment.members.every((m) =>

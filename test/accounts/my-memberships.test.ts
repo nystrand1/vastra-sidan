@@ -109,14 +109,17 @@ describe("Mina medlemskap", () => {
     expect(res.own?.active.map((m) => m.id)).toEqual([family.id]);
   });
 
-  it("still tells the payer from the family on payments made before payers were stored", async () => {
+  it("shows no family on payments without a recorded payer", async () => {
     const { family } = await createSeason();
     const x = familyMember({ email: "x@test.se" });
     await signUpAndPay(memberSignupInput(family, { email: "owner@test.se", additionalMembers: [x] }));
     await prisma.stripePayment.updateMany({ data: { payerEmail: null } });
 
-    expect((await memberships("owner@test.se")).family).toHaveLength(1);
-    expect((await memberships(x.email)).family).toEqual([]);
+    for (const email of ["owner@test.se", x.email]) {
+      const res = await memberships(email);
+      expect(res.family).toEqual([]);
+      expect(res.own?.active.map((m) => m.id)).toEqual([family.id]);
+    }
   });
 
   it("records who paid for a membership", async () => {

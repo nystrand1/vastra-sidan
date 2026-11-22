@@ -4,8 +4,15 @@ import { backfillPayerEmails } from "~/server/utils/accounts/backfillPayerEmails
 import { stripe } from "~/server/stripe";
 import { adminCaller, publicCaller, userCaller } from "../helpers/caller";
 import { prisma } from "../helpers/db";
-import { createEvent, participantInput } from "../helpers/factories";
-import { bookAndPay } from "../helpers/flows";
+import {
+  adminAddMemberInput,
+  createEvent,
+  createSeason,
+  familyMember,
+  memberSignupInput,
+  participantInput
+} from "../helpers/factories";
+import { bookAndPay, signUpAndPay } from "../helpers/flows";
 import { server } from "../mocks/server";
 import { fakeStripe } from "../mocks/stripe";
 
@@ -84,6 +91,8 @@ describe("payer across the payment's status history", () => {
   });
 });
 
+const noMemberships = { fromStripe: 0, fromOwnerMetadata: 0, adminComp: 0, unresolved: 0 };
+
 describe("backfillPayerEmails", () => {
   const bookTwo = async () => {
     const event = await createEvent();
@@ -102,7 +111,7 @@ describe("backfillPayerEmails", () => {
 
     const result = await backfillPayerEmails(prisma, stripe);
 
-    expect(result).toEqual({ fromStripe: 1, fromFirstTraveller: 0, adminComp: 0 });
+    expect(result).toEqual({ fromStripe: 1, fromFirstTraveller: 0, adminComp: 0, memberships: noMemberships });
     expect((await paymentFor(paymentIntent.id)).payerEmail).toBe("betalare@x.se");
   });
 
@@ -117,7 +126,7 @@ describe("backfillPayerEmails", () => {
 
     const result = await backfillPayerEmails(prisma, stripe);
 
-    expect(result).toEqual({ fromStripe: 0, fromFirstTraveller: 1, adminComp: 0 });
+    expect(result).toEqual({ fromStripe: 0, fromFirstTraveller: 1, adminComp: 0, memberships: noMemberships });
     expect((await paymentFor("pi_gone")).payerEmail).toBe(first.email);
     expect(paymentIntent.id).not.toBe("pi_gone");
   });
@@ -171,7 +180,7 @@ describe("backfillPayerEmails", () => {
 
     const result = await backfillPayerEmails(prisma, stripe);
 
-    expect(result).toEqual({ fromStripe: 0, fromFirstTraveller: 0, adminComp: 1 });
+    expect(result).toEqual({ fromStripe: 0, fromFirstTraveller: 0, adminComp: 1, memberships: noMemberships });
     expect(fakeStripe.requests()).toHaveLength(before);
     const payment = await prisma.stripePayment.findFirstOrThrow();
     expect(payment.payerEmail).toBe("ada@test.se");
@@ -184,7 +193,91 @@ describe("backfillPayerEmails", () => {
 
     const second = await backfillPayerEmails(prisma, stripe);
 
-    expect(second).toEqual({ fromStripe: 0, fromFirstTraveller: 0, adminComp: 0 });
+    expect(second).toEqual({ fromStripe: 0, fromFirstTraveller: 0, adminComp: 0, memberships: noMemberships });
     expect(await prisma.stripePayment.findMany({ orderBy: { id: "asc" } })).toEqual(afterFirst);
+  });
+
+  describe("membership payments", () => {
+    const payFamily = async () => {
+      const { family } = await createSeason();
+      const x = familyMember({ email: "x@test.se" });
+      const paymentIntent = await signUpAndPay(
+        memberSignupInput(family, { email: "owner@test.se", additionalMembers: [x] })
+      );
+      await prisma.stripePayment.updateMany({ data: { payerEmail: null } });
+      return { paymentIntent, x };
+    };
+    const payers = async () =>
+      (await prisma.stripePayment.findMany()).map((p) => p.payerEmail);
+
+    it("uses the Stripe customer, once per payment intent", async () => {
+      const { paymentIntent } = await payFamily();
+
+      const result = await backfillPayerEmails(prisma, stripe);
+
+      expect(result).toEqual({
+        fromStripe: 0,
+        fromFirstTraveller: 0,
+        adminComp: 0,
+        memberships: { ...noMemberships, fromStripe: 1 }
+      });
+      expect(await payers()).toEqual(["owner@test.se", "owner@test.se"]);
+      expect((await paymentFor(paymentIntent.id)).payerEmail).toBe("owner@test.se");
+    });
+
+    it("falls back to the owner in the PaymentIntent metadata when Stripe has no email", async () => {
+      await payFamily();
+      for (const c of fakeStripe.customers()) c.email = null as unknown as string;
+
+      const result = await backfillPayerEmails(prisma, stripe);
+
+      expect(result.memberships).toEqual({ ...noMemberships, fromOwnerMetadata: 1 });
+      expect(await payers()).toEqual(["owner@test.se", "owner@test.se"]);
+    });
+
+    it("leaves the payer empty when nothing says who paid", async () => {
+      await payFamily();
+      await prisma.stripePayment.updateMany({ data: { stripePaymentId: "pi_gone" } });
+
+      const result = await backfillPayerEmails(prisma, stripe);
+
+      expect(result.memberships).toEqual({ ...noMemberships, unresolved: 1 });
+      expect(await payers()).toEqual([null, null]);
+    });
+
+    it("uses the member's own email for an admin-added membership with one member", async () => {
+      const { regular } = await createSeason();
+      await adminCaller().admin.addMember(adminAddMemberInput(regular, { email: "solo@test.se" }));
+      const before = fakeStripe.requests().length;
+
+      const result = await backfillPayerEmails(prisma, stripe);
+
+      expect(result.memberships).toEqual({ ...noMemberships, adminComp: 1 });
+      expect(fakeStripe.requests()).toHaveLength(before);
+      expect((await payers())).toEqual(["solo@test.se"]);
+    });
+
+    it("leaves an admin-added family payment empty", async () => {
+      const { family } = await createSeason();
+      await adminCaller().admin.addMember(
+        adminAddMemberInput(family, { additionalMembers: [familyMember()] })
+      );
+
+      const result = await backfillPayerEmails(prisma, stripe);
+
+      expect(result.memberships).toEqual({ ...noMemberships, unresolved: 1 });
+      expect(await payers()).toEqual([null]);
+    });
+
+    it("running the backfill twice changes nothing", async () => {
+      await payFamily();
+      await backfillPayerEmails(prisma, stripe);
+      const afterFirst = await prisma.stripePayment.findMany({ orderBy: { id: "asc" } });
+
+      const second = await backfillPayerEmails(prisma, stripe);
+
+      expect(second.memberships).toEqual(noMemberships);
+      expect(await prisma.stripePayment.findMany({ orderBy: { id: "asc" } })).toEqual(afterFirst);
+    });
   });
 });

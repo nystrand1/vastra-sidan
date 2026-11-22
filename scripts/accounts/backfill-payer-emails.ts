@@ -1,4 +1,5 @@
-// One-off: store the payer of every event booking made before payerEmail existed.
+// One-off: store the payer of every booking made before payerEmail existed.
+// Membership payments are included.
 // Usage: pnpm script scripts/accounts/backfill-payer-emails.ts
 import { prisma } from "~/server/db";
 import { stripe } from "~/server/stripe";
