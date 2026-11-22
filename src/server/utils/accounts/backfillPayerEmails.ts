@@ -1,4 +1,4 @@
-import type Stripe from "stripe";
+import Stripe from "stripe";
 import { type PrismaClient } from "~/generated/prisma/client";
 import { normaliseEmail } from "~/utils/email";
 
@@ -63,7 +63,15 @@ const stripeCustomerEmail = async (stripe: Stripe, paymentIntentId: string) => {
     return customer && typeof customer !== "string" && !customer.deleted
       ? (customer.email ?? undefined)
       : undefined;
-  } catch {
-    return undefined;
+  } catch (error) {
+    // Only a payment Stripe doesn't have falls back to the first traveller. Anything
+    // else (network, rate limit, 5xx) aborts, so a re-run can still fill the row in.
+    if (
+      error instanceof Stripe.errors.StripeError &&
+      (error.statusCode === 404 || error.code === "resource_missing")
+    ) {
+      return undefined;
+    }
+    throw error;
   }
 };

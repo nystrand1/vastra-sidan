@@ -1,3 +1,4 @@
+import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { backfillPayerEmails } from "~/server/utils/accounts/backfillPayerEmails";
 import { stripe } from "~/server/stripe";
@@ -5,6 +6,7 @@ import { adminCaller, publicCaller, userCaller } from "../helpers/caller";
 import { prisma } from "../helpers/db";
 import { createEvent, participantInput } from "../helpers/factories";
 import { bookAndPay } from "../helpers/flows";
+import { server } from "../mocks/server";
 import { fakeStripe } from "../mocks/stripe";
 
 const paymentFor = (stripePaymentId: string) =>
@@ -136,6 +138,20 @@ describe("backfillPayerEmails", () => {
     await backfillPayerEmails(prisma, stripe);
 
     expect((await paymentFor("pi_gone")).payerEmail).toBe(p2!.email);
+  });
+
+  it("aborts without writing a payer when Stripe fails", async () => {
+    await bookTwo();
+    server.use(
+      http.get("https://api.stripe.com/v1/payment_intents/:id", () =>
+        HttpResponse.json({ error: { type: "api_error", message: "Boom" } }, { status: 500 })
+      )
+    );
+
+    await expect(backfillPayerEmails(prisma, stripe)).rejects.toThrow();
+
+    const payments = await prisma.stripePayment.findMany();
+    expect(payments.every((p) => p.payerEmail === null)).toBe(true);
   });
 
   it("backfills admin bookings without calling Stripe", async () => {
