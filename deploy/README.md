@@ -47,7 +47,7 @@ a value: edit it on GitHub and re-run the workflow.
 | Name                    | Value                                                   |
 | ----------------------- | ------------------------------------------------------- |
 | `DATABASE_URL`          | `mysql://vss:…@127.0.0.1:3306/vss_prod`. The build reaches it through an SSH tunnel |
-| `NEXTAUTH_SECRET`       |                                                         |
+| `BETTER_AUTH_SECRET`    | Signs sessions and sign-in links. `openssl rand -base64 32` |
 | `WORDPRESS_API_KEY`     |                                                         |
 | `CRON_KEY`              | Must match the key in WordPress (`themes/storefront/inc/vss-functions.php`) |
 | `STRIPE_API_KEY`        | Live secret key                                         |
@@ -62,7 +62,8 @@ a value: edit it on GitHub and re-run the workflow.
 | ---------------------------- | ---------------------------------------- |
 | `EC2_HOST`                   | The box's Elastic IP                     |
 | `EC2_KNOWN_HOSTS`            | Output of `ssh-keyscan <EC2_HOST>`       |
-| `NEXTAUTH_URL`, `WEBSITE_URL`, `NEXT_PUBLIC_WEBSITE_URL` | `https://www.vastrasidan.se` |
+| `BETTER_AUTH_URL`, `WEBSITE_URL`, `NEXT_PUBLIC_WEBSITE_URL` | `https://www.vastrasidan.se` |
+| `PASSKEY_RP_ID`              | `vastrasidan.se` (the domain, no scheme) |
 | `NEXT_PUBLIC_WORDPRESS_URL`  | `https://api.vastrasidan.se`             |
 | `NEXT_PUBLIC_STRIPE_API_KEY` | Live publishable key                     |
 | `NEXT_PUBLIC_ENABLE_MEMBERSHIPS`, `NEXT_PUBLIC_ENABLE_LOGIN`, `NEXT_PUBLIC_ENABLE_AWAYGAMES`, `NEXT_PUBLIC_ENABLE_ANALYTICS`, `ENABLE_AWS_SES_EMAILS`, `USE_DEV_MODE` | `true`/`false`, leave unset for the default |
@@ -149,7 +150,7 @@ page, so a name without a record shows that page instead of failing.
 
 **Before the day**
 
-1. The `Production` environment on GitHub is filled in, with `NEXTAUTH_URL` set to
+1. The `Production` environment on GitHub is filled in, with `BETTER_AUTH_URL` set to
    `https://www.vastrasidan.se`, and `main` deploys to the box. The app runs, but nothing
    routes to it yet.
 2. Install the vhost: copy `deploy/apache-vss-event.conf` to `/etc/apache2/sites-available/vss-event.conf`,
@@ -196,3 +197,99 @@ domains stay on the project.
 
 Previews on Vercel still connect to `vss_dev` over the public MySQL port, so it stays open.
 Give them a user that can only touch `vss_dev`, and limit the production user to `localhost`.
+
+## User accounts rollout
+
+Passwordless accounts (Better Auth, email codes, passkeys) replace NextAuth. The schema change
+is destructive and `User.email` becomes required, so go in this order and stop if a check fails.
+Design: `docs/superpowers/specs/2026-11-22-user-accounts-design.md`.
+
+Run scripts and SQL against production through the tunnel in "Reaching MySQL from your machine"
+(`DATABASE_URL` pointing at `127.0.0.1:3307/vss_prod`, plus the production Stripe key for the
+backfill). Keep `NEXT_PUBLIC_ENABLE_LOGIN` unset or `false` until step 8.
+
+**Before you start: origins.** `trustedOrigins` is `[WEBSITE_URL]`, so exactly one origin is
+allowed, and the passkey origin is `WEBSITE_URL` too. `deploy/apache-vss-event.conf` makes
+`https://www.vastrasidan.se` canonical: the apex `vastrasidan.se` answers with a 308 redirect to
+www (certbot copies that rule to the :443 vhost). So `WEBSITE_URL`, `NEXT_PUBLIC_WEBSITE_URL` and
+`BETTER_AUTH_URL` must all be `https://www.vastrasidan.se`, and `PASSKEY_RP_ID` is
+`vastrasidan.se` (a passkey's RP ID may be the parent domain of the origin). If you ever serve
+both hosts without the redirect, sign-in from the other host is rejected as an untrusted origin.
+That would be a required follow-up (add the second origin to `trustedOrigins`), not something
+that works today.
+
+1. **Back up.** Run `sudo systemctl start mysql-backup.service` on the box and check it with
+   `systemctl status mysql-backup.service`; the dump is `/var/backups/mysql/vss_prod-<date>.sql.gz`
+   (`deploy/mysql-backup.sh`).
+2. **Deploy the first half with login off.** Deploy the code up to and including the payer-email
+   work (commit `2925516`) with `NEXT_PUBLIC_ENABLE_LOGIN=false`, then `pnpm prisma db push` (no flag needed:
+   it only adds `StripePayment.payerEmail` and `StripePayment.membershipId`). If you deploy
+   everything at once instead, skip to step 6 after the backfill.
+3. **Normalise emails.**
+   ```bash
+   pnpm script scripts/accounts/normalise-emails.ts --dry-run
+   ```
+   It prints JSON and exits 1 if lowercasing would make two rows collide. Nothing is written then:
+   merge the duplicates by hand and run again. When the dry run is clean, run it without
+   `--dry-run`.
+4. **Backfill payers.**
+   ```bash
+   pnpm script scripts/accounts/backfill-payer-emails.ts
+   ```
+   It prints counts: `fromStripe`, `fromFirstTraveller`, `adminComp` for event bookings and a
+   `memberships` object with `fromStripe`, `fromOwnerMetadata`, `adminComp`, `unresolved`,
+   `membershipIds`. It aborts on any Stripe error other than a 404, so just re-run it after a
+   network or rate-limit failure; it only fills rows that are still empty. `unresolved` payments
+   are left without a payer on purpose (never guessed). Until the backfill has run, old bookings
+   show each link only its own seat, which is safe. Family entries on "Mina medlemskap" only
+   appear for membership payments that have both a payer and a `membershipId`; older ones show
+   each member just their own membership. Check:
+   ```sql
+   SELECT COUNT(*) FROM StripePayment WHERE payerEmail IS NULL;
+   SELECT COUNT(*) FROM StripePayment WHERE membershipId IS NULL AND id IN (SELECT stripePaymentId FROM _MemberToStripePayment);
+   ```
+   (adjust the second to your join table; the point is to see how many membership payments have
+   no `membershipId`).
+5. **Check the admins.** Admins sign in with an email code, so every admin needs a working
+   address. `User.email` also becomes required, so this must be 0 before step 6:
+   ```sql
+   SELECT COUNT(*) FROM User WHERE email IS NULL;
+   SELECT id, firstName, lastName, email FROM User WHERE role = 'ADMIN';
+   ```
+   Read the second list: every admin must have an email they can open. Fix by hand if not.
+6. **Deploy the accounts code, still with login off.**
+   - On GitHub (Production environment): add the secret `BETTER_AUTH_SECRET` and the variables
+     `BETTER_AUTH_URL` and `PASSKEY_RP_ID` (values above); delete `NEXTAUTH_SECRET` and
+     `NEXTAUTH_URL`. `deploy.yml` already lists the new names in `ENV_NAMES`.
+   - Run `pnpm prisma db push --accept-data-loss`. It drops `User.password`, the old NextAuth
+     `Account`, `Session` and `VerificationToken` tables (Better Auth creates its own
+     `Session`, `Account`, `Verification` and `Passkey`), the `User`–`Membership` join table and
+     the old `User` relations to participants and payments. `relationMode = "prisma"` means those relations never
+     had foreign keys in MySQL; the `userId` columns on `Participant`, `StripePayment` and
+     `StripeRefund` are kept. `emailVerified` changes from `DATETIME` to `TINYINT(1)`, which
+     resets it to 0.
+   - Then fill the new columns for existing users (`name` is `VARCHAR(191)`, `emailVerified`
+     is boolean):
+     ```sql
+     UPDATE User SET emailVerified = 1, name = CONCAT(firstName, ' ', lastName);
+     ```
+   - Existing admin sessions stop working. Admins sign in again with a code at `/loggain?admin`.
+     While login is off only admins are sent a code, and sign-up is refused.
+   - Rate limiting reads `x-forwarded-for` and keeps its counters in memory (so they reset on
+     restart). Apache's `mod_proxy` adds that header with the client address by default
+     (`ProxyAddHeaders`), and the vhost doesn't turn it off. Check it in the app, not just
+     in the config: without it every visitor shares one address and a few codes lock everyone out.
+     To stop a client from sending its own value, add `RequestHeader unset X-Forwarded-For`
+     to the vhost, above the `ProxyPass` lines, so the only value is the one Apache adds.
+7. **Staging first.** On the Vercel preview (`staging.event.vastrasidan.se`, database `vss_dev`)
+   set `NEXT_PUBLIC_ENABLE_LOGIN=true`. Go through: sign-up with a code, the link in the email,
+   passkey on iOS Safari and Android Chrome (add it on `/profil`, which needs a fresh sign-in),
+   signing in with the passkey, bookings on "Mina bussresor" (cancel, change bus, transfer),
+   "Mina medlemskap", and deleting the account.
+8. **Production.** `NEXT_PUBLIC_ENABLE_LOGIN` is inlined at build time, so setting the
+   variable on GitHub to `true` does nothing until the workflow runs again: re-run "Deploy to
+   EC2" (a rebuild and redeploy), then check `/loggain`, sign-up and one booking.
+
+**Rollback.** Set `NEXT_PUBLIC_ENABLE_LOGIN` back to `false` and redeploy to close sign-up (admin
+sign-in keeps working). Rolling the code back past step 6 also needs the backup from step 1,
+because `db push --accept-data-loss` is not reversible.

@@ -1,7 +1,18 @@
 # User accounts ("Mina sidor") — design
 
 Date: 2026-11-22
-Status: Approved
+Status: Implemented
+
+## Changes during implementation
+
+- Family entries on "Mina medlemskap" are shown without their card link.
+- `membershipId` was added to `StripePayment`, so a membership payment records what it bought.
+- Membership payments have a payer (`payerEmail`) too, and the backfill fills them.
+- The `user` relations on `Participant`, `StripePayment` and `StripeRefund` were dropped; the
+  `userId` columns stay.
+- The link in the sign-in email submits the code, but it auto-submits only in the browser that
+  asked for the code.
+- Adding a passkey needs a fresh session.
 
 ## Purpose
 
