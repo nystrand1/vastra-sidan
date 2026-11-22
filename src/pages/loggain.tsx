@@ -18,7 +18,14 @@ const safeCallbackUrl = (value: string | string[] | undefined) =>
 
 export const LoginPage = ({ adminLogin }: LoginPageProps) => {
   const router = useRouter();
-  const isAdminLogin = adminLogin || router.query.admin !== undefined;
+  // The login link from the email carries `kod`; while login is off only admins get codes.
+  const isAdminLogin =
+    adminLogin || router.query.admin !== undefined || router.query.kod !== undefined;
+
+  // The page is prerendered, so the query is empty until the router is ready.
+  if (!router.isReady && !featureFlags.ENABLE_LOGIN) {
+    return <p className="text-center">Laddar...</p>;
+  }
 
   if (!featureFlags.ENABLE_LOGIN && !isAdminLogin) {
     return <Error statusCode={404} />;

@@ -94,10 +94,18 @@ const ProfileForm = ({
 };
 
 const Passkeys = () => {
+  const router = useRouter();
   const { data: passkeys, refetch } = authClient.useListPasskeys();
 
   const add = async () => {
     const result = await authClient.passkey.addPasskey();
+    if (result?.error && "code" in result.error && result.error.code === "SESSION_NOT_FRESH") {
+      // Adding a passkey needs a recent sign-in.
+      toast.error("Logga in igen för att lägga till passkey");
+      await authClient.signOut();
+      await router.push("/loggain?callbackUrl=/profil");
+      return;
+    }
     if (result?.error) {
       toast.error("Det gick inte att lägga till passkey.");
       return;

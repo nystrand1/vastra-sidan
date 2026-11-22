@@ -3,12 +3,19 @@ import { useEffect, useRef, useState } from "react";
 import { InputField } from "~/components/atoms/InputField/InputField";
 import { Button } from "~/components/ui/button";
 import { authClient } from "~/utils/authClient";
+import {
+  forgetRequestedEmail,
+  readRequestedEmail,
+  rememberRequestedEmail,
+  shouldAutoSubmitCode
+} from "~/utils/signInLink";
 
 interface EmailCodeSignInProps {
   intro: string;
   onSignedIn: () => void | Promise<void>;
 }
 
+const GENERIC_ERROR = "Något gick fel. Försök igen.";
 const CODE_ERROR = "Koden är fel eller har gått ut. Försök igen.";
 
 /**
@@ -22,6 +29,8 @@ export const EmailCodeSignIn = ({ intro, onSignedIn }: EmailCodeSignInProps) => 
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // A code from a link this browser didn't ask for: the visitor must confirm it.
+  const [confirmLink, setConfirmLink] = useState(false);
   const handledLink = useRef(false);
   const onSignedInRef = useRef(onSignedIn);
   useEffect(() => {
@@ -40,6 +49,7 @@ export const EmailCodeSignIn = ({ intro, onSignedIn }: EmailCodeSignInProps) => 
       setError(CODE_ERROR);
       return;
     }
+    forgetRequestedEmail();
     await onSignedInRef.current();
     setBusy(false);
   };
@@ -53,9 +63,11 @@ export const EmailCodeSignIn = ({ intro, onSignedIn }: EmailCodeSignInProps) => 
     setEmail(linkEmail);
     setCode(kod);
     setStep("code");
+    const autoSubmit = shouldAutoSubmitCode(readRequestedEmail(), linkEmail);
+    setConfirmLink(!autoSubmit);
     void router
       .replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true })
-      .then(() => verify(linkEmail, kod));
+      .then(() => (autoSubmit ? verify(linkEmail.trim().toLowerCase(), kod) : undefined));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady]);
 
@@ -92,6 +104,11 @@ export const EmailCodeSignIn = ({ intro, onSignedIn }: EmailCodeSignInProps) => 
       setError("För många försök. Vänta en stund och försök igen.");
       return;
     }
+    if (sendError) {
+      setError(GENERIC_ERROR);
+      return;
+    }
+    rememberRequestedEmail(email);
     setEmail(email.trim());
     setStep("code");
   };
@@ -147,7 +164,7 @@ export const EmailCodeSignIn = ({ intro, onSignedIn }: EmailCodeSignInProps) => 
             onChange={(e) => setCode(e.target.value)}
           />
           <Button className="w-full" type="submit" disabled={busy}>
-            Logga in
+            {confirmLink ? `Logga in som ${email}` : "Logga in"}
           </Button>
           <Button
             className="w-full"
@@ -155,6 +172,7 @@ export const EmailCodeSignIn = ({ intro, onSignedIn }: EmailCodeSignInProps) => 
             variant="ghost"
             onClick={() => {
               setCode("");
+              setConfirmLink(false);
               setError(null);
               setStep("email");
             }}
