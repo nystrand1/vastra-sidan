@@ -246,10 +246,11 @@ that works today.
    each member just their own membership. Check:
    ```sql
    SELECT COUNT(*) FROM StripePayment WHERE payerEmail IS NULL;
-   SELECT COUNT(*) FROM StripePayment WHERE membershipId IS NULL AND id IN (SELECT stripePaymentId FROM _MemberToStripePayment);
+   SELECT COUNT(*) FROM StripePayment WHERE membershipId IS NULL AND id IN (SELECT B FROM _MemberToStripePayment);
    ```
-   (adjust the second to your join table; the point is to see how many membership payments have
-   no `membershipId`).
+   The second counts membership payments without a `membershipId` (`_MemberToStripePayment` is
+   Prisma's join table for `Member`–`StripePayment`; `B` is the payment id). Some old ones may
+   remain: they show no family, which is safe.
 5. **Check the admins.** Admins sign in with an email code, so every admin needs a working
    address. `User.email` also becomes required, so this must be 0 before step 6:
    ```sql
