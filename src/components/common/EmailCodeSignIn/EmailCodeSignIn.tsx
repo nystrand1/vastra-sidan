@@ -1,0 +1,185 @@
+import { useRouter } from "next/router";
+import { useEffect, useRef, useState } from "react";
+import { InputField } from "~/components/atoms/InputField/InputField";
+import { Button } from "~/components/ui/button";
+import { authClient } from "~/utils/authClient";
+
+interface EmailCodeSignInProps {
+  intro: string;
+  onSignedIn: () => void | Promise<void>;
+}
+
+const CODE_ERROR = "Koden är fel eller har gått ut. Försök igen.";
+
+/**
+ * Email step, code step and a passkey button. The link in the login email
+ * (`?email=…&kod=…`) is read once, removed from the URL, and submitted.
+ */
+export const EmailCodeSignIn = ({ intro, onSignedIn }: EmailCodeSignInProps) => {
+  const router = useRouter();
+  const [step, setStep] = useState<"email" | "code">("email");
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const handledLink = useRef(false);
+  const onSignedInRef = useRef(onSignedIn);
+  useEffect(() => {
+    onSignedInRef.current = onSignedIn;
+  });
+
+  const verify = async (emailToVerify: string, otp: string) => {
+    setBusy(true);
+    setError(null);
+    const { error: signInError } = await authClient.signIn.emailOtp({
+      email: emailToVerify,
+      otp
+    });
+    if (signInError) {
+      setBusy(false);
+      setError(CODE_ERROR);
+      return;
+    }
+    await onSignedInRef.current();
+    setBusy(false);
+  };
+
+  // The link from the email: take the email and code out of the URL, then sign in.
+  useEffect(() => {
+    if (!router.isReady || handledLink.current) return;
+    const { email: linkEmail, kod, ...rest } = router.query;
+    if (typeof linkEmail !== "string" || typeof kod !== "string") return;
+    handledLink.current = true;
+    setEmail(linkEmail);
+    setCode(kod);
+    setStep("code");
+    void router
+      .replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true })
+      .then(() => verify(linkEmail, kod));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady]);
+
+  // Offer saved passkeys in the browser's autofill where it is supported.
+  useEffect(() => {
+    let cancelled = false;
+    const start = async () => {
+      if (
+        typeof PublicKeyCredential === "undefined" ||
+        !(await PublicKeyCredential.isConditionalMediationAvailable?.())
+      ) {
+        return;
+      }
+      const result = await authClient.signIn.passkey({ autoFill: true });
+      if (!cancelled && result && !result.error) await onSignedInRef.current();
+    };
+    void start().catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const sendCode = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    // Whether the email has an account is never revealed: always continue to the code step.
+    const { error: sendError } = await authClient.emailOtp.sendVerificationOtp({
+      email: email.trim(),
+      type: "sign-in"
+    });
+    setBusy(false);
+    if (sendError?.status === 429) {
+      setError("För många försök. Vänta en stund och försök igen.");
+      return;
+    }
+    setEmail(email.trim());
+    setStep("code");
+  };
+
+  const submitCode = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    await verify(email, code.trim());
+  };
+
+  const signInWithPasskey = async () => {
+    setError(null);
+    const result = await authClient.signIn.passkey();
+    if (result?.error) {
+      setError("Det gick inte att logga in med passkey.");
+      return;
+    }
+    await onSignedIn();
+  };
+
+  return (
+    <div className="space-y-4">
+      <p>{intro}</p>
+      {step === "email" ? (
+        <form className="space-y-4" onSubmit={sendCode}>
+          <InputField
+            id="email"
+            type="email"
+            label="Email"
+            placeholder="Email..."
+            autoComplete="username webauthn"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <Button className="w-full" type="submit" disabled={busy}>
+            Skicka kod
+          </Button>
+        </form>
+      ) : (
+        <form className="space-y-4" onSubmit={submitCode}>
+          <p className="text-sm">
+            Vi har skickat en kod till {email}. Koden gäller i 10 minuter.
+          </p>
+          <InputField
+            id="code"
+            label="Kod"
+            placeholder="123456"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            required
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+          />
+          <Button className="w-full" type="submit" disabled={busy}>
+            Logga in
+          </Button>
+          <Button
+            className="w-full"
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              setCode("");
+              setError(null);
+              setStep("email");
+            }}
+          >
+            Använd en annan email
+          </Button>
+        </form>
+      )}
+      {error && (
+        <p role="alert" className="text-sm text-red-400">
+          {error}
+        </p>
+      )}
+      {step === "email" && (
+        <Button
+          className="w-full"
+          type="button"
+          variant="outline"
+          onClick={signInWithPasskey}
+        >
+          Logga in med passkey
+        </Button>
+      )}
+    </div>
+  );
+};
+
+export default EmailCodeSignIn;

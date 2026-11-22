@@ -56,24 +56,21 @@ model Member {
 
 /// Better Auth's user. Signing in with an email code creates it.
 model User {
-  id                  String          @id @default(cuid())
+  id            String    @id @default(cuid())
   /// Kept as "firstName lastName"; Better Auth requires it
-  name                String          @default("")
-  email               String          @unique
-  emailVerified       Boolean         @default(false)
-  image               String?
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @default(now()) @updatedAt
-  firstName           String          @default("")
-  lastName            String          @default("")
-  phone               String?
-  role                Role            @default(USER)
-  sessions            Session[]
-  accounts            Account[]
-  passkeys            Passkey[]
-  eventParticipations Participant[]
-  stripePayments      StripePayment[]
-  stripeRefunds       StripeRefund[]
+  name          String    @default("")
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
+  firstName     String    @default("")
+  lastName      String    @default("")
+  phone         String?
+  role          Role      @default(USER)
+  sessions      Session[]
+  accounts      Account[]
+  passkeys      Passkey[]
 }
 
 model Session {
@@ -192,7 +189,6 @@ model Participant {
   member            Boolean               @default(false)
   youth             Boolean               @default(false)
   userEmail         String?
-  user              User?                 @relation(fields: [userEmail], references: [email], onDelete: NoAction, onUpdate: NoAction)
   stripePayments    StripePayment[]
   stripeRefunds     StripeRefund[]
   transfers         ParticipantTransfer[]
@@ -229,7 +225,6 @@ model StripePayment {
   members         Member[]
   participants    Participant[]
   userId          String?
-  user            User?               @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   status          StripePaymentStatus
   stripeRefunds   StripeRefund[]
   /// Who paid for the booking. Always lowercased. Null for membership payments.
@@ -263,7 +258,6 @@ model StripeRefund {
   participant       Participant?       @relation(fields: [participantId], references: [id])
   members           Member[]
   userId            String?
-  user              User?              @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   originalPaymentId String
   originalPayment   StripePayment      @relation(fields: [originalPaymentId], references: [id])
 

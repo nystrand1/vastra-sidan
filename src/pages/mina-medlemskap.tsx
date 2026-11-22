@@ -1,7 +1,6 @@
 import { useAppSession } from "~/utils/authClient";
 import Error from "next/error";
 import Card from "~/components/atoms/CardLink/CardLink";
-import { api } from "~/utils/api";
 import { featureFlags } from "~/utils/featureFlags";
 import LoginPage from "./loggain";
 
@@ -10,7 +9,6 @@ const isEnabled = featureFlags.ENABLE_LOGIN && featureFlags.ENABLE_MEMBERSHIPS;
 
 export const ProfilePage = () => {
   const { user } = useAppSession();
-  const { data } = api.user.getProfile.useQuery(undefined, { enabled: isEnabled && !!user });
 
   if (!isEnabled) {
     return <Error statusCode={404} />
@@ -18,10 +16,6 @@ export const ProfilePage = () => {
 
   if (!user) {
     return <LoginPage />
-  }
-
-  if (!data) {
-    return <p className="text-center">Laddar...</p>
   }
 
   return (

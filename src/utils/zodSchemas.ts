@@ -93,25 +93,6 @@ export const StripeCallbackRefundSchema = z.object({
   status: z.enum(StripeRefundStatuses)
 });
 
-export const signupSchema = z
-  .object({
-    email: z.string().trim().toLowerCase().email({ message: "Felaktig email" }),
-    firstName: z.string().min(1),
-    lastName: z.string().min(1),
-    phone: z.string().min(1),
-    password: z
-      .string()
-      .min(8, { message: "Lösenordet måste vara minst 8 tecken" })
-      .max(64, { message: "Lösenordet får inte vara mer än 64 tecken" }),
-    confirmPassword: z
-      .string()
-      .min(8, { message: "Lösenordet måste vara minst 8 tecken" })
-      .max(64, { message: "Lösenordet får inte vara mer än 64 tecken" })
-  })
-  .refine((x) => x.confirmPassword === x.password, {
-    message: "Lösenorden matchar inte"
-  });
-
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email({ message: "Felaktig email" }),
   password: z
@@ -187,7 +168,6 @@ export const profileSchema = z.object({
   lastName: z
     .string()
     .min(1, { message: "Efternamn måste vara minst 1 tecken" }),
-  email: z.string().trim().toLowerCase().email({ message: "Felaktig email" }),
   phone: z.string().min(1, { message: "Felaktigt nummer" })
 });
 
