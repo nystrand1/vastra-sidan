@@ -9,7 +9,7 @@ import { MAX_FAMILY_MEMBERS } from "~/utils/constants";
 export const participantSchema = z.object({
   firstName: z.string({ required_error: "Ange förnamn" }).min(1, { message: "Ange förnamn" }),
   lastName: z.string({ required_error: "Ange efternamn" }).min(1, { message: "Ange efternamn" }),
-  email: z.string({ required_error: "Ange email" }).email({ message: "Felaktig email" }),
+  email: z.string({ required_error: "Ange email" }).trim().toLowerCase().email({ message: "Felaktig email" }),
   phone: z.string({ required_error: "Ange telefonnummer" }).min(1, { message: "Ange telefonnummer" }),
   consent: z
     .boolean()
@@ -41,7 +41,7 @@ export const adminAddParticipantSchema = z.object({
   eventId: z.string(),
   firstName: z.string({ required_error: "Ange förnamn" }).min(1, { message: "Ange förnamn" }),
   lastName: z.string({ required_error: "Ange efternamn" }).min(1, { message: "Ange efternamn" }),
-  email: z.string({ required_error: "Ange email" }).email({ message: "Felaktig email" }),
+  email: z.string({ required_error: "Ange email" }).trim().toLowerCase().email({ message: "Felaktig email" }),
   phone: z.string({ required_error: "Ange telefonnummer" }).min(1, { message: "Ange telefonnummer" }),
   note: z.string().optional(),
   busId: z.string({ required_error: "Välj buss" }).min(1, { message: "Välj buss" }),
@@ -95,7 +95,7 @@ export const StripeCallbackRefundSchema = z.object({
 
 export const signupSchema = z
   .object({
-    email: z.string().email({ message: "Felaktig email" }),
+    email: z.string().trim().toLowerCase().email({ message: "Felaktig email" }),
     firstName: z.string().min(1),
     lastName: z.string().min(1),
     phone: z.string().min(1),
@@ -113,7 +113,7 @@ export const signupSchema = z
   });
 
 export const loginSchema = z.object({
-  email: z.string().email({ message: "Felaktig email" }),
+  email: z.string().trim().toLowerCase().email({ message: "Felaktig email" }),
   password: z
     .string()
     .min(8, { message: "Lösenordet måste vara minst 8 tecken" })
@@ -130,6 +130,7 @@ export const memberSignupSchema = z
       .min(1, { message: "Ange efternamn" }),
     email: z
       .string({ required_error: "Ange email" })
+      .trim()
       .toLowerCase()
       .email({ message: "Felaktig email" }),
     acceptedTerms: z.literal<boolean>(true, {
@@ -153,8 +154,9 @@ export const memberSignupSchema = z
           phone: z.string().optional(),
           email: z
             .string({ required_error: "Ange email" })
-            .toLowerCase()
-            .email({ message: "Felaktig email" })
+            .trim()
+      .toLowerCase()
+      .email({ message: "Felaktig email" })
         })
       )
       .max(MAX_FAMILY_MEMBERS, { message: `Max ${MAX_FAMILY_MEMBERS} familjemedlemmar` })
@@ -185,7 +187,7 @@ export const profileSchema = z.object({
   lastName: z
     .string()
     .min(1, { message: "Efternamn måste vara minst 1 tecken" }),
-  email: z.string().email({ message: "Felaktig email" }),
+  email: z.string().trim().toLowerCase().email({ message: "Felaktig email" }),
   phone: z.string().min(1, { message: "Felaktigt nummer" })
 });
 
@@ -201,13 +203,13 @@ export const updatePasswordSchema = z
 
 export const updateMemberSchema = z.object({
   id: z.string(),
-  email: z.string().email().optional(),
+  email: z.string().trim().toLowerCase().email().optional(),
   phone: z.string().optional()
 });
 
 export const updateParticipantSchema = z.object({
   id: z.string(),
-  email: z.string().email().optional(),
+  email: z.string().trim().toLowerCase().email().optional(),
   phone: z.string().optional()
 });
 
@@ -215,7 +217,7 @@ export const adminAddMemberSchema = z
   .object({
     firstName: z.string({ required_error: "Ange förnamn" }).min(1, { message: "Ange förnamn" }),
     lastName: z.string({ required_error: "Ange efternamn" }).min(1, { message: "Ange efternamn" }),
-    email: z.string({ required_error: "Ange email" }).toLowerCase().email({ message: "Felaktig email" }),
+    email: z.string({ required_error: "Ange email" }).trim().toLowerCase().email({ message: "Felaktig email" }),
     phone: z.string({ required_error: "Ange telefonnummer" }).min(1, { message: "Ange telefonnummer" }),
     membershipType: z.nativeEnum(MembershipType),
     membershipId: z.string({ required_error: "Välj medlemskap" }).min(1, { message: "Välj medlemskap" }),
@@ -225,7 +227,7 @@ export const adminAddMemberSchema = z
           firstName: z.string({ required_error: "Ange förnamn" }).min(1, { message: "Ange förnamn" }),
           lastName: z.string({ required_error: "Ange efternamn" }).min(1, { message: "Ange efternamn" }),
           phone: z.string().optional(),
-          email: z.string({ required_error: "Ange email" }).toLowerCase().email({ message: "Felaktig email" })
+          email: z.string({ required_error: "Ange email" }).trim().toLowerCase().email({ message: "Felaktig email" })
         })
       )
       .max(MAX_FAMILY_MEMBERS, { message: `Max ${MAX_FAMILY_MEMBERS} familjemedlemmar` })
@@ -253,7 +255,7 @@ export const addFamilyMemberSchema = z.object({
   member: z.object({
     firstName: z.string().min(1),
     lastName: z.string().min(1),
-    email: z.string().toLowerCase().email(),
+    email: z.string().trim().toLowerCase().email(),
     phone: z.string().optional()
   })
 });
