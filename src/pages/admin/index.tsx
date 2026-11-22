@@ -1,21 +1,21 @@
 import { Role } from "~/generated/prisma/browser";
-import { useSession } from "next-auth/react";
+import { useAppSession } from "~/utils/authClient";
 import { ButtonLink } from "~/components/atoms/ButtonLink/ButtonLink";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { api } from "~/utils/api";
 import { featureFlags } from "~/utils/featureFlags";
 
 export default function Admin() {
-  const { data: sessionData } = useSession();
+  const { user } = useAppSession();
 
   const { data: events } = api.admin.getEvents.useQuery(
     undefined,
-    { enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN, staleTime: 0 }
+    { enabled: !!user && user.role === Role.ADMIN, staleTime: 0 }
     );
 
   const { data: members } = api.admin.getActiveMembers.useQuery(
     undefined,
-    { enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN, staleTime: 0 }
+    { enabled: !!user && user.role === Role.ADMIN, staleTime: 0 }
   );
   if (!events || !members) {
     return <p className="text-center">Laddar...</p>

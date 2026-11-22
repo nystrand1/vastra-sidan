@@ -1,4 +1,4 @@
-import { useSession } from "next-auth/react";
+import { useAppSession } from "~/utils/authClient";
 import Card from "~/components/atoms/CardLink/CardLink";
 import LoginPage from "./loggain";
 import { InputField } from "~/components/atoms/InputField/InputField";
@@ -17,8 +17,7 @@ interface Profile {
 }
 
 export const ProfilePage = () => {
-  const { data, update } = useSession();
-  const { user } = data || {};
+  const { user, refetch } = useAppSession();
   const [profile, setProfile] = useState<Profile>({} as Profile);
 
   const { mutateAsync: updateProfile } = api.user.updateProfile.useMutation();
@@ -53,7 +52,7 @@ export const ProfilePage = () => {
       error: 'Något gick fel!'
     });
     // Reloads the session from the database, which now has the new profile.
-    await update();
+    await refetch();
   };
 
   return (

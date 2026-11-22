@@ -1,13 +1,13 @@
 import { Role } from "~/generated/prisma/browser";
-import { useSession } from "next-auth/react";
+import { useAppSession } from "~/utils/authClient";
 import { type PropsWithChildren } from "react";
 import LoginPage from "~/pages/loggain";
 
 export default function AdminLayout({ children } : PropsWithChildren) {
-  const { data: sessionData } = useSession();
-  const title = sessionData?.user?.role === Role.ADMIN ? `Admin - ${sessionData.user?.name || ''}` : "Logga in för att se adminsidan";
+  const { user } = useAppSession();
+  const title = user?.role === Role.ADMIN ? `Admin - ${user?.name || ''}` : "Logga in för att se adminsidan";
 
-  if (!sessionData) {
+  if (!user) {
     return <LoginPage adminLogin />
   }
 

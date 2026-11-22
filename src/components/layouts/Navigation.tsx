@@ -1,32 +1,42 @@
-import { signIn, signOut, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { useState } from "react";
+import { authClient, useAppSession } from "~/utils/authClient";
 import { featureFlags } from "~/utils/featureFlags";
 import { Button } from "../ui/button";
 
 interface UserMenuProps {
   className?: string;
 }
+const useSignOut = () => {
+  const router = useRouter();
+  return async () => {
+    await authClient.signOut();
+    await router.push("/");
+  };
+};
+
 const UserMenu = ({ className }: UserMenuProps) => {
-  const { data: sessionData } = useSession();
+  const { user } = useAppSession();
+  const signOut = useSignOut();
   return (
     <div
       className={`z-50 my-4 hidden list-none divide-y divide-gray-600 rounded-lg bg-gray-700 text-base shadow md:block ${className || ""}`}
       id="user-dropdown"
     >
       <div className="px-4 py-3">
-        {sessionData?.user && (
+        {user && (
           <>
             <span className="block text-sm text-white">
-              {sessionData.user.name}
+              {user.name}
             </span>
             <span className="block truncate text-sm text-gray-400">
-              {sessionData.user.email}
+              {user.email}
             </span>
             {featureFlags.ENABLE_MEMBERSHIPS && (
               <span className="block truncate text-sm text-gray-400">
-                {sessionData.user.isMember ? "Medlem" : "Inte medlem"}
+                {user.isMember ? "Medlem" : "Inte medlem"}
               </span>
             )}
           </>
@@ -54,7 +64,7 @@ const UserMenu = ({ className }: UserMenuProps) => {
             Mina bussresor
           </Link>
         </li>
-        {sessionData?.user.role === "ADMIN" && (
+        {user?.role === "ADMIN" && (
           <li>
             <Link prefetch={false}
               href="/admin"
@@ -74,7 +84,7 @@ const UserMenu = ({ className }: UserMenuProps) => {
         </li>
         <li>
           <p
-            onClick={() => signOut()}
+            onClick={signOut}
             className="block rounded-b-lg px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 hover:text-white"
           >
             Logga ut
@@ -88,9 +98,11 @@ const UserMenu = ({ className }: UserMenuProps) => {
 export const Navigation = () => {
   const [open, setOpen] = useState(false);
   const [openUserMenu, setOpenUserMenu] = useState(false);
-  const { data: sessionData } = useSession();
-  const firstNameInitial = sessionData?.user.firstName[0];
-  const lastNameInitial = sessionData?.user.lastName[0];
+  const { user } = useAppSession();
+  const router = useRouter();
+  const signOut = useSignOut();
+  const firstNameInitial = user?.firstName[0];
+  const lastNameInitial = user?.lastName[0];
   return (
     <nav className="fixed z-50 w-full border-gray-200 bg-gray-900">
       <div className="mx-auto flex max-w-screen-xl flex-wrap items-center justify-between p-4">
@@ -141,7 +153,7 @@ export const Navigation = () => {
           </Link>
         </div>
         <div className="flex items-center md:order-2">
-          {!sessionData?.user.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
+          {!user?.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
             <Button asChild>
               <Link prefetch={false}
                 href="/bli-medlem"
@@ -151,7 +163,7 @@ export const Navigation = () => {
               </Link>
             </Button>
           )}
-          {!sessionData?.user && featureFlags.ENABLE_LOGIN && (
+          {!user && featureFlags.ENABLE_LOGIN && (
             <>
               <Button className="!mb-0 mr-3 hidden md:block">
                 <Link prefetch={false} href="/skapakonto">
@@ -162,7 +174,7 @@ export const Navigation = () => {
                 className="!mb-0 mr-3"
                 onClick={async (e) => {
                   e.preventDefault();
-                  await signIn();
+                  await router.push("/loggain");
                 }}
               >
                 <p>Logga In</p>
@@ -207,7 +219,7 @@ export const Navigation = () => {
             onClick={() => setOpen(false)}
             className="mt-4 flex flex-col divide-y rounded-lg border border-gray-700 bg-gray-800 font-medium"
           >
-            {!sessionData?.user.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
+            {!user?.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
               <li>
                 <Link prefetch={false}
                   href="/bli-medlem"
@@ -296,7 +308,7 @@ export const Navigation = () => {
                 Om oss
               </Link>
             </li>
-            {!sessionData?.user && featureFlags.ENABLE_LOGIN && (
+            {!user && featureFlags.ENABLE_LOGIN && (
               <li className="divide-y divide-gray-100">
                 <Link prefetch={false}
                   href="/skapakonto"
@@ -307,7 +319,7 @@ export const Navigation = () => {
                 </Link>
               </li>
             )}
-            {sessionData?.user.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
+            {user?.isMember && featureFlags.ENABLE_MEMBERSHIPS && (
               <li>
                 <Link prefetch={false}
                   href="/mina-medlemskap"
@@ -318,7 +330,7 @@ export const Navigation = () => {
                 </Link>
               </li>
             )}
-            {sessionData?.user.role === "ADMIN" && (
+            {user?.role === "ADMIN" && (
               <li>
                 <Link prefetch={false}
                   href="/admin"
@@ -328,7 +340,7 @@ export const Navigation = () => {
                 </Link>
               </li>
             )}
-            {sessionData?.user && (
+            {user && (
               <>
                 <li>
                   <Link prefetch={false}
@@ -350,7 +362,7 @@ export const Navigation = () => {
                 </li>
                 <li>
                   <div
-                    onClick={() => signOut()}
+                    onClick={signOut}
                     className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
                     aria-current="page"
                   >

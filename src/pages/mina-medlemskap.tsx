@@ -1,4 +1,4 @@
-import { useSession } from "next-auth/react";
+import { useAppSession } from "~/utils/authClient";
 import Error from "next/error";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { api } from "~/utils/api";
@@ -9,14 +9,14 @@ import LoginPage from "./loggain";
 const isEnabled = featureFlags.ENABLE_LOGIN && featureFlags.ENABLE_MEMBERSHIPS;
 
 export const ProfilePage = () => {
-  const session = useSession();
-  const { data } = api.user.getProfile.useQuery(undefined, { enabled: isEnabled && !!session.data?.user });
+  const { user } = useAppSession();
+  const { data } = api.user.getProfile.useQuery(undefined, { enabled: isEnabled && !!user });
 
   if (!isEnabled) {
     return <Error statusCode={404} />
   }
 
-  if (!session.data?.user) {
+  if (!user) {
     return <LoginPage />
   }
 

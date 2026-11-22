@@ -13,22 +13,9 @@ import { Role } from "~/generated/prisma/client";
 import { prisma } from "~/server/db";
 import { sendSesEmail } from "~/server/utils/email/sendSesEmail";
 import { isMemberEmail } from "~/server/utils/member/isMemberEmail";
+import { toAppSession, type AppSession } from "~/utils/appSession";
 import { normaliseEmail } from "~/utils/email";
 import { featureFlags } from "~/utils/featureFlags";
-
-/** The signed-in user, as tRPC procedures and pages see it. */
-export type AppSession = {
-  user: {
-    id: string;
-    role: Role;
-    firstName: string;
-    lastName: string;
-    name: string;
-    email: string;
-    phone: string;
-    isMember: boolean;
-  };
-};
 
 const LOGIN_CODE_SUBJECT = "Din inloggningskod till Västra Sidan";
 
@@ -124,6 +111,8 @@ const options = {
   ]
 } satisfies BetterAuthOptions;
 
+export { toAppSession, type AppSession };
+
 export const auth = betterAuth({
   ...options,
   plugins: [
@@ -137,34 +126,6 @@ export const auth = betterAuth({
     )
   ]
 });
-
-type AuthSessionUser = {
-  id: string;
-  email: string;
-  role?: string | null;
-  firstName?: string | null;
-  lastName?: string | null;
-  phone?: string | null;
-  isMember: boolean;
-};
-
-/** Maps what Better Auth's get-session returns to the session the app uses. */
-export const toAppSession = (session: { user: AuthSessionUser } | null): AppSession | null => {
-  if (!session) return null;
-  const { id, email, role, firstName, lastName, phone, isMember } = session.user;
-  return {
-    user: {
-      id,
-      email,
-      role: role === Role.ADMIN ? Role.ADMIN : Role.USER,
-      firstName: firstName ?? "",
-      lastName: lastName ?? "",
-      name: `${firstName ?? ""} ${lastName ?? ""}`.trim(),
-      phone: phone ?? "",
-      isMember
-    }
-  };
-};
 
 /** The session of the request's cookie, read from the database, or null when signed out. */
 export const getServerAuthSession = async (ctx: { req: IncomingMessage }): Promise<AppSession | null> =>

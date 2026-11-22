@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Role } from "~/generated/prisma/browser";
 import { IdCardIcon, MailIcon, SaveIcon } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useAppSession } from "~/utils/authClient";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
@@ -18,11 +18,11 @@ import { formatSwedishTime } from "~/utils/formatSwedishTime";
 import { updateMemberSchema } from "~/utils/zodSchemas";
 
 export default function AdminMemberPage() {
-  const { data: sessionData } = useSession();
+  const { user } = useAppSession();
   const { query } = useRouter();
   const { data: member, refetch } = api.admin.getMemberById.useQuery(
     { id: query.id as string },
-    { enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN && !!query.id, staleTime: 0 }
+    { enabled: !!user && user.role === Role.ADMIN && !!query.id, staleTime: 0 }
   );
   const { mutateAsync: sendMemberLink, isPending } = api.admin.sendMemberLink.useMutation();
   const { mutateAsync: updateMember, isPending: isUpdatingMember } = api.admin.updateMember.useMutation();

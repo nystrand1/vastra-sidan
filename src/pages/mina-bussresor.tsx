@@ -1,4 +1,4 @@
-import { useSession } from "next-auth/react";
+import { useAppSession } from "~/utils/authClient";
 import { ButtonLink } from "~/components/atoms/ButtonLink/ButtonLink";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { formatSwedishTime } from "~/utils/formatSwedishTime";
@@ -6,9 +6,9 @@ import { api } from "~/utils/api";
 import LoginPage from "./loggain";
 
 export const AwayGamesProfilePage = () => {
-  const session = useSession();
-  const { data } = api.user.getProfile.useQuery(undefined, { enabled: !!session.data?.user });
-  if (!session.data?.user) {
+  const { user } = useAppSession();
+  const { data } = api.user.getProfile.useQuery(undefined, { enabled: !!user });
+  if (!user) {
     return <LoginPage />
   }
 
