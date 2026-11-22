@@ -8,6 +8,7 @@ import { memberSignupSchema } from "~/utils/zodSchemas";
 import { createTRPCRouter, membershipProcedure } from "../trpc";
 import { findOrCreateFamilyMembers } from "~/server/utils/member/findOrCreateFamilyMembers";
 import { parseForMembershipType } from "~/server/utils/member/parseForMembershipType";
+import { normaliseEmail } from "~/utils/email";
 import { isMembershipOnSale } from "~/server/utils/membership";
 
 export const memberPaymentRouter = createTRPCRouter({
@@ -82,6 +83,8 @@ export const memberPaymentRouter = createTRPCRouter({
             stripePaymentId: paymentIntentData.id,
             amount: membership.price,
             status: StripePaymentStatus.CREATED,
+            // Whoever fills in the form pays for everyone on it
+            payerEmail: normaliseEmail(input.email),
             members: {
               connect: members.map((member) => ({ id: member.id }))
             }

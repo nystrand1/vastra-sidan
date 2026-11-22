@@ -1,10 +1,14 @@
 import { createTRPCRouter, userProcedure } from "~/server/api/trpc";
+import { getMyMemberships } from "~/server/utils/user/getMyMemberships";
 import { getMyBookings } from "~/server/utils/user/getMyBookings";
 import { getProfilePrefill } from "~/server/utils/user/getProfilePrefill";
 import { profileSchema } from "~/utils/zodSchemas";
 
 export const userRouter = createTRPCRouter({
   getMyBookings: userProcedure.query(({ ctx }) => getMyBookings(ctx.prisma, ctx.session.user.email)),
+  getMyMemberships: userProcedure.query(({ ctx }) =>
+    getMyMemberships(ctx.prisma, ctx.session.user.email)
+  ),
   getProfilePrefill: userProcedure.query(({ ctx }) =>
     getProfilePrefill(ctx.prisma, ctx.session.user.email)
   ),
