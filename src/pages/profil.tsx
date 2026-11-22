@@ -228,12 +228,9 @@ export const ProfilePage = () => {
         complete={complete}
         refetch={refetch}
       />
-      {complete && (
-        <>
-          <Passkeys />
-          <Danger />
-        </>
-      )}
+      {/* Also before the profile is complete, so a new account can still be deleted */}
+      <Passkeys />
+      <Danger />
     </div>
   );
 };

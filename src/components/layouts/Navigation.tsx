@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useState } from "react";
+import { Role } from "~/generated/prisma/browser";
+import { type AppSession } from "~/utils/appSession";
 import { authClient, useAppSession } from "~/utils/authClient";
 import { featureFlags } from "~/utils/featureFlags";
 import { Button } from "../ui/button";
@@ -9,6 +11,10 @@ import { Button } from "../ui/button";
 interface UserMenuProps {
   className?: string;
 }
+/** Signed in, and allowed to see the account menu: everyone with login on, else admins only. */
+const showsAccountMenu = (user: AppSession["user"] | null): user is AppSession["user"] =>
+  !!user && (featureFlags.ENABLE_LOGIN || user.role === Role.ADMIN);
+
 const useSignOut = () => {
   const router = useRouter();
   return async () => {
@@ -66,7 +72,7 @@ const UserMenu = ({ className }: UserMenuProps) => {
             </Link>
           </li>
         )}
-        {user?.role === "ADMIN" && (
+        {user?.role === Role.ADMIN && (
           <li>
             <Link prefetch={false}
               href="/admin"
@@ -76,14 +82,16 @@ const UserMenu = ({ className }: UserMenuProps) => {
             </Link>
           </li>
         )}
-        <li>
-          <Link prefetch={false}
-            href="/profil"
-            className="block rounded-b-lg px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 hover:text-white"
-          >
-            Profil
-          </Link>
-        </li>
+        {featureFlags.ENABLE_LOGIN && (
+          <li>
+            <Link prefetch={false}
+              href="/profil"
+              className="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-600 hover:text-white"
+            >
+              Profil
+            </Link>
+          </li>
+        )}
         <li>
           <p
             onClick={signOut}
@@ -103,8 +111,8 @@ export const Navigation = () => {
   const { user } = useAppSession();
   const router = useRouter();
   const signOut = useSignOut();
-  const firstNameInitial = user?.firstName[0];
-  const lastNameInitial = user?.lastName[0];
+  // "?" until the profile has a name, so the menu (and "Logga ut") is always reachable
+  const initials = `${user?.firstName[0] ?? ""}${user?.lastName[0] ?? ""}` || "?";
   return (
     <nav className="fixed z-50 w-full border-gray-200 bg-gray-900">
       <div className="mx-auto flex max-w-screen-xl flex-wrap items-center justify-between p-4">
@@ -183,13 +191,13 @@ export const Navigation = () => {
               </Button>
             </>
           )}
-          {featureFlags.ENABLE_LOGIN && firstNameInitial && lastNameInitial && (
+          {showsAccountMenu(user) && (
             <div
               onClick={() => setOpenUserMenu(!openUserMenu)}
               className="relative mr-3 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-blue-900 p-5 hover:bg-blue-800"
             >
               <p className="font-bold">
-                {`${firstNameInitial}${lastNameInitial}`}
+                {initials}
               </p>
               {openUserMenu && <UserMenu className="absolute right-0 top-8" />}
             </div>
@@ -331,47 +339,51 @@ export const Navigation = () => {
                 </Link>
               </li>
             )}
-            {user && featureFlags.ENABLE_LOGIN && featureFlags.ENABLE_MEMBERSHIPS && (
-              <li>
-                <Link prefetch={false}
-                  href="/mina-medlemskap"
-                  className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
-                  aria-current="page"
-                >
-                  Mina medlemskap
-                </Link>
-              </li>
-            )}
-            {user?.role === "ADMIN" && (
-              <li>
-                <Link prefetch={false}
-                  href="/admin"
-                  className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
-                >
-                  Admin
-                </Link>
-              </li>
-            )}
-            {user && featureFlags.ENABLE_LOGIN && (
+            {showsAccountMenu(user) && (
               <>
-                <li>
-                  <Link prefetch={false}
-                    href="/mina-bussresor"
-                    className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
-                    aria-current="page"
-                  >
-                    Mina bussresor
-                  </Link>
-                </li>
-                <li>
-                  <Link prefetch={false}
-                    href="/profil"
-                    className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
-                    aria-current="page"
-                  >
-                    Profil
-                  </Link>
-                </li>
+                {featureFlags.ENABLE_LOGIN && featureFlags.ENABLE_MEMBERSHIPS && (
+                  <li>
+                    <Link prefetch={false}
+                      href="/mina-medlemskap"
+                      className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
+                      aria-current="page"
+                    >
+                      Mina medlemskap
+                    </Link>
+                  </li>
+                )}
+                {user.role === Role.ADMIN && (
+                  <li>
+                    <Link prefetch={false}
+                      href="/admin"
+                      className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
+                    >
+                      Admin
+                    </Link>
+                  </li>
+                )}
+                {featureFlags.ENABLE_LOGIN && (
+                  <>
+                    <li>
+                      <Link prefetch={false}
+                        href="/mina-bussresor"
+                        className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
+                        aria-current="page"
+                      >
+                        Mina bussresor
+                      </Link>
+                    </li>
+                    <li>
+                      <Link prefetch={false}
+                        href="/profil"
+                        className="block rounded py-4 pl-3 pr-4 text-white md:p-0"
+                        aria-current="page"
+                      >
+                        Profil
+                      </Link>
+                    </li>
+                  </>
+                )}
                 <li>
                   <div
                     onClick={signOut}
