@@ -1,6 +1,6 @@
 import { StripePaymentStatus } from "~/generated/prisma/client";
 import { describe, expect, it } from "vitest";
-import { authBrowser, lastLoginCode } from "../helpers/auth";
+import { authBrowser, loginCode } from "../helpers/auth";
 import { userCaller } from "../helpers/caller";
 import { prisma } from "../helpers/db";
 import { createEvent, createUser } from "../helpers/factories";
@@ -79,7 +79,7 @@ describe("deleting the account", () => {
     const email = "radera@x.se";
     const browser = authBrowser();
     await browser.sendCode(email);
-    await browser.signIn(email, lastLoginCode(email)!);
+    await browser.signIn(email, await loginCode(email));
     const user = await prisma.user.findUniqueOrThrow({ where: { email } });
     await prisma.passkey.create({
       data: {

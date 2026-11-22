@@ -1,6 +1,8 @@
 import type * as Sentry from "@sentry/nextjs";
 import { captureException, captureMessage } from "@sentry/nextjs";
 import { afterAll, afterEach, beforeAll, beforeEach, expect, vi } from "vitest";
+import { resetEmailLimits } from "~/server/utils/accounts/emailLimits";
+import { settleLoginCodes } from "../helpers/auth";
 import { prisma, resetDatabase } from "../helpers/db";
 import { resetRevalidatedPaths } from "../mocks/revalidate";
 import { resetSentEmails } from "../mocks/ses";
@@ -24,11 +26,14 @@ beforeEach(async () => {
   resetFakeStripe();
   resetSentEmails();
   resetRevalidatedPaths();
+  resetEmailLimits();
   vi.mocked(captureException).mockClear();
   vi.mocked(captureMessage).mockClear();
 });
 
 afterEach(async () => {
+  // Sign-in codes are sent in the background: let them finish inside the test that asked
+  await settleLoginCodes();
   server.resetHandlers();
   // StripeRefund is append-only: the app may add rows, but never change them
   const changed = await prisma.stripeRefund.findMany({

@@ -21,8 +21,10 @@ const sendEmailResponse = `<?xml version="1.0" encoding="UTF-8"?>
   <ResponseMetadata><RequestId>test-request-id</RequestId></ResponseMetadata>
 </SendEmailResponse>`;
 
+export const SES_URL = "https://email.eu-north-1.amazonaws.com/";
+
 export const sesHandlers = [
-  http.post("https://email.eu-north-1.amazonaws.com/", async ({ request }) => {
+  http.post(SES_URL, async ({ request }) => {
     const params = new URLSearchParams(await request.text());
     sentEmails.push({
       to: params.get("Destination.ToAddresses.member.1"),

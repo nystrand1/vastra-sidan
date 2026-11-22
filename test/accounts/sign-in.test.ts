@@ -1,16 +1,18 @@
 import { Role } from "~/generated/prisma/client";
 import { subMinutes } from "date-fns";
+import { http } from "msw";
 import { afterEach, describe, expect, it } from "vitest";
 import { featureFlags } from "~/utils/featureFlags";
-import { authBrowser, lastLoginCode } from "../helpers/auth";
+import { authBrowser, loginCode, settleLoginCodes } from "../helpers/auth";
 import { prisma } from "../helpers/db";
 import { createSeason, createUser } from "../helpers/factories";
-import { getSentEmails } from "../mocks/ses";
+import { server } from "../mocks/server";
+import { getSentEmails, SES_URL } from "../mocks/ses";
 
 const signedIn = async (email: string) => {
   const browser = authBrowser();
   await browser.sendCode(email);
-  await browser.signIn(email, lastLoginCode(email)!);
+  await browser.signIn(email, await loginCode(email));
   return browser;
 };
 
@@ -27,13 +29,13 @@ describe("signing in with an email code", () => {
 
     await browser.sendCode("ny@x.se");
 
+    const code = await loginCode("ny@x.se");
+    expect(code).toMatch(/^\d{6}$/);
     expect(getSentEmails()).toEqual([
       expect.objectContaining({ to: "ny@x.se", subject: "Din inloggningskod till Västra Sidan" })
     ]);
-    const code = lastLoginCode("ny@x.se");
-    expect(code).toMatch(/^\d{6}$/);
 
-    expect((await browser.signIn("ny@x.se", code!)).status).toBe(200);
+    expect((await browser.signIn("ny@x.se", code)).status).toBe(200);
 
     expect((await browser.getSession())?.user).toMatchObject({
       email: "ny@x.se",
@@ -50,7 +52,7 @@ describe("signing in with an email code", () => {
     const browser = authBrowser();
 
     await browser.sendCode(" Ny@X.se ");
-    await browser.signIn("ny@x.se", lastLoginCode("ny@x.se")!);
+    await browser.signIn("ny@x.se", await loginCode("ny@x.se"));
 
     expect((await browser.getSession())?.user.email).toBe("ny@x.se");
     expect(await prisma.user.findMany({ select: { email: true } })).toEqual([{ email: "ny@x.se" }]);
@@ -60,7 +62,7 @@ describe("signing in with an email code", () => {
     const browser = authBrowser();
     await browser.sendCode("ny@x.se");
 
-    const { status } = await browser.signIn("ny@x.se", wrong(lastLoginCode("ny@x.se")!));
+    const { status } = await browser.signIn("ny@x.se", wrong(await loginCode("ny@x.se")));
 
     expect(status).toBe(400);
     expect(await browser.getSession()).toBeNull();
@@ -72,7 +74,7 @@ describe("signing in with an email code", () => {
     await browser.sendCode("ny@x.se");
     await prisma.verification.updateMany({ data: { expiresAt: subMinutes(new Date(), 1) } });
 
-    const { status } = await browser.signIn("ny@x.se", lastLoginCode("ny@x.se")!);
+    const { status } = await browser.signIn("ny@x.se", await loginCode("ny@x.se"));
 
     expect(status).toBe(400);
     expect(await browser.getSession()).toBeNull();
@@ -81,7 +83,7 @@ describe("signing in with an email code", () => {
   it("locks the code after 3 wrong attempts", async () => {
     const browser = authBrowser();
     await browser.sendCode("ny@x.se");
-    const code = lastLoginCode("ny@x.se")!;
+    const code = await loginCode("ny@x.se");
 
     for (let i = 0; i < 3; i++) {
       expect((await browser.signIn("ny@x.se", wrong(code))).status).toBe(400);
@@ -106,7 +108,7 @@ describe("signing in with an email code", () => {
 
     await browser.post("sign-in/email-otp", {
       email: "ny@x.se",
-      otp: lastLoginCode("ny@x.se"),
+      otp: await loginCode("ny@x.se"),
       role: Role.ADMIN
     });
 
@@ -121,17 +123,19 @@ describe("signing in with an email code", () => {
 
     const forUnknown = await authBrowser().sendCode("okand@x.se");
     const forUser = await authBrowser().sendCode(user.email);
+    await settleLoginCodes();
     expect(getSentEmails()).toEqual([]);
 
     const adminBrowser = authBrowser();
     const forAdmin = await adminBrowser.sendCode(admin.email);
+    const adminCode = await loginCode(admin.email);
 
     expect(forUnknown).toEqual(forAdmin);
     expect(forUser).toEqual(forAdmin);
     expect(getSentEmails().map((e) => e.to)).toEqual([admin.email]);
     expect(await prisma.user.count()).toBe(2);
 
-    await adminBrowser.signIn(admin.email, lastLoginCode(admin.email)!);
+    await adminBrowser.signIn(admin.email, adminCode);
     expect((await adminBrowser.getSession())?.user).toMatchObject({
       email: admin.email,
       role: Role.ADMIN
@@ -141,13 +145,49 @@ describe("signing in with an email code", () => {
   it("with login disabled, does not create an account even with a valid code", async () => {
     const browser = authBrowser();
     await browser.sendCode("ny@x.se");
+    const code = await loginCode("ny@x.se");
     featureFlags.ENABLE_LOGIN = false;
 
-    const { status } = await browser.signIn("ny@x.se", lastLoginCode("ny@x.se")!);
+    const { status } = await browser.signIn("ny@x.se", code);
 
     expect(status).toBe(403);
     expect(await browser.getSession()).toBeNull();
     expect(await prisma.user.count()).toBe(0);
+  });
+
+  it("with login disabled, does not sign in an existing user even with a valid code", async () => {
+    const { user } = await createUser();
+    const browser = authBrowser();
+    await browser.sendCode(user.email);
+    const code = await loginCode(user.email);
+    featureFlags.ENABLE_LOGIN = false;
+
+    const { status } = await browser.signIn(user.email, code);
+
+    expect(status).toBe(403);
+    expect(await browser.getSession()).toBeNull();
+    expect(await prisma.session.count()).toBe(0);
+  });
+
+  it("with login disabled, answers an admin before their code is sent", async () => {
+    featureFlags.ENABLE_LOGIN = false;
+    const { user: admin } = await createUser({ role: Role.ADMIN });
+    // Hold the email in SES until the answer is back
+    let releaseEmail = () => {};
+    const emailReleased = new Promise<void>((resolve) => (releaseEmail = resolve));
+    server.use(
+      http.post(SES_URL, async () => {
+        await emailReleased;
+      })
+    );
+
+    const forUnknown = await authBrowser().sendCode("okand@x.se");
+    const forAdmin = await authBrowser().sendCode(admin.email);
+
+    expect(forAdmin).toEqual(forUnknown);
+    expect(getSentEmails()).toEqual([]);
+    releaseEmail();
+    expect(await loginCode(admin.email)).toMatch(/^\d{6}$/);
   });
 
   it("revokes every session", async () => {
