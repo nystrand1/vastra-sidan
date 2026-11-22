@@ -11,6 +11,7 @@ interface MemberSignupProps {
   memberUrl: string,
   memberImageUrl: string,
   showAccountLink: boolean,
+  accountUrl?: string,
 }
 
 const mockMembership: MemberSignupProps = {
@@ -21,20 +22,17 @@ const mockMembership: MemberSignupProps = {
   },
   membershipType: MembershipType.REGULAR,
   memberUrl: "https://example.com",
-  showAccountLink: false,
+  showAccountLink: true,
+  accountUrl: "https://example.com/loggain",
   memberImageUrl: "https://cmsdev.vastrasidan.se/wp-content/uploads/2021/03/Medlemskort-2021.png"
 }
-
-// VERCEL_URL on Vercel previews, WEBSITE_URL on EC2
-const baseUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : (process.env.WEBSITE_URL ?? "http://localhost:3000");
 
 export const MemberSignup = ({
   member = mockMembership.member,
   memberImageUrl = mockMembership.memberImageUrl,
   memberUrl = mockMembership.memberUrl,
   showAccountLink,
+  accountUrl,
 }: MemberSignupProps) => {
   return (
     <Tailwind>
@@ -85,9 +83,9 @@ export const MemberSignup = ({
             >
               Visa medlemskap
             </Button>
-            {showAccountLink && (
+            {showAccountLink && accountUrl && (
               <Text>
-                <Link href={`${baseUrl}/loggain`} className="text-blue-300">
+                <Link href={accountUrl} className="text-blue-300">
                   Logga in på vastrasidan.se för att se alla dina medlemskap
                 </Link>
               </Text>

@@ -23,7 +23,8 @@ export const sendEventConfirmationEmail = async (
         participant,
         cancellationUrl,
         transferred: options.transferred,
-        showAccountLink: featureFlags.ENABLE_LOGIN
+        showAccountLink: featureFlags.ENABLE_LOGIN,
+        accountUrl: `${env.WEBSITE_URL}/loggain`
       })
     )
   });

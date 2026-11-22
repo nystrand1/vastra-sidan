@@ -25,7 +25,8 @@ export const sendMemberConfirmationEmail = async (
         memberUrl,
         membershipType: membership.type,
         memberImageUrl: membership.imageUrl,
-        showAccountLink: featureFlags.ENABLE_LOGIN
+        showAccountLink: featureFlags.ENABLE_LOGIN,
+        accountUrl: `${env.WEBSITE_URL}/loggain`
       })
     )
   });

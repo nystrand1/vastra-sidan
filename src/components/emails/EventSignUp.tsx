@@ -19,6 +19,7 @@ interface EventSignUpProps {
   cancellationUrl: string;
   transferred?: boolean;
   showAccountLink: boolean;
+  accountUrl?: string;
 }
 
 const mockBus: EventSignUpProps["participant"]["bus"] = {
@@ -75,7 +76,8 @@ export const EventSignUp = ({
   participant = mockParticipant,
   cancellationUrl,
   transferred = false,
-  showAccountLink
+  showAccountLink,
+  accountUrl
 }: EventSignUpProps) => {
   const { name, payAmount, note, bus, event } = participant;
 
@@ -134,9 +136,9 @@ export const EventSignUp = ({
             >
               Hantera bokning
             </Button>
-            {showAccountLink && (
+            {showAccountLink && accountUrl && (
               <Text className="text-lg">
-                <Link href={`${baseUrl}/loggain`} className="text-blue-300">
+                <Link href={accountUrl} className="text-blue-300">
                   Logga in på vastrasidan.se för att se alla dina resor
                 </Link>
               </Text>
