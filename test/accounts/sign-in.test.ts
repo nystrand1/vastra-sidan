@@ -48,6 +48,19 @@ describe("signing in with an email code", () => {
     });
   });
 
+  it("links to the sign-in page with the email and code in the fragment", async () => {
+    await authBrowser().sendCode("anna+vss@x.se");
+    const code = await loginCode("anna+vss@x.se");
+
+    const [email] = getSentEmails();
+
+    // The fragment never reaches the server log, analytics or Sentry
+    expect(email?.html).toContain(
+      `href="${process.env.BETTER_AUTH_URL}/loggain#email=anna%2Bvss%40x.se&amp;kod=${code}"`
+    );
+    expect(email?.html).not.toContain("loggain?");
+  });
+
   it("normalises the email", async () => {
     const browser = authBrowser();
 

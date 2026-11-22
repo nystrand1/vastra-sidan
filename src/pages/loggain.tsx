@@ -1,29 +1,33 @@
 import Error from "next/error";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
 import Card from "~/components/atoms/CardLink/CardLink";
 import { EmailCodeSignIn } from "~/components/common/EmailCodeSignIn/EmailCodeSignIn";
 import { toAppSession } from "~/utils/appSession";
 import { authClient } from "~/utils/authClient";
 import { featureFlags } from "~/utils/featureFlags";
 import { isProfileComplete } from "~/utils/profile";
+import { safeCallbackUrl } from "~/utils/safeCallbackUrl";
+import { readSignInLink } from "~/utils/signInLink";
 
 interface LoginPageProps {
   adminLogin?: boolean;
 }
 
-/** Only same-site paths, so a link can't send someone to another site after sign-in. */
-const safeCallbackUrl = (value: string | string[] | undefined) =>
-  typeof value === "string" && value.startsWith("/") && !value.startsWith("//") ? value : null;
-
 export const LoginPage = ({ adminLogin }: LoginPageProps) => {
   const router = useRouter();
-  // The login link from the email carries `kod`; while login is off only admins get codes.
-  const isAdminLogin =
-    adminLogin || router.query.admin !== undefined || router.query.kod !== undefined;
+  // Whether the address is the login link from the email. The code is in the fragment, which
+  // only the browser sees, so this is known once mounted. Read once: the link is then removed.
+  const [isLoginLink, setIsLoginLink] = useState<boolean | null>(null);
+  useEffect(() => {
+    setIsLoginLink(readSignInLink(window.location.hash) !== null);
+  }, []);
+  // While login is off only admins get codes, so the link is an admin's.
+  const isAdminLogin = adminLogin || router.query.admin !== undefined || isLoginLink === true;
 
   // The page is prerendered, so the query is empty until the router is ready.
-  if (!router.isReady && !featureFlags.ENABLE_LOGIN) {
+  if (!featureFlags.ENABLE_LOGIN && (!router.isReady || isLoginLink === null)) {
     return <p className="text-center">Laddar...</p>;
   }
 
@@ -40,7 +44,7 @@ export const LoginPage = ({ adminLogin }: LoginPageProps) => {
     }
     // Embedded in another page (e.g. a guarded one): signing in re-renders it.
     if (router.pathname === "/loggain") {
-      await router.push(safeCallbackUrl(router.query.callbackUrl) ?? "/profil");
+      await router.push(safeCallbackUrl(router.query.callbackUrl, window.location.origin) ?? "/profil");
     }
   };
 

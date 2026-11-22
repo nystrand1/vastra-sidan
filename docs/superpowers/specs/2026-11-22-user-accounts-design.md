@@ -12,6 +12,8 @@ Status: Implemented
   `userId` columns stay.
 - The link in the sign-in email submits the code, but it auto-submits only in the browser that
   asked for the code.
+- The sign-in link carries the email and code in the fragment (`/loggain#email=…&kod=…`), not the
+  query, so they never reach the Apache log, Google Analytics or Sentry.
 - Adding a passkey needs a fresh session.
 
 ## Purpose

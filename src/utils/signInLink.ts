@@ -31,3 +31,14 @@ export const readRequestedEmail = (): string | null => {
  */
 export const shouldAutoSubmitCode = (requestedEmail: string | null, linkEmail: string): boolean =>
   requestedEmail !== null && requestedEmail === linkEmail.trim().toLowerCase();
+
+/**
+ * The email and code from the link in the login email (`/loggain#email=…&kod=…`). They are in
+ * the fragment, which the browser never sends, so they stay out of server logs and analytics.
+ */
+export const readSignInLink = (hash: string): { email: string; code: string } | null => {
+  const params = new URLSearchParams(hash.replace(/^#/, ""));
+  const email = params.get("email");
+  const code = params.get("kod");
+  return email && code ? { email, code } : null;
+};

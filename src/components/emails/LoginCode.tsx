@@ -8,7 +8,7 @@ interface LoginCodeProps {
 
 export const LoginCode = ({
   code = "123456",
-  signInUrl = "http://localhost:3000/loggain?email=test%40testsson.com&kod=123456"
+  signInUrl = "http://localhost:3000/loggain#email=test%40testsson.com&kod=123456"
 }: LoginCodeProps) => {
   return (
     <Tailwind>

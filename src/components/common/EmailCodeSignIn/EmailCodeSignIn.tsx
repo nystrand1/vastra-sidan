@@ -6,6 +6,7 @@ import { authClient } from "~/utils/authClient";
 import {
   forgetRequestedEmail,
   readRequestedEmail,
+  readSignInLink,
   rememberRequestedEmail,
   shouldAutoSubmitCode
 } from "~/utils/signInLink";
@@ -20,7 +21,7 @@ const CODE_ERROR = "Koden är fel eller har gått ut. Försök igen.";
 
 /**
  * Email step, code step and a passkey button. The link in the login email
- * (`?email=…&kod=…`) is read once, removed from the URL, and submitted.
+ * (`#email=…&kod=…`) is read once, removed from the URL, and submitted.
  */
 export const EmailCodeSignIn = ({ intro, onSignedIn }: EmailCodeSignInProps) => {
   const router = useRouter();
@@ -57,17 +58,21 @@ export const EmailCodeSignIn = ({ intro, onSignedIn }: EmailCodeSignInProps) => 
   // The link from the email: take the email and code out of the URL, then sign in.
   useEffect(() => {
     if (!router.isReady || handledLink.current) return;
-    const { email: linkEmail, kod, ...rest } = router.query;
-    if (typeof linkEmail !== "string" || typeof kod !== "string") return;
+    const link = readSignInLink(window.location.hash);
+    if (!link) return;
     handledLink.current = true;
-    setEmail(linkEmail);
-    setCode(kod);
+    setEmail(link.email);
+    setCode(link.code);
     setStep("code");
-    const autoSubmit = shouldAutoSubmitCode(readRequestedEmail(), linkEmail);
+    const autoSubmit = shouldAutoSubmitCode(readRequestedEmail(), link.email);
     setConfirmLink(!autoSubmit);
+    // Drop the fragment from the address bar and the history entry before submitting
     void router
-      .replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true })
-      .then(() => (autoSubmit ? verify(linkEmail.trim().toLowerCase(), kod) : undefined));
+      .replace(`${window.location.pathname}${window.location.search}`, undefined, {
+        shallow: true,
+        scroll: false
+      })
+      .then(() => (autoSubmit ? verify(link.email.trim().toLowerCase(), link.code) : undefined));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady]);
 

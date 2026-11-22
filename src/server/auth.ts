@@ -33,7 +33,8 @@ const deliverLoginCode = async (email: string, otp: string) => {
     const user = await prisma.user.findUnique({ where: { email }, select: { role: true } });
     if (user?.role !== Role.ADMIN) return;
   }
-  const signInUrl = `${env.BETTER_AUTH_URL}/loggain?email=${encodeURIComponent(email)}&kod=${otp}`;
+  // In the fragment, so the code never reaches the server log, analytics or Sentry
+  const signInUrl = `${env.BETTER_AUTH_URL}/loggain#email=${encodeURIComponent(email)}&kod=${otp}`;
   await sendSesEmail({
     to: email,
     subject: LOGIN_CODE_SUBJECT,
