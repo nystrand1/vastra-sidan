@@ -204,9 +204,22 @@ Passwordless accounts (Better Auth, email codes, passkeys) replace NextAuth. The
 is destructive and `User.email` becomes required, so go in this order and stop if a check fails.
 Design: `docs/superpowers/specs/2026-11-22-user-accounts-design.md`.
 
-Run scripts and SQL against production through the tunnel in "Reaching MySQL from your machine"
-(`DATABASE_URL` pointing at `127.0.0.1:3307/vss_prod`, plus the production Stripe key for the
-backfill). Keep `NEXT_PUBLIC_ENABLE_LOGIN` unset or `false` until step 8.
+Run scripts and SQL through the tunnel in "Reaching MySQL from your machine". The scripts are
+plain `tsx`: it loads no `.env` and sets no `NODE_ENV`, and importing the database client runs the
+env validation in `src/env.mjs`. So skip the validation and pass what the scripts read
+(`DATABASE_URL`, and `STRIPE_API_KEY` for the backfill; with `SKIP_ENV_VALIDATION` the values
+come straight from the process environment):
+
+```bash
+SKIP_ENV_VALIDATION=true NODE_ENV=production DATABASE_URL='mysql://vss:…@127.0.0.1:3307/vss_prod' \
+  pnpm script scripts/accounts/normalise-emails.ts --dry-run
+SKIP_ENV_VALIDATION=true NODE_ENV=production DATABASE_URL='mysql://vss:…@127.0.0.1:3307/vss_prod' \
+  STRIPE_API_KEY='sk_live_…' pnpm script scripts/accounts/backfill-payer-emails.ts
+```
+
+`STRIPE_API_KEY` must be the **live** secret key when the database is production (a test key
+finds none of the payment intents, and the rows fall back to the first traveller). Keep
+`NEXT_PUBLIC_ENABLE_LOGIN` unset or `false` until step 9.
 
 **Before you start: origins.** `trustedOrigins` is `[WEBSITE_URL]`, so exactly one origin is
 allowed, and the passkey origin is `WEBSITE_URL` too. `deploy/apache-vss-event.conf` makes
@@ -221,75 +234,120 @@ that works today.
 1. **Back up.** Run `sudo systemctl start mysql-backup.service` on the box and check it with
    `systemctl status mysql-backup.service`; the dump is `/var/backups/mysql/vss_prod-<date>.sql.gz`
    (`deploy/mysql-backup.sh`).
-2. **Deploy the first half with login off.** Deploy the code up to and including the payer-email
-   work (commit `2925516`) with `NEXT_PUBLIC_ENABLE_LOGIN=false`, then `pnpm prisma db push` (no flag needed:
-   it only adds `StripePayment.payerEmail` and `StripePayment.membershipId`). If you deploy
-   everything at once instead, skip to step 6 after the backfill.
-3. **Normalise emails.**
+2. **Deploy the payer-email half with login off.** Deploy the code up to and including commit
+   `2925516` with `NEXT_PUBLIC_ENABLE_LOGIN=false`, then `pnpm prisma db push` (no flag needed: at
+   that commit the push only adds `StripePayment.payerEmail` and its index). Skip this step and
+   step 4's first run if you deploy everything at once; then do steps 3 and 5 before step 6, and
+   run the backfill in step 7.
+3. **Normalise emails.** With the invocation above:
    ```bash
    pnpm script scripts/accounts/normalise-emails.ts --dry-run
    ```
    It prints JSON and exits 1 if lowercasing would make two rows collide. Nothing is written then:
    merge the duplicates by hand and run again. When the dry run is clean, run it without
    `--dry-run`.
-4. **Backfill payers.**
-   ```bash
-   pnpm script scripts/accounts/backfill-payer-emails.ts
-   ```
-   It prints counts: `fromStripe`, `fromFirstTraveller`, `adminComp` for event bookings and a
-   `memberships` object with `fromStripe`, `fromOwnerMetadata`, `adminComp`, `unresolved`,
-   `membershipIds`. It aborts on any Stripe error other than a 404, so just re-run it after a
-   network or rate-limit failure; it only fills rows that are still empty. `unresolved` payments
-   are left without a payer on purpose (never guessed). Until the backfill has run, old bookings
-   show each link only its own seat, which is safe. Family entries on "Mina medlemskap" only
-   appear for membership payments that have both a payer and a `membershipId`; older ones show
-   each member just their own membership. Check:
+4. **Backfill event payers.** At this commit the backfill only covers event bookings, so it
+   prints `fromStripe`, `fromFirstTraveller` and `adminComp` (no `memberships`). It aborts on any
+   Stripe error other than a 404, so re-run it after a network or rate-limit failure; it only
+   fills rows that are still empty. Until it has run, old bookings show each link only its own
+   seat, which is safe. Check that no event payment is left without a payer:
    ```sql
-   SELECT COUNT(*) FROM StripePayment WHERE payerEmail IS NULL;
-   SELECT COUNT(*) FROM StripePayment WHERE membershipId IS NULL AND id IN (SELECT B FROM _MemberToStripePayment);
+   SELECT COUNT(*) FROM StripePayment
+   WHERE payerEmail IS NULL AND id IN (SELECT B FROM _ParticipantToStripePayment);
    ```
-   The second counts membership payments without a `membershipId` (`_MemberToStripePayment` is
-   Prisma's join table for `Member`–`StripePayment`; `B` is the payment id). Some old ones may
-   remain: they show no family, which is safe.
+   Membership payments are legitimately null here; step 7 fills them.
 5. **Check the admins.** Admins sign in with an email code, so every admin needs a working
-   address. `User.email` also becomes required, so this must be 0 before step 6:
+   address. `User.email` also becomes required, so the first count must be 0 before step 6:
    ```sql
    SELECT COUNT(*) FROM User WHERE email IS NULL;
    SELECT id, firstName, lastName, email FROM User WHERE role = 'ADMIN';
    ```
-   Read the second list: every admin must have an email they can open. Fix by hand if not.
-6. **Deploy the accounts code, still with login off.**
-   - On GitHub (Production environment): add the secret `BETTER_AUTH_SECRET` and the variables
-     `BETTER_AUTH_URL` and `PASSKEY_RP_ID` (values above); delete `NEXTAUTH_SECRET` and
-     `NEXTAUTH_URL`. `deploy.yml` already lists the new names in `ENV_NAMES`.
-   - Run `pnpm prisma db push --accept-data-loss`. It drops `User.password`, the old NextAuth
-     `Account`, `Session` and `VerificationToken` tables (Better Auth creates its own
-     `Session`, `Account`, `Verification` and `Passkey`), the `User`–`Membership` join table and
-     the old `User` relations to participants and payments. `relationMode = "prisma"` means those relations never
-     had foreign keys in MySQL; the `userId` columns on `Participant`, `StripePayment` and
-     `StripeRefund` are kept. `emailVerified` changes from `DATETIME` to `TINYINT(1)`, which
-     resets it to 0.
-   - Then fill the new columns for existing users (`name` is `VARCHAR(191)`, `emailVerified`
-     is boolean):
-     ```sql
-     UPDATE User SET emailVerified = 1, name = CONCAT(firstName, ' ', lastName);
-     ```
-   - Existing admin sessions stop working. Admins sign in again with a code at `/loggain?admin`.
-     While login is off only admins are sent a code, and sign-up is refused.
-   - Rate limiting reads `x-forwarded-for` and keeps its counters in memory (so they reset on
-     restart). Apache's `mod_proxy` adds that header with the client address by default
-     (`ProxyAddHeaders`), and the vhost doesn't turn it off. Check it in the app, not just
-     in the config: without it every visitor shares one address and a few codes lock everyone out.
-     To stop a client from sending its own value, add `RequestHeader unset X-Forwarded-For`
-     to the vhost, above the `ProxyPass` lines, so the only value is the one Apache adds.
-7. **Staging first.** On the Vercel preview (`staging.event.vastrasidan.se`, database `vss_dev`)
-   set `NEXT_PUBLIC_ENABLE_LOGIN=true`. Go through: sign-up with a code, the link in the email,
-   passkey on iOS Safari and Android Chrome (add it on `/profil`, which needs a fresh sign-in),
-   signing in with the passkey, bookings on "Mina bussresor" (cancel, change bus, transfer),
-   "Mina medlemskap", and deleting the account.
-8. **Production.** `NEXT_PUBLIC_ENABLE_LOGIN` is inlined at build time, so setting the
-   variable on GitHub to `true` does nothing until the workflow runs again: re-run "Deploy to
-   EC2" (a rebuild and redeploy), then check `/loggain`, sign-up and one booking.
+   Every admin on the second list must have an email they can open. Fix by hand if not.
+6. **Prepare the switch.** In this order:
+   1. On GitHub (Production environment), add the secret `BETTER_AUTH_SECRET` and the variables
+      `BETTER_AUTH_URL` and `PASSKEY_RP_ID` (values above); delete `NEXTAUTH_SECRET` and
+      `NEXTAUTH_URL`. `deploy.yml` already lists the new names in `ENV_NAMES`.
+   2. Fix the proxy header (see "Rate limiting" below) on the box, before any traffic reaches the
+      new code.
+   3. Pick a quiet window. Between 6.4 and 6.6 admin sign-in is unavailable, and between 6.4 and
+      6.5 the site is mid-switch.
+   4. Run `pnpm prisma db push --accept-data-loss` against production, **immediately before** the
+      deploy. It drops `User.password`, the old NextAuth `Account`, `Session` and
+      `VerificationToken` tables (Better Auth creates its own `Session`, `Account`,
+      `Verification` and `Passkey`), the `User`–`Membership` join table and the old `User`
+      relations to participants and payments. `relationMode = "prisma"` means those relations
+      never had foreign keys in MySQL; the `userId` columns on `Participant`, `StripePayment` and
+      `StripeRefund` are kept. `emailVerified` changes from `DATETIME` to a boolean
+      (`TINYINT(1)`); Prisma may convert or drop and recreate it, and the `UPDATE` below makes
+      the result the same either way. The old code cannot run after this (no `password`), so
+      deploy straight away.
+   5. Run the "Deploy to EC2" workflow (login still off). If the new code runs before the push,
+      admin sign-in fails instead; hence this order.
+   6. **Immediately after the push**, run once:
+      ```sql
+      UPDATE User SET emailVerified = 1, name = CONCAT(firstName, ' ', lastName);
+      ```
+      (`name` is `VARCHAR(191)`.) It has no `WHERE`: run it once, while the table holds only the
+      legacy rows. Until it has run, `emailVerified` is 0 and `name` is empty. Existing admin
+      sessions stop working. Admins sign in again with a code at `/loggain?admin`; while login is
+      off only admins are sent a code and sign-up is refused.
+7. **Backfill membership payers.** The columns `StripePayment.membershipId` and the membership
+   backfill only exist after step 6. Run the backfill again (with the invocation above):
+   ```bash
+   pnpm script scripts/accounts/backfill-payer-emails.ts
+   ```
+   It now also prints a `memberships` object with `fromStripe`, `fromOwnerMetadata`, `adminComp`,
+   `unresolved` and `membershipIds`. `unresolved` payments are left without a payer on purpose
+   (never guessed). Family entries on "Mina medlemskap" only appear for membership payments that
+   have both a payer and a `membershipId`; others show each member just their own membership.
+   Check:
+   ```sql
+   SELECT COUNT(*) FROM StripePayment WHERE payerEmail IS NULL;
+   SELECT COUNT(*) FROM StripePayment
+   WHERE membershipId IS NULL AND id IN (SELECT B FROM _MemberToStripePayment);
+   ```
+   The first should be only the unresolved ones. The second counts membership payments without a
+   `membershipId`; some old ones may remain, which show no family (safe). `_MemberToStripePayment`
+   is Prisma's join table for `Member`–`StripePayment`, `B` is the payment id.
+8. **Staging first.** The preview at `staging.event.vastrasidan.se` uses the database `vss_dev`,
+   so it needs everything above done to that database first: `prisma db push --accept-data-loss`
+   and the same `UPDATE` (in that order, as in step 6), then the normalise and backfill scripts
+   with `vss_dev`'s `DATABASE_URL` and the Stripe key that environment uses. On Vercel, set
+   `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (`https://staging.event.vastrasidan.se`),
+   `PASSKEY_RP_ID` (`staging.event.vastrasidan.se`, or `vastrasidan.se`) and
+   `NEXT_PUBLIC_ENABLE_LOGIN=true`.
+
+   **Required follow-up before staging can work:** `src/env.mjs` (lines 36-41) overrides
+   `WEBSITE_URL` with `https://$VERCEL_URL` whenever `VERCEL_URL` is set, and that is the
+   per-deployment host, not the staging alias. `trustedOrigins` and the passkey origin are both
+   `WEBSITE_URL`, so sign-in on `staging.event.vastrasidan.se` is rejected as an untrusted
+   origin, and passkeys fail. A fixed staging origin is not possible without a code change (use
+   the explicit `WEBSITE_URL` when set, or add the staging host to `trustedOrigins`). Until
+   then, test the whole flow in a local run against `vss_dev` instead, or sign in through the
+   deployment's own `*.vercel.app` URL with `BETTER_AUTH_URL` and `PASSKEY_RP_ID` set to that host.
+
+   Go through: sign-up with a code, the link in the email, passkey on iOS Safari and Android
+   Chrome (add it on `/profil`, which needs a fresh sign-in), signing in with the passkey,
+   bookings on "Mina bussresor" (cancel, change bus, transfer), "Mina medlemskap", and deleting
+   the account.
+9. **Production.** `NEXT_PUBLIC_ENABLE_LOGIN` is inlined at build time, so setting the
+   variable on GitHub to `true` does nothing until the workflow runs again: set it, re-run "Deploy
+   to EC2" (a rebuild and redeploy), then check `/loggain`, sign-up and one booking.
+
+**Rate limiting (required, step 6.2).** `src/server/auth.ts` trusts `x-forwarded-for` for the
+client address, and its counters are in memory (they reset on restart). `mod_proxy` appends to a
+value the client sent, so a client could spoof the header and dodge the limit. The repo's
+`deploy/apache-vss-event.conf` only has the `:80` vhost; production traffic is served by the
+`:443` vhost certbot generated from it, `/etc/apache2/sites-available/vss-event-le-ssl.conf` on
+the box. Add `RequestHeader unset X-Forwarded-For` above the `ProxyPass` lines in **both** files
+(the repo copy so a re-install keeps it, the SSL vhost on the server so it takes effect), then
+`sudo apache2ctl configtest && sudo systemctl reload apache2`. Verify:
+```bash
+curl -s -H 'X-Forwarded-For: 1.2.3.4' https://www.vastrasidan.se/api/auth/get-session -o /dev/null
+```
+and check that the address Better Auth records (`Session.ipAddress` after a sign-in, or the
+Apache access log) is yours, not `1.2.3.4`. Without the header every visitor would share one
+address and a few codes would lock everyone out.
 
 **Rollback.** Set `NEXT_PUBLIC_ENABLE_LOGIN` back to `false` and redeploy to close sign-up (admin
 sign-in keeps working). Rolling the code back past step 6 also needs the backup from step 1,
