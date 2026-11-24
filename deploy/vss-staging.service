@@ -1,0 +1,41 @@
+# Staging (staging.event.vastrasidan.se), deployed from the staging branch.
+# The same app as deploy/vss-event.service, from /srv/vss-staging on port 3001,
+# with less memory and lower priority, so production wins when the box is short.
+[Unit]
+Description=Vastra Sidan website, staging (Next.js standalone)
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+Type=simple
+User=vss-event
+Group=vss-event
+UMask=0002
+WorkingDirectory=/srv/vss-staging/current
+EnvironmentFile=/srv/vss-staging/shared/.env
+Environment=NODE_ENV=production
+Environment=PORT=3001
+Environment=HOSTNAME=127.0.0.1
+Environment=NODE_OPTIONS=--max-old-space-size=256
+ExecStart=/usr/bin/node server.js
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=3
+MemoryMax=500M
+# Killed before production if the box runs out of memory, and gets less CPU
+OOMScoreAdjust=500
+CPUWeight=50
+IOWeight=50
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ReadWritePaths=/srv/vss-staging/shared/cache /srv/vss-staging/releases
+
+[Install]
+WantedBy=multi-user.target

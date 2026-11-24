@@ -1,17 +1,22 @@
 # Deploying to EC2
 
-Production runs as a Next.js standalone server on the same EC2 box as MySQL and WordPress
-(`ssh VastraAWS`, t3.small, Ubuntu 22.04). Apache terminates TLS and proxies to it.
-Vercel only builds preview deployments.
+Production and staging run as Next.js standalone servers on the same EC2 box as MySQL and
+WordPress (`ssh VastraAWS`, t3.small, Ubuntu 22.04). Apache terminates TLS and proxies to them.
+Vercel only builds previews of the other branches.
 
 ```
-Internet → Apache :443 (certbot) → node server.js on 127.0.0.1:3000 → MySQL on localhost
+Internet → Apache :443 (certbot) → node server.js on 127.0.0.1:3000 (production)
+                                                    127.0.0.1:3001 (staging)   → MySQL on localhost
 ```
 
-| Branch        | Built by                          | Runs on |
-| ------------- | --------------------------------- | ------- |
-| `main`        | `.github/workflows/deploy.yml`    | EC2     |
-| anything else | Vercel                            | Vercel previews (`*.vercel.app`, `staging.event.vastrasidan.se`) |
+| Branch        | Built by                       | GitHub environment | Runs on                                       | Database   |
+| ------------- | ------------------------------ | ------------------ | --------------------------------------------- | ---------- |
+| `main`        | `.github/workflows/deploy.yml` | `Production`       | EC2, `vss-event`, `www.vastrasidan.se`        | `vss_prod` |
+| `staging`     | `.github/workflows/deploy.yml` | `Staging`          | EC2, `vss-staging`, `staging.event.vastrasidan.se` | `vss_dev` |
+| anything else | Vercel                         |                    | Vercel previews (`*.vercel.app`)              | `vss_dev`  |
+
+`vercel.json` turns off Vercel's builds of `main` and `staging`, so a `staging` → `main` PR
+gets no Vercel preview. Staging is that preview.
 
 The box has 2 GB of RAM, so it never builds. GitHub Actions builds a linux/amd64 release and the
 box only unpacks and runs it.
@@ -20,8 +25,8 @@ box only unpacks and runs it.
 
 | User        | What it can do                                                                 |
 | ----------- | ------------------------------------------------------------------------------ |
-| `deploy`    | Logs in with the GitHub Actions key. Owns the releases. Its only sudo right is `systemctl restart vss-event`, and its only port forward is to MySQL on `127.0.0.1:3306` |
-| `vss-event` | Runs the app (no login). Can write only `shared/cache` and each release's `.next/server/route-cache`. systemd also keeps it off `/home` and makes the rest of the system read-only |
+| `deploy`    | Logs in with the GitHub Actions keys (one per environment). Owns the releases. Its only sudo rights are `systemctl restart vss-event` and `systemctl restart vss-staging`, and its only port forward is to MySQL on `127.0.0.1:3306` |
+| `vss-event` | Runs both apps (no login). Can write only `shared/cache` and each release's `.next/server/route-cache`. systemd also keeps it off `/home` and makes the rest of the system read-only |
 | `ubuntu`    | Your login, with full sudo. Not used by deploys                                |
 
 ## Layout on the box
@@ -33,6 +38,7 @@ box only unpacks and runs it.
 | `/srv/vss-event/shared/.env`  | Production env (`deploy:vss-event`, mode 640), rewritten by every deploy |
 | `/srv/vss-event/shared/cache` | `.next/cache` (ISR pages, optimised images), kept across deploys |
 | `/etc/systemd/system/vss-event.service` | From `deploy/vss-event.service`                    |
+| `/srv/vss-staging/...`        | The same layout for staging, run by `vss-staging.service` (from `deploy/vss-staging.service`) |
 | `/var/backups/mysql/*.sql.gz` | Nightly database dumps (root only), the last 30 days         |
 
 ## Configuration
@@ -69,20 +75,26 @@ a value: edit it on GitHub and re-run the workflow.
 | `CANCELLATION_URL`, `MEMBERSHIP_URL`, `API_URL`, `BOOKING_EMAIL` | As in Vercel        |
 | `SENTRY_PROJECT_NAME`        | As in Vercel                             |
 
+The **`Staging`** environment has the same names, with Stripe test keys, `vss_dev` in
+`DATABASE_URL`, `https://staging.event.vastrasidan.se` for the URLs, and its own `EC2_SSH_KEY`
+(`github-actions-deploy-staging@…` in `authorized_keys`). It only deploys from `staging`. It
+has no `SENTRY_AUTH_TOKEN`, so staging builds upload no source maps.
+
 Vercel set `VERCEL_URL` and the code fell back to it. Nothing does that on EC2, so the URLs
 above must be set.
 
 A new env var needs three changes: `src/env.mjs`, the `ENV_NAMES` list in `deploy.yml`, and
-a secret or variable on GitHub.
+a secret or variable in both GitHub environments.
 
 ## Deploying
 
-Push to `main`, or run the "Deploy to EC2" workflow by hand. `deploy/release.sh` swaps the
-`current` symlink, restarts the service and checks that `/` and a database query answer. If
-they don't, it switches back to the previous release.
+Push to `main` (production) or `staging`, or run the "Deploy to EC2" workflow by hand on one
+of them. `deploy/release.sh` swaps the `current` symlink, restarts the service and checks that
+`/` and a database query answer. If they don't, it switches back to the previous release.
 
 Without GitHub: `deploy/build-local.sh path/to/production.env` builds in Docker on your machine
-and deploys.
+and deploys. `APP=vss-staging deploy/build-local.sh path/to/staging.env` does the same for
+staging.
 
 **Rollback by hand** (keeps the current `.env`):
 
@@ -97,6 +109,9 @@ ssh VastraAWS 'sudo -u deploy ln -sfn /srv/vss-event/releases/<id> /srv/vss-even
 ssh VastraAWS 'sudo systemctl status vss-event'
 ssh VastraAWS 'sudo journalctl -u vss-event -f'
 ```
+
+Use `vss-staging` for staging. Staging has a smaller memory cap (500 MB, 256 MB heap) and a
+higher OOM score than production, so on a short box it is killed first.
 
 Cron jobs are WP-Cron events in WordPress (`themes/storefront/inc/vss-functions.php`). They
 POST to `https://www.vastrasidan.se/api/trpc/cron.*`, which is this box.
@@ -190,9 +205,32 @@ domains stay on the project.
 
 **After a quiet week or two:**
 - Remove `vastrasidan.se`, `www.vastrasidan.se` and `event.vastrasidan.se` from the Vercel
-  project (Settings → Domains). Keep `staging.event.vastrasidan.se`.
+  project (Settings → Domains).
 - Remove the dry-run host: `sudo a2dissite vss-event-test vss-event-test-le-ssl`,
   `sudo certbot delete --cert-name test-new-prod.vastrasidan.se`, and its A record in Loopia.
 
 Previews on Vercel still connect to `vss_dev` over the public MySQL port, so it stays open.
-Give them a user that can only touch `vss_dev`, and limit the production user to `localhost`.
+Give them a user that can only touch `vss_dev`, and limit the production user to `localhost`
+(see `deploy/database-lockdown-plan.md`). Staging on the box uses `127.0.0.1`, like production.
+
+## Moving staging to the box
+
+The box side is already done: `/srv/vss-staging`, `vss-staging.service` (enabled), the
+`vss-staging` vhost (from `deploy/apache-vss-staging.conf`) and the `deploy` sudo rule.
+
+1. Merge the PR that adds staging to `deploy.yml` and `vercel.json` into `main`.
+2. Bring `staging` up to date with `main` and push it. The workflow deploys it to
+   `vss-staging` and checks it on port 3001, before any DNS moves.
+3. In Loopia, replace the `staging.event` CNAME (`cname.vercel-dns.com`) with an A record to
+   the Elastic IP.
+4. Once `dig +short staging.event.vastrasidan.se @1.1.1.1` shows the box:
+   `sudo certbot --apache -d staging.event.vastrasidan.se`. Until then, HTTPS on the box answers
+   with another site's certificate, so staging shows a warning for those few minutes.
+5. In Vercel, remove `staging.event.vastrasidan.se` from the project (Settings → Domains), and
+   the `staging`-branch env vars, which nothing reads any more.
+
+The Stripe test webhook stays `https://staging.event.vastrasidan.se/api/payment/stripeWebhook`
+with the same secret.
+
+**Rollback:** set the Loopia record back to CNAME `cname.vercel-dns.com`, and take `staging`
+out of `vercel.json` so Vercel builds it again.
