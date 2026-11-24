@@ -12,6 +12,10 @@ import {
 } from "./utils";
 import { captureException } from "@sentry/nextjs";
 import { sendMemberConfirmationEmail } from "~/server/utils/email/sendMemberConfirmationEmail";
+import {
+  payerNeedsSummary,
+  sendPayerSummaryEmail
+} from "~/server/utils/email/sendPayerSummaryEmail";
 import { awayGamePaths, revalidatePages } from "~/server/utils/revalidate";
 
 const endpointSecret =
@@ -31,7 +35,10 @@ const handleStripeEvent = async (event: Stripe.Event) => {
         event.data.object.metadata.type === "MEMBERSHIP" && membership
           ? members.map((m) => sendMemberConfirmationEmail(m, membership))
           : event.data.object.metadata.type === "EVENT"
-            ? participants.map((p) => sendEventConfirmationEmail(p))
+            ? [
+                ...participants.map((p) => sendEventConfirmationEmail(p)),
+                ...(payerNeedsSummary(payment) ? [sendPayerSummaryEmail(payment)] : [])
+              ]
             : [];
       // Emails are best effort: the payment is already saved, so failing the webhook would
       // only make Stripe retry an event that is then skipped.

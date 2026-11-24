@@ -6,6 +6,9 @@ Status: Implemented
 ## Changes during implementation
 
 - Family entries on "Mina medlemskap" are shown without their card link.
+- A signed-in payer who isn't one of the travellers gets a summary email ("Din bokning: …"): the
+  event, the travellers' names, the total, and a link to "Mina bussresor". It has no manage
+  links; the travellers' own confirmations are unchanged.
 - `membershipId` was added to `StripePayment`, so a membership payment records what it bought.
 - Membership payments have a payer (`payerEmail`) too, and the backfill fills them.
 - The `user` relations on `Participant`, `StripePayment` and `StripeRefund` were dropped; the
