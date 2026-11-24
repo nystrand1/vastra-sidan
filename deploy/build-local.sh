@@ -2,14 +2,16 @@
 # Builds a linux/amd64 release in Docker (the EC2 box is too small to run `next build`)
 # and deploys it. Use when GitHub Actions isn't an option.
 #
-# Usage: deploy/build-local.sh <env-file> [ssh-host]
-#   <env-file>  the production env, used for the build (NEXT_PUBLIC_* are baked in
+# Usage: [APP=vss-staging] deploy/build-local.sh <env-file> [ssh-host]
+#   APP         vss-event (production, the default) or vss-staging
+#   <env-file>  that app's env, used for the build (NEXT_PUBLIC_* are baked in
 #               and getStaticProps reads the database and WordPress)
 #   [ssh-host]  defaults to VastraAWS
 set -euo pipefail
 
 ENV_FILE=$1
 HOST=${2:-VastraAWS}
+APP=${APP:-vss-event}
 RELEASE_ID=$(date -u +%Y%m%d%H%M%S)-$(git rev-parse --short HEAD)
 OUT=/tmp/vss-event-$RELEASE_ID.tar.gz
 
@@ -29,5 +31,5 @@ docker run --rm --platform linux/amd64 \
 
 # Your own login on the box, not the deploy key. Releases still belong to deploy.
 scp "$OUT" deploy/release.sh "$HOST":/tmp/
-ssh "$HOST" "sudo -u deploy bash /tmp/release.sh /tmp/$(basename "$OUT") $RELEASE_ID; rm -f /tmp/$(basename "$OUT")"
+ssh "$HOST" "sudo -u deploy env APP=$APP bash /tmp/release.sh /tmp/$(basename "$OUT") $RELEASE_ID; rm -f /tmp/$(basename "$OUT")"
 rm -f "$OUT"
