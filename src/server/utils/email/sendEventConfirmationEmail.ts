@@ -2,6 +2,7 @@ import { env } from "~/env.mjs";
 import { type ParticipantWithBusAndEvent } from "../../api/routers/eventPayment";
 import EventSignUp from "~/components/emails/EventSignUp";
 import { render } from "react-email";
+import { featureFlags } from "~/utils/featureFlags";
 import { sendSesEmail } from "./sendSesEmail";
 
 export const sendEventConfirmationEmail = async (
@@ -18,7 +19,13 @@ export const sendEventConfirmationEmail = async (
       ? `Plats överlåten: ${participant?.event?.name}`
       : `Anmälan till ${participant?.event?.name}`,
     body: await render(
-      EventSignUp({ participant, cancellationUrl, transferred: options.transferred })
+      EventSignUp({
+        participant,
+        cancellationUrl,
+        transferred: options.transferred,
+        showAccountLink: featureFlags.ENABLE_LOGIN,
+        accountUrl: `${env.WEBSITE_URL}/loggain`
+      })
     )
   });
 };

@@ -1,5 +1,5 @@
 import { MembershipType } from "~/generated/prisma/browser";
-import { Button, Container, Head, Hr, Html, Img, Section, Tailwind, Text } from "react-email";
+import { Button, Container, Head, Hr, Html, Img, Link, Section, Tailwind, Text } from "react-email";
 
 interface MemberSignupProps {
   member: {
@@ -10,6 +10,8 @@ interface MemberSignupProps {
   membershipType: MembershipType,
   memberUrl: string,
   memberImageUrl: string,
+  showAccountLink: boolean,
+  accountUrl?: string,
 }
 
 const mockMembership: MemberSignupProps = {
@@ -20,6 +22,8 @@ const mockMembership: MemberSignupProps = {
   },
   membershipType: MembershipType.REGULAR,
   memberUrl: "https://example.com",
+  showAccountLink: true,
+  accountUrl: "https://example.com/loggain",
   memberImageUrl: "https://cmsdev.vastrasidan.se/wp-content/uploads/2021/03/Medlemskort-2021.png"
 }
 
@@ -27,6 +31,8 @@ export const MemberSignup = ({
   member = mockMembership.member,
   memberImageUrl = mockMembership.memberImageUrl,
   memberUrl = mockMembership.memberUrl,
+  showAccountLink,
+  accountUrl,
 }: MemberSignupProps) => {
   return (
     <Tailwind>
@@ -77,6 +83,13 @@ export const MemberSignup = ({
             >
               Visa medlemskap
             </Button>
+            {showAccountLink && accountUrl && (
+              <Text>
+                <Link href={accountUrl} className="text-blue-300">
+                  Logga in på vastrasidan.se för att se alla dina medlemskap
+                </Link>
+              </Text>
+            )}
           </Container>
         </Section>
       </Html>

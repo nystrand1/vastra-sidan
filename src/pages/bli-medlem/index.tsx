@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Elements } from "@stripe/react-stripe-js";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { type z } from "zod";
@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~
 import { friendlyMembershipNames } from "~/server/utils/membership";
 import { api } from "~/utils/api";
 import { MAX_FAMILY_MEMBERS } from "~/utils/constants";
+import { useAppSession } from "~/utils/authClient";
 import { createSSRHelper } from "~/utils/createSSRHelper";
 import { featureFlags } from "~/utils/featureFlags";
 import getStripe from "~/utils/stripePromise";
@@ -32,9 +33,29 @@ export const MemberPage = () => {
   const [disabled, setDisabled] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
+  const { user } = useAppSession();
+
   const form = useForm<z.infer<typeof memberSignupSchema>>({
     resolver: zodResolver(memberSignupSchema),
+    defaultValues: {
+      firstName: user?.firstName ?? '',
+      lastName: user?.lastName ?? '',
+      email: user?.email ?? '',
+      phone: user?.phone ?? '',
+    },
   });
+
+  // The session can arrive after the form mounted: fill only what is still empty
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (!user || prefilled.current) return;
+    prefilled.current = true;
+    const account = { firstName: user.firstName, lastName: user.lastName, email: user.email, phone: user.phone ?? '' };
+    for (const key of ['firstName', 'lastName', 'email', 'phone'] as const) {
+      if (!form.getValues(key)) form.setValue(key, account[key]);
+    }
+  }, [user, form]);
+  const enteredEmail = form.watch('email');
 
   const additionalMembers = useFieldArray({
     control: form.control,
@@ -164,6 +185,11 @@ export const MemberPage = () => {
                     <FormControl>
                       <Input placeholder="Email..." {...field} />
                     </FormControl>
+                    {user && enteredEmail?.trim().toLowerCase() !== user.email.toLowerCase() && (
+                      <p className="text-sm text-muted-foreground">
+                        Medlemskapet syns bara på ditt konto om du använder samma email som kontot.
+                      </p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}

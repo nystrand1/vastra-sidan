@@ -14,7 +14,7 @@ This is the website for **Västra Sidan** (a Swedish football supporters associa
 | Language   | **TypeScript** (strict mode)                                     |
 | API        | **tRPC v11** (React Query integration)                           |
 | Database   | **MySQL** (MariaDB via Docker) with **Prisma ORM**               |
-| Auth       | **NextAuth.js v4** (Credentials provider, JWT sessions)          |
+| Auth       | **Better Auth** (email OTP, passkeys, database sessions)         |
 | CMS        | **WordPress** (headless) via **Apollo GraphQL** client           |
 | Payments   | **Stripe** (checkout + webhooks)                                 |
 | Styling    | **Tailwind CSS** + **shadcn/ui** (New York style, CSS variables) |
@@ -51,10 +51,12 @@ This is the website for **Västra Sidan** (a Swedish football supporters associa
 │   ├── pages/                     # Next.js Pages Router (all site routes)
 │   │   ├── _app.tsx               # App entry point
 │   │   ├── api/
-│   │   │   ├── auth/[...nextauth].ts  # NextAuth API route
+│   │   │   ├── auth/[...all].ts       # Better Auth API route
 │   │   │   └── trpc/[trpc].ts         # tRPC API route
 │   │   ├── admin/                 # Admin panel (events, members)
 │   │   ├── bli-medlem/            # Membership signup
+│   │   ├── loggain.tsx, skapakonto.tsx, profil.tsx   # Account: sign in (email code), sign up, profile (passkeys, delete account)
+│   │   ├── mina-bussresor.tsx, mina-medlemskap.tsx   # Account: the user's bookings and memberships
 │   │   ├── bortaguiden/           # Away game guides (WordPress content)
 │   │   ├── bortaresor/            # Away game trip bookings
 │   │   ├── kronikor/              # Chronicles (WordPress content)
@@ -67,7 +69,7 @@ This is the website for **Västra Sidan** (a Swedish football supporters associa
 │   │   │   ├── root.ts            # tRPC root router
 │   │   │   ├── trpc.ts            # tRPC context, middleware, procedures
 │   │   │   └── routers/           # tRPC routers (admin, member, public, etc.)
-│   │   ├── auth.ts                # NextAuth configuration
+│   │   ├── auth.ts                # Better Auth configuration
 │   │   ├── db.ts                  # Prisma client singleton
 │   │   ├── stripe.ts              # Stripe **client**
 │   │   ├── ses.ts                 # AWS SES email client
@@ -79,11 +81,13 @@ This is the website for **Västra Sidan** (a Swedish football supporters associa
 │   │   └── wordpresstypes/graphql.ts  # Auto-generated GraphQL types
 │   └── utils/                     # Client/shared utilities
 │       ├── api.ts                 # tRPC client setup (createTRPCNext)
+│       ├── authClient.ts          # Better Auth browser client
 │       ├── constants.ts           # Shared constants
 │       ├── createSSRHelper.ts     # SSR helper for tRPC prefetching
 │       ├── featureFlags.ts        # Feature flags from env vars
 │       ├── zodSchemas.ts          # Shared Zod validation schemas
 │       └── stripeHelpers.ts       # Client-side Stripe utilities
+├── scripts/accounts/              # One-off rollout scripts, run with `pnpm script <file>` (tsx)
 ├── codegen.ts                     # GraphQL Codegen configuration
 ├── apollo.config.js               # Apollo client configuration
 ├── components.json                # shadcn/ui configuration
@@ -134,6 +138,10 @@ To regenerate WordPress types after changing `.gql` files:
 pnpm compile
 ```
 
+### Accounts
+
+Login is by email code (Better Auth `emailOTP`); the email also links to `/loggain#email=…&kod=…` (in the fragment, so the code never reaches server logs, analytics or Sentry), which auto-submits only in the browser that asked for the code. Passkeys are added on `/profil` and need a fresh session. Better Auth trusts `BETTER_AUTH_URL`'s origin and `WEBSITE_URL`; the passkey origin and the sign-in link use `BETTER_AUTH_URL`. Codes are limited per email (5 sends, 15 failed sign-ins an hour, in memory; `resetEmailLimits()` runs before each test) on top of the per-IP limit, and are emailed in the background (tests wait with `loginCode(email)` / `settleLoginCodes()` from `test/helpers/auth.ts`). Env vars: `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `PASSKEY_RP_ID`. Account routes: `/loggain`, `/skapakonto`, `/profil`, `/mina-bussresor`, `/mina-medlemskap`. With `ENABLE_LOGIN` off only admins can sign in: only they are sent codes, and no other user can start a session. Rollout steps: "User accounts rollout" in `deploy/README.md`.
+
 ### Feature Flags
 
 Feature flags are controlled via `NEXT_PUBLIC_*` environment variables and accessed through `src/utils/featureFlags.ts`:
@@ -168,6 +176,7 @@ Always use `~/` imports for project files.
 - Prisma uses `relationMode = "prisma"` (no foreign key constraints at DB level)
 - The client is generated to `src/generated/prisma` (gitignored). Import from `~/generated/prisma/client` in server code, and from `~/generated/prisma/browser` in anything a page or component can import (enums and model types). Importing `client` there pulls server-only code into the browser bundle and breaks `next build`.
 - Key models: `User`, `Member`, `Membership`, `VastraEvent`, `Bus`, `Participant`, `ParticipantTransfer`, `StripePayment`, `StripeRefund`, `FotballGame`, `TicketSalesRecord`
+- `User` is Better Auth's table (`name`, `emailVerified`, plus `firstName`, `lastName`, `phone`, `role`), with `Session`, `Account`, `Verification` and `Passkey` beside it. `StripePayment.payerEmail` (event and membership payments) and `StripePayment.membershipId` (membership payments) decide who sees a booking or a family membership. The `userId` columns on `Participant`, `StripePayment` and `StripeRefund` have no relation.
 - After schema changes: `pnpm prisma db push` (dev) or `pnpm prisma migrate dev`
 - Generate client: `pnpm prisma generate` (runs automatically on `postinstall`)
 
@@ -227,6 +236,7 @@ Always use `~/` imports for project files.
 | `pnpm compile`         | Generate GraphQL types from `.gql` files |
 | `pnpm watch`           | Watch mode for GraphQL codegen           |
 | `pnpm dev:email`       | Preview email templates on port 3001     |
+| `pnpm script <file>`   | Run a one-off script (`scripts/accounts/normalise-emails.ts`, `backfill-payer-emails.ts`; see `deploy/README.md`) |
 | `pnpm prisma studio`   | Open Prisma Studio (database GUI)        |
 | `pnpm prisma db push`  | Push schema changes to database          |
 | `pnpm prisma generate` | Regenerate Prisma client                 |

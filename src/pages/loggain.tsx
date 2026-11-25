@@ -1,99 +1,70 @@
-import { signIn } from "next-auth/react";
 import Error from "next/error";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
-import { Button } from "~/components/ui/button";
 import Card from "~/components/atoms/CardLink/CardLink";
-import { InputField } from "~/components/atoms/InputField/InputField";
+import { EmailCodeSignIn } from "~/components/common/EmailCodeSignIn/EmailCodeSignIn";
+import { toAppSession } from "~/utils/appSession";
+import { authClient } from "~/utils/authClient";
 import { featureFlags } from "~/utils/featureFlags";
-import { loginSchema } from "~/utils/zodSchemas";
-
+import { isProfileComplete } from "~/utils/profile";
+import { safeCallbackUrl } from "~/utils/safeCallbackUrl";
+import { readSignInLink } from "~/utils/signInLink";
 
 interface LoginPageProps {
   adminLogin?: boolean;
 }
 
-
 export const LoginPage = ({ adminLogin }: LoginPageProps) => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const router = useRouter();
-
-  
+  // Whether the address is the login link from the email. The code is in the fragment, which
+  // only the browser sees, so this is known once mounted. Read once: the link is then removed.
+  const [isLoginLink, setIsLoginLink] = useState<boolean | null>(null);
   useEffect(() => {
-    const loginError = router.query['error'];
-    if (loginError === 'CredentialsSignin') {
-      toast.error("Felaktig inloggning, försök igen!")
-    }
-  }, [router.query]);
-  
-  if (!featureFlags.ENABLE_LOGIN && !adminLogin) {
-    return <Error statusCode={404} />
+    setIsLoginLink(readSignInLink(window.location.hash) !== null);
+  }, []);
+  // While login is off only admins get codes, so the link is an admin's.
+  const isAdminLogin = adminLogin || router.query.admin !== undefined || isLoginLink === true;
+
+  // The page is prerendered, so the query is empty until the router is ready.
+  if (!featureFlags.ENABLE_LOGIN && (!router.isReady || isLoginLink === null)) {
+    return <p className="text-center">Laddar...</p>;
   }
 
-  const handleLogin = async () => {
-    const loginPayload = loginSchema.safeParse({ email, password });
-    if (!loginPayload.success) {
-      loginPayload.error.issues.map((x) => toast.error(x.message))
+  if (!featureFlags.ENABLE_LOGIN && !isAdminLogin) {
+    return <Error statusCode={404} />;
+  }
+
+  const onSignedIn = async () => {
+    const { data } = await authClient.getSession();
+    const user = toAppSession(data)?.user;
+    if (!user || !isProfileComplete(user)) {
+      await router.push("/profil");
       return;
     }
-    const res = await signIn('credentials', { username: email, password, redirect: false, callbackUrl: "/" });
-    if (res?.status === 401) {
-      toast.error("Felaktig inloggning, försök igen")
+    // Embedded in another page (e.g. a guarded one): signing in re-renders it.
+    if (router.pathname === "/loggain") {
+      await router.push(safeCallbackUrl(router.query.callbackUrl, window.location.origin) ?? "/profil");
     }
-    if (res?.ok && !adminLogin) {
-      await router.push("/");
-    }
-  }
+  };
 
   return (
     <div className="flex flex-col items-center justify-center">
-      <Card 
-        title="Logga in"
-        className="w-full md:w-96"
-      >
-        <form className="space-y-4">
-          <InputField
-            type="email"
-            label="Email"
-            placeholder="Email..."
-            name="email_login" 
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <InputField 
-            label="Lösenord" 
-            placeholder="Lösenord..."
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          /> 
-          <Button 
-            className="w-full"
-            type="submit"
-            onClick={async (e) => {
-              e.preventDefault();
-              await handleLogin();
-            }}
-          >
-            Logga In
-          </Button>
-          {featureFlags.ENABLE_LOGIN && (
-            <Button 
-              className="w-full"
-              onClick={() => router.push("/skapakonto")}
-            >
-              Skapa konto
-            </Button>
-          )}
-        </form>
+      <Card title="Logga in" className="w-full md:w-96">
+        <EmailCodeSignIn
+          intro="Logga in med din email. Vi skickar en kod."
+          onSignedIn={onSignedIn}
+        />
+        {featureFlags.ENABLE_LOGIN && (
+          <p className="mt-4 text-center text-sm">
+            <Link className="underline" href="/skapakonto">
+              Inget konto? Skapa konto
+            </Link>
+          </p>
+        )}
       </Card>
     </div>
-  )
-}
-
+  );
+};
 
 export default LoginPage;

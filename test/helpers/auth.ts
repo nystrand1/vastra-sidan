@@ -1,88 +1,88 @@
-import { type NextApiRequest, type NextApiResponse } from "next";
-import { type Session } from "next-auth";
-import nextAuthRoute from "~/pages/api/auth/[...nextauth]";
+import { expect } from "vitest";
+import { auth, loginCodesDelivered, toAppSession } from "~/server/auth";
+import { getSentEmails } from "../mocks/ses";
 
-// next-auth types `NextAuth(options)` as `any`.
-const nextAuthHandler = nextAuthRoute as (req: NextApiRequest, res: NextApiResponse) => Promise<void>;
-
-interface HandlerResult {
-  status: number;
-  body: unknown;
-}
+type CustomSession = Parameters<typeof toAppSession>[0];
 
 /**
- * A browser talking to the real NextAuth API route (/api/auth/*), keeping the
- * session and CSRF cookies between requests like a browser would.
+ * A browser talking to the real Better Auth handler (/api/auth/*), keeping its
+ * cookies between requests like a browser would. `headers` go on every request
+ * (e.g. the `x-forwarded-for` the proxy adds).
  */
-export const authBrowser = () => {
+export const authBrowser = (headers: Record<string, string> = {}) => {
   const cookies = new Map<string, string>();
+  const cookieHeader = () => [...cookies].map(([name, value]) => `${name}=${value}`).join("; ");
 
   const request = async (method: "GET" | "POST", path: string, body?: object) => {
-    const result: HandlerResult = { status: 200, body: undefined };
-    const headers = new Map<string, string | string[]>();
-    const res = {
-      status: (code: number) => {
-        result.status = code;
-        return res;
-      },
-      getHeader: (name: string) => headers.get(name.toLowerCase()),
-      setHeader: (name: string, value: string | string[]) => {
-        headers.set(name.toLowerCase(), value);
-        return res;
-      },
-      send: (data: unknown) => {
-        result.body = data;
-      },
-      json: (data: unknown) => {
-        result.body = data;
-      },
-      end: () => undefined
-    };
-    const req = {
-      method,
-      query: { nextauth: path.split("/") },
-      headers: {
-        host: new URL(process.env.NEXTAUTH_URL!).host,
-        ...(body && { "content-type": "application/json" })
-      },
-      cookies: Object.fromEntries(cookies),
-      body
-    };
+    const response = await auth.handler(
+      new Request(`${process.env.BETTER_AUTH_URL}/api/auth/${path}`, {
+        method,
+        headers: {
+          ...headers,
+          origin: process.env.WEBSITE_URL!,
+          cookie: cookieHeader(),
+          ...(body && { "content-type": "application/json" })
+        },
+        body: body && JSON.stringify(body)
+      })
+    );
 
-    await nextAuthHandler(req as unknown as NextApiRequest, res as unknown as NextApiResponse);
-
-    for (const header of [headers.get("set-cookie") ?? []].flat()) {
-      const [pair = ""] = header.split(";");
+    for (const header of response.headers.getSetCookie()) {
+      const [pair = "", ...attributes] = header.split(";");
       const separator = pair.indexOf("=");
-      const name = pair.slice(0, separator);
-      const value = decodeURIComponent(pair.slice(separator + 1));
-      if (value) cookies.set(name, value);
+      const name = pair.slice(0, separator).trim();
+      const value = pair.slice(separator + 1);
+      const expired = attributes.some((a) => a.trim().toLowerCase() === "max-age=0");
+      if (value && !expired) cookies.set(name, value);
       else cookies.delete(name);
     }
-    return result;
-  };
 
-  const csrfToken = async () => {
-    const { body } = await request("GET", "csrf");
-    return (body as { csrfToken: string }).csrfToken;
+    const text = await response.text();
+    return { status: response.status, body: text ? (JSON.parse(text) as unknown) : null };
   };
 
   return {
-    /** Logs in through the credentials form. */
-    signIn: async (email: string, password: string) => {
-      await request("POST", "callback/credentials", {
-        csrfToken: await csrfToken(),
-        username: email,
-        password
-      });
+    /** The Cookie header this browser sends. */
+    cookie: cookieHeader,
+    /** Any POST to the auth API, e.g. one the app's own pages would never send. */
+    post: (path: string, body: object) => request("POST", path, body),
+    /** Asks for a sign-in code by email. */
+    sendCode: (email: string) =>
+      request("POST", "email-otp/send-verification-otp", { email, type: "sign-in" }),
+    /** Signs in (or up) with the code from the email. */
+    signIn: async (email: string, otp: string) => {
+      const { status, body } = await request("POST", "sign-in/email-otp", { email, otp });
+      return { status, body };
     },
-    /** What `useSession().update(data)` sends: a POST to /api/auth/session. */
-    updateSession: async (data?: unknown) =>
-      request("POST", "session", { csrfToken: await csrfToken(), data }),
-    /** What `useSession()` reads, or null when logged out. */
+    /** What the app sees as the session, or null when signed out. */
     getSession: async () => {
-      const { body } = await request("GET", "session");
-      return body && Object.keys(body).length ? (body as Session) : null;
-    }
+      const { body } = await request("GET", "get-session");
+      return toAppSession(body as CustomSession);
+    },
+    /** "Sign out on all devices". */
+    revokeSessions: () => request("POST", "revoke-sessions", {}),
+    signOut: () => request("POST", "sign-out", {})
   };
+};
+
+/**
+ * The sign-in code in the latest login email sent to `email`, or null if none was sent.
+ * Codes are sent in the background: use `loginCode` to wait for one.
+ */
+export const lastLoginCode = (email: string): string | null => {
+  const sent = getSentEmails().filter(
+    (e) => e.to === email && e.subject === "Din inloggningskod till Västra Sidan"
+  );
+  return sent.at(-1)?.html?.match(/kod=(\d{6})/)?.[1] ?? null;
+};
+
+/** Waits until every sign-in code asked for so far has been sent, or skipped. */
+export const settleLoginCodes = loginCodesDelivered;
+
+/** Waits for the login emails asked for so far, then returns the latest code sent to `email`. */
+export const loginCode = async (email: string): Promise<string> => {
+  await settleLoginCodes();
+  const code = lastLoginCode(email);
+  expect(code, `no login code was sent to ${email}`).toMatch(/^\d{6}$/);
+  return code!;
 };

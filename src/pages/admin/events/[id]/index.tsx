@@ -1,6 +1,6 @@
 import { Role } from "~/generated/prisma/browser";
 import { type GetServerSidePropsContext } from "next";
-import { useSession } from "next-auth/react";
+import { useAppSession } from "~/utils/authClient";
 import { useRouter } from "next/router";
 import { AddPassengerModal } from "~/components/admin/PassengerTable/AddPassengerModal";
 import { columns } from "~/components/admin/PassengerTable/Columns";
@@ -12,13 +12,13 @@ import { api } from "~/utils/api";
 
 export const AdminEventPage = () => {
   const { query, push } = useRouter();
-  const { data: sessionData } = useSession();
+  const { user } = useAppSession();
   const { data: event, isLoading } = api.admin.getEvent.useQuery(
     { id: query.id as string },
     {
       enabled:
-        !!sessionData?.user &&
-        sessionData.user.role === Role.ADMIN &&
+        !!user &&
+        user.role === Role.ADMIN &&
         !!query.id,
       staleTime: 0
     }

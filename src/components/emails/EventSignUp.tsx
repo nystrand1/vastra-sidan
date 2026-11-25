@@ -5,6 +5,7 @@ import {
   Hr,
   Html,
   Img,
+  Link,
   Section,
   Tailwind,
   Text
@@ -17,6 +18,8 @@ interface EventSignUpProps {
   participant: ParticipantWithBusAndEvent;
   cancellationUrl: string;
   transferred?: boolean;
+  showAccountLink: boolean;
+  accountUrl?: string;
 }
 
 const mockBus: EventSignUpProps["participant"]["bus"] = {
@@ -72,7 +75,9 @@ const baseUrl = process.env.VERCEL_URL
 export const EventSignUp = ({
   participant = mockParticipant,
   cancellationUrl,
-  transferred = false
+  transferred = false,
+  showAccountLink,
+  accountUrl
 }: EventSignUpProps) => {
   const { name, payAmount, note, bus, event } = participant;
 
@@ -131,6 +136,13 @@ export const EventSignUp = ({
             >
               Hantera bokning
             </Button>
+            {showAccountLink && accountUrl && (
+              <Text className="text-lg">
+                <Link href={accountUrl} className="text-blue-300">
+                  Logga in på vastrasidan.se för att se alla dina resor
+                </Link>
+              </Text>
+            )}
           </Container>
         </Section>
       </Html>

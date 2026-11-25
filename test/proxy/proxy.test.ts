@@ -72,7 +72,7 @@ describe("proxy", () => {
     server.use(http.get(TEXTURE_URL, () => HttpResponse.arrayBuffer(GLB.buffer)));
 
     await proxy(TEXTURE_URL, {
-      cookie: "next-auth.session-token=secret",
+      cookie: "better-auth.session_token=secret",
       authorization: "Bearer secret",
       "x-forwarded-for": "1.2.3.4"
     });

@@ -12,17 +12,13 @@ export const env = createEnv({
     DATABASE_URL: z.string().url(),
     ENABLE_AWS_SES_EMAILS: z.literal("true").or(z.literal("false")).default("false").transform((val) => val === "true"),
     NODE_ENV: z.enum(["development", "test", "production"]),
-    NEXTAUTH_SECRET:
+    BETTER_AUTH_SECRET:
       process.env.NODE_ENV === "production"
         ? z.string().min(1)
         : z.string().min(1).optional(),
-    NEXTAUTH_URL: z.preprocess(
-      // This makes Vercel deployments not fail if you don't set NEXTAUTH_URL
-      // Since NextAuth.js automatically uses the VERCEL_URL if present.
-      (str) => process.env.VERCEL_URL ?? str,
-      // VERCEL_URL doesn't include `https` so it cant be validated as a URL
-      process.env.VERCEL ? z.string().min(1) : z.string().url()
-    ),
+    BETTER_AUTH_URL: z.string().url(),
+    // The passkey relying party: the site's domain, e.g. "vastrasidan.se", or "localhost" in dev
+    PASSKEY_RP_ID: z.string().min(1),
     // Add `.min(1) on ID and SECRET if you want to make sure they're not empty
     WORDPRESS_API_KEY: z.string().min(1),
     CRON_KEY: z.string().min(1),
@@ -38,8 +34,8 @@ export const env = createEnv({
     ),
     USE_DEV_MODE: z.literal("true").or(z.literal("false")).default("false"),
     WEBSITE_URL: z.preprocess(
-      // This makes Vercel deployments not fail if you don't set NEXTAUTH_URL
-      // Since NextAuth.js automatically uses the VERCEL_URL if present.
+      // On Vercel, WEBSITE_URL is always the deployment's own URL (even when set), so each
+      // preview links to itself. Auth uses BETTER_AUTH_URL instead, which is not overridden.
       (str) => process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : str,
       // VERCEL_URL doesn't include `https` so it cant be validated as a URL
       process.env.VERCEL ? z.string().min(1) : z.string().url()
@@ -71,8 +67,9 @@ export const env = createEnv({
     AWS_CLIENT_SECRET: process.env.AWS_CLIENT_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
-    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+    BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
+    BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
+    PASSKEY_RP_ID: process.env.PASSKEY_RP_ID,
     WORDPRESS_API_KEY: process.env.WORDPRESS_API_KEY,
     NEXT_PUBLIC_WORDPRESS_URL: process.env.NEXT_PUBLIC_WORDPRESS_URL,
     CRON_KEY: process.env.CRON_KEY,

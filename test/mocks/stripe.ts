@@ -201,7 +201,14 @@ export const stripeHandlers = [
     if (!paymentIntent) {
       return stripeError(`No such payment_intent: '${String(params.id)}'`, 404);
     }
-    return HttpResponse.json(paymentIntent);
+    // `expand[0]=customer` swaps the customer id for the customer object
+    const expand = [...new URL(request.url).searchParams]
+      .filter(([key]) => key.startsWith("expand["))
+      .map(([, value]) => value);
+    const customer = state.customers.find((c) => c.id === paymentIntent.customer);
+    return HttpResponse.json(
+      expand.includes("customer") && customer ? { ...paymentIntent, customer } : paymentIntent
+    );
   }),
 
   http.post(`${API}/payment_intents/:id/cancel`, async ({ request, params }) => {

@@ -28,6 +28,7 @@ import { sendEventConfirmationEmail } from "~/server/utils/email/sendEventConfir
 import { sendMemberConfirmationEmail } from "~/server/utils/email/sendMemberConfirmationEmail";
 import { findOrCreateMember } from "~/server/utils/member/findOrCreateMember";
 import { findOrCreateFamilyMembers, linkFamilyMembers } from "~/server/utils/member/findOrCreateFamilyMembers";
+import { normaliseEmail } from "~/utils/email";
 import { awayGamePaths, revalidatePages } from "~/server/utils/revalidate";
 import { parseForMembershipType } from "~/server/utils/member/parseForMembershipType";
 import { isMembershipOnSale } from "~/server/utils/membership";
@@ -51,16 +52,6 @@ export type AdminUserProfile = Prisma.UserGetPayload<{
         event: true;
         stripePayments: true;
         stripeRefunds: true;
-      };
-    };
-    memberShips: {
-      select: {
-        type: true;
-        stripePayments: {
-          select: {
-            createdAt: true;
-          };
-        };
       };
     };
   };
@@ -246,6 +237,7 @@ export const adminRouter = createTRPCRouter({
               stripePaymentId: `admin-comp-${created.id}`,
               amount: 0,
               status: StripePaymentStatus.SUCCEEDED,
+              payerEmail: normaliseEmail(created.email),
               participants: {
                 connect: [{ id: created.id }]
               }
@@ -341,6 +333,7 @@ export const adminRouter = createTRPCRouter({
             stripePaymentId: `admin-comp-${membershipOwner!.id}`,
             amount: 0,
             status: StripePaymentStatus.SUCCEEDED,
+            membershipId: membership.id,
             members: {
               connect: memberIds.map((id) => ({ id }))
             }

@@ -1,7 +1,5 @@
 import { setDefaultOptions } from "date-fns";
 import { sv } from "date-fns/locale/sv";
-import { type Session } from "next-auth";
-import { SessionProvider } from "next-auth/react";
 import { type AppType } from "next/app";
 import Head from "next/head";
 import { useRouter } from "next/router";
@@ -15,10 +13,7 @@ import { featureFlags } from "~/utils/featureFlags";
 
 setDefaultOptions({ locale: sv });
  
-const MyApp: AppType<{ session: Session | null}> = ({
-  Component,
-  pageProps: { session, ...pageProps },
-}) => {
+const MyApp: AppType = ({ Component, pageProps }) => {
   const { route } = useRouter();
   const isAdminRoute = route.includes('/admin');
   return (
@@ -39,7 +34,6 @@ const MyApp: AppType<{ session: Session | null}> = ({
       <link rel="icon" type="image/png" sizes="96x96" href="/favicon/favicon-96x96.png" />
       <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
     </Head>
-    <SessionProvider session={session}>
       {featureFlags.ENABLE_ANALYTICS && (
         <Script async src="https://www.googletagmanager.com/gtag/js?id=G-P1J3LPRH51" />       
       )}
@@ -76,7 +70,6 @@ const MyApp: AppType<{ session: Session | null}> = ({
           <Component {...pageProps} />
         )}
       </Layout>
-    </SessionProvider>
     </>
   );
 };

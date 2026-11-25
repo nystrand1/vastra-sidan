@@ -41,6 +41,8 @@ export const handleSuccessfulPayment = async (event: Stripe.PaymentIntentSucceed
         netAmount: paymentIntent.amount,
         stripePaymentId: paymentIntent.id,
         status: StripePaymentStatus.SUCCEEDED,
+        payerEmail: originalPayment.payerEmail,
+        membershipId: originalPayment.membershipId,
         participants: {
           connect: originalPayment.participants.map((p) => ({ id: p.id }))
         },
@@ -87,11 +89,17 @@ export const handleFailedPayment = async (paymentIntent: Stripe.PaymentIntentPay
       id: true
     }
   });
+  const original = await prisma.stripePayment.findFirst({
+    where: { stripePaymentId: paymentIntent.data.object.id, payerEmail: { not: null } },
+    select: { payerEmail: true, membershipId: true }
+  });
   await prisma.stripePayment.create({
     data: {
       amount: paymentIntent.data.object.amount,
       stripePaymentId: paymentIntent.data.object.id,
       status: StripePaymentStatus.CANCELED,
+      payerEmail: original?.payerEmail,
+      membershipId: original?.membershipId,
       participants: {
         connect: participants
       }

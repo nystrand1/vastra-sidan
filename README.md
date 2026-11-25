@@ -10,7 +10,7 @@ The website for **Västra Sidan**, a Swedish football supporters association. It
 | Language   | TypeScript (strict mode)                                   |
 | API        | [tRPC](https://trpc.io) v11 + [TanStack Query](https://tanstack.com/query)                          |
 | Database   | MySQL (MariaDB) via [Prisma](https://prisma.io) ORM                        |
-| Auth       | [NextAuth.js](https://next-auth.js.org) v4 (credentials provider, JWT sessions) |
+| Auth       | [Better Auth](https://www.better-auth.com) (email codes, passkeys, database sessions) |
 | Styling    | [Tailwind CSS](https://tailwindcss.com) + [shadcn/ui](https://ui.shadcn.com) (Radix primitives) |
 | Forms      | react-hook-form + Zod validation                            |
 | 3D/graphics| react-three-fiber, drei, rapier                             |
@@ -58,7 +58,7 @@ pnpm only runs install scripts for dependencies listed in `pnpm.onlyBuiltDepende
 Copy `.env.example` to `.env` and fill in the values. The full schema (and which variables are required) is defined in `src/env.mjs`; at minimum you'll need credentials/keys for:
 
 - Prisma (`DATABASE_URL`)
-- NextAuth (`NEXTAUTH_SECRET`, `NEXTAUTH_URL`)
+- Better Auth (`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `PASSKEY_RP_ID`; `PASSKEY_RP_ID` is the site's domain, `localhost` in development). `WEBSITE_URL` is the only trusted origin, so it must be the URL you open the site on
 - WordPress (`WORDPRESS_API_KEY`, `NEXT_PUBLIC_WORDPRESS_URL`)
 - Stripe (`STRIPE_API_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_API_KEY`)
 - AWS SES (`AWS_CLIENT_ID`, `AWS_CLIENT_SECRET`, `ENABLE_AWS_SES_EMAILS`)

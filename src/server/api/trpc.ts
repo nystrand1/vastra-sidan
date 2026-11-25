@@ -10,11 +10,10 @@
 import { Role } from "~/generated/prisma/client";
 import { initTRPC, TRPCError } from "@trpc/server";
 import { type CreateNextContextOptions } from "@trpc/server/adapters/next";
-import { type Session } from "next-auth";
 import superjson, { type SuperJSONResult } from "superjson";
 import { ZodError } from "zod";
 import { env } from "~/env.mjs";
-import { getServerAuthSession } from "~/server/auth";
+import { type AppSession, getServerAuthSession } from "~/server/auth";
 import { prisma } from "~/server/db";
 import { featureFlags } from "~/utils/featureFlags";
 import { apolloClient } from "../utils/apolloClient";
@@ -29,7 +28,7 @@ import { stripe } from "../stripe";
  */
 
 type CreateContextOptions = {
-  session: Session | null;
+  session: AppSession | null;
   cronKey: string | null;
   apolloClient: typeof apolloClient | null;
 };
@@ -61,10 +60,9 @@ export const createInnerTRPCContext = (opts: CreateContextOptions) => {
  * @see https://trpc.io/docs/context
  */
 export const createTRPCContext = async (opts: CreateNextContextOptions) => {
-  const { req, res } = opts;
+  const { req } = opts;
 
-  // Get the session from the server using the getServerSession wrapper function
-  const session = await getServerAuthSession({ req, res });
+  const session = await getServerAuthSession({ req });
   const cronKey = req.query["cron-key"] ?? null;
   return createInnerTRPCContext({
     session,

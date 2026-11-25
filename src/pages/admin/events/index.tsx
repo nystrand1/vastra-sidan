@@ -1,5 +1,5 @@
 import { Role } from "~/generated/prisma/browser";
-import { useSession } from "next-auth/react";
+import { useAppSession } from "~/utils/authClient";
 import { useRouter } from "next/router";
 import { columns } from "~/components/admin/EventTable/Columns";
 import { EventTable } from "~/components/admin/EventTable/EventTable";
@@ -7,12 +7,12 @@ import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { api } from "~/utils/api";
 
 export default function AdminEvent() {
-  const { data: sessionData } = useSession();
+  const { user } = useAppSession();
   const router = useRouter();
 
   const { data: events } = api.admin.getEvents.useQuery(
     undefined,
-    { enabled: !!sessionData?.user && sessionData.user.role === Role.ADMIN, staleTime: 0 }
+    { enabled: !!user && user.role === Role.ADMIN, staleTime: 0 }
     );
 
   if (!events) {

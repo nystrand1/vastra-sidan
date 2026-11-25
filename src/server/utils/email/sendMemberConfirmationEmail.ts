@@ -2,6 +2,7 @@ import { type Member, type Membership } from "~/generated/prisma/client";
 import { render } from "react-email";
 import MemberSignup from "~/components/emails/MemberSignUp";
 import { env } from "~/env.mjs";
+import { featureFlags } from "~/utils/featureFlags";
 import { sendSesEmail } from "./sendSesEmail";
 
 export const sendMemberConfirmationEmail = async (
@@ -23,7 +24,9 @@ export const sendMemberConfirmationEmail = async (
         member: formattedMember,
         memberUrl,
         membershipType: membership.type,
-        memberImageUrl: membership.imageUrl
+        memberImageUrl: membership.imageUrl,
+        showAccountLink: featureFlags.ENABLE_LOGIN,
+        accountUrl: `${env.WEBSITE_URL}/loggain`
       })
     )
   });
