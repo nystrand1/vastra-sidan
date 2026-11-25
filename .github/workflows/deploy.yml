@@ -1,22 +1,26 @@
 name: Deploy to EC2
 
-# main is built here and deployed to EC2. Vercel only builds previews (see deploy/README.md).
+# main and staging are built here and deployed to EC2: main to production (vss-event),
+# staging to staging.event.vastrasidan.se (vss-staging). Vercel builds every other
+# branch as a preview (see deploy/README.md).
 on:
   push:
-    branches: [main]
+    branches: [main, staging]
   workflow_dispatch:
 
 concurrency:
-  group: deploy-production
+  group: deploy-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
   deploy:
+    if: github.ref_name == 'main' || github.ref_name == 'staging'
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: Production
+    environment: ${{ github.ref_name == 'main' && 'Production' || 'Staging' }}
     env:
       EC2_HOST: ${{ vars.EC2_HOST }}
+      APP: ${{ github.ref_name == 'main' && 'vss-event' || 'vss-staging' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -47,7 +51,7 @@ jobs:
         run: ssh -fN -o ExitOnForwardFailure=yes -L 3306:127.0.0.1:3306 "deploy@$EC2_HOST"
 
       # The same file is used for the build (NEXT_PUBLIC_* are baked in) and
-      # installed as /srv/vss-event/shared/.env. Empty values are left out so
+      # installed as /srv/$APP/shared/.env. Empty values are left out so
       # the defaults in src/env.mjs apply.
       - name: Write env
         run: |
@@ -102,6 +106,8 @@ jobs:
       - name: Upload and release
         run: |
           RELEASE_ID=$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}
-          scp release.tar.gz deploy/release.sh "deploy@$EC2_HOST":/tmp/
-          scp .env "deploy@$EC2_HOST":/tmp/vss-event.env
-          ssh "deploy@$EC2_HOST" "bash /tmp/release.sh /tmp/release.tar.gz $RELEASE_ID /tmp/vss-event.env"
+          # Per-app names in /tmp, so a production and a staging deploy can't collide
+          scp release.tar.gz "deploy@$EC2_HOST":/tmp/$APP-release.tar.gz
+          scp deploy/release.sh "deploy@$EC2_HOST":/tmp/$APP-release.sh
+          scp .env "deploy@$EC2_HOST":/tmp/$APP.env
+          ssh "deploy@$EC2_HOST" "APP=$APP bash /tmp/$APP-release.sh /tmp/$APP-release.tar.gz $RELEASE_ID /tmp/$APP.env"
